@@ -1,0 +1,65 @@
+character enhance.png
+size:2048,2048
+filter:Linear,Linear
+pma:true
+1
+bounds:1098,60,125,140
+offsets:0,0,126,142
+2
+bounds:1849,1912,130,132
+3
+bounds:1649,1300,125,106
+offsets:0,2,125,108
+bangs
+bounds:1649,1485,237,203
+offsets:0,1,238,205
+blue explode3
+bounds:2,472,1645,1572
+offsets:121,82,1775,1700
+eye close
+bounds:2,53,248,93
+offsets:143,46,448,144
+eye open
+bounds:1649,1408,224,75
+hair front
+bounds:667,202,638,268
+offsets:0,8,644,306
+hair front left
+bounds:1649,1690,198,354
+offsets:0,0,199,354
+hair strand
+bounds:667,2,429,198
+offsets:238,0,667,288
+hair top
+bounds:1307,218,527,252
+offsets:0,0,543,298
+hair top1
+bounds:2,148,663,322
+offsets:2,2,690,324
+
+character enhance_2.png
+size:1900,1900
+filter:Linear,Linear
+pma:true
+body
+bounds:2,298,1124,1599
+upper leg left
+bounds:1128,233,769,1664
+offsets:33,0,802,1664
+
+character enhance_3.png
+size:1652,1652
+filter:Linear,Linear
+pma:true
+arm left
+bounds:1036,653,545,995
+offsets:0,3,545,998
+back hair
+bounds:2,2,810,655
+offsets:0,0,815,777
+face
+bounds:814,145,412,506
+offsets:122,0,880,630
+light8
+bounds:2,659,1032,989
+offsets:45,146,1083,1186
