@@ -73,8 +73,15 @@ export class SlotMachine {
     }
 
     preload(scene: Scene): void {
-        scene.load.image('slotBackground', 'assets/Reels/Property 1=Default.png');
-        scene.load.image('bonusSlotBackground', 'assets/Reels/Property 1=Bonus.png');
+        this.isMobile = this.isMobileDevice();
+        if(this.isMobile){
+            scene.load.image('slotBackground', 'assets/Reels/Mobile_Grid.png');
+            scene.load.image('bonusSlotBackground', 'assets/Reels/Mobile_Grid.png');
+        }
+        else{
+            scene.load.image('slotBackground', 'assets/Reels/Property 1=Default.png');
+            scene.load.image('bonusSlotBackground', 'assets/Reels/Property 1=Bonus.png');
+        }
 
         // Initialize animation
         this.animation = new Animation(scene);
@@ -84,7 +91,6 @@ export class SlotMachine {
         this.winAnimation.preload();
 
         this.initVariables(scene as GameScene);
-        this.isMobile = this.isMobileDevice();
     }
 
     private initVariables(scene: GameScene): void {
@@ -150,8 +156,8 @@ export class SlotMachine {
         background.y = this.isMobile ? background.displayHeight * 0.45 : this.slotY - paddingY * 0.33;
 
         if(this.isMobile){
-            background.setScale(0.37, 0.4);
-            background.setOrigin(0.61, -0.025);
+            background.setScale(0.5, 0.5);
+            background.setOrigin(0.61, 0.1);
         }
         else{
             background.setScale(.95 , 0.94);
@@ -196,8 +202,7 @@ export class SlotMachine {
             scene.gameData.debugLog("result",result);
             scene.gameData.debugLog("slotArea",result.data.slotArea);
 
-            
-            newValues = transpose(result.data.slotArea);
+            newValues = transpose(result.data.slotArea.SlotArea);
 
           for(let i = 0; i < newValues.length; i++){
               for(let j = 0; j < newValues[i].length; j++){
@@ -1132,9 +1137,11 @@ export class SlotMachine {
             // Fill the rest with new random symbols at the top
             const numNew = rows - newCol.length;
             for (let i = 0; i < numNew; i++) {
-                const newSymbol = Math.floor(Math.random() * Slot.SYMBOLS) + 1;
+                const newSymbol = symbolGrid[i][col]
                 newCol.unshift(newSymbol);
+                console.log("newCol " + i + " " + col, newCol);
             }
+                
 
             // Create a temporary grid to track the new positions
             const tempSymbolGrid: (GameObjects.Sprite | SpineGameObject | BombContainer)[] = [];

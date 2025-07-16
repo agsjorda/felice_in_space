@@ -42,10 +42,9 @@ export class Character {
         this.currAnim = this.spineObject.animationState.setAnimation(0, 'idle', true); // felice animations: 'idle' , 'win'
         this.spineObject.setDepth(10);
 
-        console.log(this.spineObject.animationState.data.skeletonData.animations);
+      // console.log(this.spineObject.animationState.data.skeletonData.animations);
 
         Events.emitter.on(Events.WIN, () => {
-                console.log('win');
                 if (this.spineObject) {
                     this.spineObject.setY(this.animationY);
                     
@@ -76,4 +75,4 @@ export class Character {
             }
         });
     }
-} 
+}

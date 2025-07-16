@@ -150,7 +150,7 @@ export class Slot {
     static readonly TOGGLE_WIN_EFFECT: boolean = false;
     static readonly TOGGLE_FRONTEND: boolean = true;
 
-    static readonly DIFFICULTY_SYMBOLS: number = 4;
+    static readonly DIFFICULTY_SYMBOLS: number = 2;
     static readonly SYMBOLS: number = 9;
     static readonly ROWS: number = 5;
     static readonly COLUMNS: number = 6;

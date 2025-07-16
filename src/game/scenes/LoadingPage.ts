@@ -139,6 +139,8 @@ export class LoadingPage extends Scene {
             this.loadingBar.fillStyle(0x4CAF50, 1);
             this.loadingBar.fillRoundedRect(this.barX, this.barY, barWidth, innerHeight, borderRadius);
             this.progressText.setText('100%');
+            this.loadingBar.destroy();
+            this.progressText.destroy();
         });
     }
 } 

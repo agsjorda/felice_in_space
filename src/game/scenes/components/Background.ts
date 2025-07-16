@@ -39,16 +39,16 @@ export class Background {
 
     preload(scene: Scene): void {
         this.isMobile = this.isMobileDevice();
+        const prefix = 'assets/background';
 
         if(this.isMobile){
-            const prefix = 'assets/background';
             //scene.load.image('mobile_main_background', `${prefix}/Main_Background.png`);
             //scene.load.image('mobile_bonus_background', `${prefix}/Bonus_Background.png`);
             scene.load.image('mobile_main_background', `${prefix}/Main_BG.png`);
             scene.load.image('mobile_bonus_background', `${prefix}/Bonus_BG.jpg`);
+            scene.load.image('main_foreground', `${prefix}/Main_Foreground.png`);
         }
         else{
-            const prefix = 'assets/background';
             scene.load.image('bonus_background', `${prefix}/Bonus_BG.jpg`);
             scene.load.image('main_background', `${prefix}/Main_BG.png`);
        //     scene.load.image('bonus_cloud', `${prefix}/Bonus_Cloud.png`);
@@ -56,7 +56,6 @@ export class Background {
        //     scene.load.image('bonus_lantern', `${prefix}/Bonus_Lantern.png`);
 //
        //     scene.load.image('main_cloud', `${prefix}/Main_Cloud.png`);
-       //     scene.load.image('main_foreground', `${prefix}/Main_Foreground.png`);
        //     scene.load.image('main_lantern', `${prefix}/Main_Lantern.png`);
         }
     }
@@ -87,13 +86,15 @@ export class Background {
 
         this.main_background.alpha = main_status;
         this.bonus_background.alpha = bonus_status;
+        if(this.isMobile){
+            this.main_foreground.alpha = main_status;
+        }
 
         Events.emitter.emit(Events.TOGGLE_BACKGROUND, main_status, bonus_status);
 
         // Only toggle other elements for desktop
        //if (!this.isMobile) {
        //    this.main_cloud.alpha = main_status;
-       //    this.main_foreground.alpha = main_status;
        //    this.main_lantern1.alpha = main_status;
        //    this.main_lantern2.alpha = main_status;
        //    this.main_lantern3.alpha = main_status;
@@ -123,10 +124,14 @@ export class Background {
             this.bonus_background = scene.add.image(centerX, centerY, 'mobile_bonus_background');
             this.bonus_background.setScale(0.70);
             this.bonus_background.setOrigin(0.5, 0.75);
+            this.main_foreground = scene.add.image(centerX, centerY * 1.2, 'main_foreground');
+            this.main_foreground.setScale(1);
+            this.main_foreground.setOrigin(0.5, 0);
             
             // Set depth for mobile
             this.main_background.setDepth(0);
             this.bonus_background.setDepth(0);
+            this.main_foreground.setDepth(0);
             
             // Initialize other properties to avoid errors
             this.main_cloud = null as any;
@@ -136,7 +141,7 @@ export class Background {
             this.main_lantern2 = null as any;
             this.main_lantern3 = null as any;
 
-            this.main_foreground = null as any;
+
             this.bonus_foreground = null as any;
 
             this.bonus_lantern1 = null as any;
