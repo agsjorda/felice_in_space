@@ -16,11 +16,15 @@ export class WinAnimation {
     }
 
     preload(): void {
-        this.scene.load.spineAtlas('myWinAnim2', 'assets/Win/Win.atlas');
-        this.scene.load.spineJson('myWinAnim2', 'assets/Win/Win.json');
+        this.scene.load.spineAtlas('myWinAnim2', 'assets/Win/Default FOR WIN ANIMATION spine.atlas');
+        this.scene.load.spineJson('myWinAnim2', 'assets/Win/Default FOR WIN ANIMATION spine.json');
 
-        this.scene.load.spineAtlas('Symbol10_SW', 'assets/Symbols/Bomb/Symbol10_SW.atlas');
-        this.scene.load.spineJson('Symbol10_SW', 'assets/Symbols/Bomb/Symbol10_SW.json');
+        for(let i = 10; i < 23; i++){
+            let j = i < 17 ? 0 : i < 21 ? 1 : 2;
+            let k = i < 17 ? "multiplier" : i < 21 ? "BLUE ROCK" : "Green rock";
+            this.scene.load.spineAtlas(`Symbol${i}_FIS`, `assets/Symbols/Bomb/Bomb_${j}/${k}.atlas`);
+            this.scene.load.spineJson(`Symbol${i}_FIS`, `assets/Symbols/Bomb/Bomb_${j}/${k}.json`);
+        }
         
     }
 
@@ -30,9 +34,11 @@ export class WinAnimation {
         spineObject2.setPosition(0, 0);
         spineObject2.setAlpha(0);
 
-        let bombSymbol = this.scene.add.spine(0, 0, 'Symbol10_SW', 'Symbol10_SW') as SpineGameObject;
-        bombSymbol.setPosition(0, 0);
-        bombSymbol.setAlpha(0);
+        for(let i = 10; i < 23; i++){
+            let bombSymbol = this.scene.add.spine(0, 0, `Symbol${i}_FIS`, `Symbol${i}_FIS`) as SpineGameObject;
+            bombSymbol.setPosition(0, 0);
+            bombSymbol.setAlpha(0);
+        }
         
     }
 
@@ -113,108 +119,7 @@ export class WinAnimation {
         }
     }
 
-    playWinAnimation(spineObject: SpineGameObject, totalwin: number, winType:string = ''): void {
-        spineObject.alpha = 1;
-        this.spineWinAnim = spineObject;
-        let animationName = '';
-        let animationName2 = '';
-        
-        const sampleDuration = 500;
-        const intervalWin = (totalwin/sampleDuration * 100)/ 100;
-        let runningWin = 0;
-        let runningChar : string[] = [];
 
-        // Get the AmountWin bone
-        // const amountWinBone = spineObject.skeleton.findBone('AmountWin');
-        // if (!amountWinBone) {
-        //     console.error(`${amountWinBone} bone not found`);
-        //     return;
-        // }
-// 
-        // // Position the AmountWin bone at the center of the screen
-        // const screenWidth = this.scene.cameras.main.width;
-        // amountWinBone.x = screenWidth / 2;
-        // amountWinBone.y = 0; // Adjust this if you need vertical positioning
-
-        for(let i = 0 ; i < sampleDuration; i++){
-            setTimeout(() => {
-                // increment
-                if(runningWin >= totalwin){
-                    runningWin = totalwin;
-                }
-                else{
-                    runningWin += intervalWin;
-                }
-                
-                Events.emitter.emit(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN,
-                     runningWin,
-                     winType
-                    );
-
-                // Convert running win to character array
-                runningChar = [];
-                const numStr = runningWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                for (let i = 0; i < numStr.length; i++) {
-                    if (numStr[i] === '.') {
-                        runningChar.push('dot');
-                    } else if (numStr[i] === ',') {
-                        runningChar.push('coma');
-                    } else {
-                        runningChar.push(numStr[i]);
-                    }
-                }
-            }, 3000 * i / sampleDuration);
-        }
-    
-        switch (winType) {
-            case 'BigWin':
-                animationName = 'BigWin-Intro';
-                animationName2 = 'BigWin-Idle'; 
-                break;
-
-            case 'EpicWin':
-                animationName = 'EpicWin-Intro';
-                animationName2 = 'EpicWin-Idle';
-                break;
-
-            case 'MegaWin':
-                animationName = 'MegaWin-Intro';
-                animationName2 = 'MegaWin-Idle';
-                break;
-
-            case 'SuperWin':
-                animationName = 'SuperWin-Intro';
-                animationName2 = 'SuperWin-Idle';
-                break;
-                
-            case 'FreeSpin':
-                animationName = 'FreeSpin-Intro';
-                animationName2 = 'FreeSpin-Idle';
-                break;
-
-            case 'Congrats':
-                animationName = 'Congrats-Intro';
-                animationName2 = 'Congrats-Idle'; 
-                break;
-            default:
-                spineObject.destroy();
-                console.error("Win type not found: " + winType);
-                return;
-        }
-        if(animationName != '' && animationName2 != ''){
-            // Check if there's an ongoing animation
-            if (spineObject.animationState.tracks.length > 0) {
-                spineObject.animationState.addAnimation(this.currentTrack, animationName, false);
-                spineObject.animationState.addAnimation(this.currentTrack + 1, animationName2, true);
-                this.currentTrack += 2;
-            }
-            else{
-                spineObject.animationState.setAnimation(this.currentTrack, animationName, false);
-                spineObject.animationState.addAnimation(this.currentTrack + 1, animationName2, true);
-                this.currentTrack += 2;
-            }
-        } 
-    }
     private currentTrack: number = 0;
     
     exitAnimation(): void {

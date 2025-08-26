@@ -6,6 +6,7 @@ import { AudioManager } from '../scenes/components/AudioManager';
 import { SlotMachine } from '../scenes/components/SlotMachine';
 import { HelpScreen } from '../scenes/components/HelpScreen';
 import { GameAPI } from '../scenes/backend/GameAPI';
+import { Menu } from './Menu';
 // Custom button interfaces with proper type safety
 interface ButtonBase {
     isButton: boolean;
@@ -22,6 +23,7 @@ interface GameScene extends Scene {
     audioManager: AudioManager;
     slotMachine: SlotMachine;
     helpScreen: HelpScreen;
+    autoplay: Autoplay;
 }
 
 export class Buttons {
@@ -44,7 +46,7 @@ export class Buttons {
     private balanceContainer: Phaser.GameObjects.Container;
     private totalWinContainer: Phaser.GameObjects.Container;
     private betContainer: Phaser.GameObjects.Container; 
-    public autoplay: Autoplay;
+
     private idleTween: Tweens.Tween | null = null;
     private static PANEL_WIDTH = 250;
     private static PANEL_HEIGHT = 120;
@@ -55,8 +57,9 @@ export class Buttons {
     private mobile_buttons_x: number = 0;
     private mobile_buttons_y: number = 0;
     
+    private menu: Menu;
+    
     constructor() {
-        this.autoplay = new Autoplay();
         this.isMobile = this.isMobileDevice();
     }
 
@@ -87,6 +90,7 @@ export class Buttons {
         scene.load.image('buyFeatBG', 'assets/Reels/BuyFeatureBG.png');
         scene.load.image('freeSpinDisplay', `${prefix}/FreeSpinDisplay.png`);
         scene.load.image('autoplayIndicator', `${prefix}/AutoplayIndicator.png`);
+        scene.load.image('amplifyBet', `${prefix}/AmplifyBet.png`);
 
         scene.load.image('greenBtn', 'assets/Buttons/greenBtn.png');
         scene.load.image('greenLongBtn', 'assets/Buttons/greenLongBtn.png');
@@ -101,14 +105,22 @@ export class Buttons {
         // Preload help screen assets
         const helpScreen = new HelpScreen();
         helpScreen.preload(scene);
+        const menu = new Menu();
+        menu.preload();
     }
 
     create(scene: GameScene): void {
+        
+        if(this.isMobile){
+            this.mobile_buttons_x = scene.scale.width * 0.05;
+            this.mobile_buttons_y = scene.scale.height * 0.86;
+        }
+
         this.createContainer(scene);
         this.createTurboButton(scene);
         this.createSpinButton(scene);
         this.createAutoplay(scene);
-        this.createInfo(scene);
+        if(!this.isMobile) this.createInfo(scene);
         this.createBalance(scene);
         this.createTotalWin(scene);
         this.createBet(scene);
@@ -116,7 +128,7 @@ export class Buttons {
         this.createDoubleFeature(scene);
         this.createLogo(scene);
         this.createMarquee(scene);
-        this.createVolumeSettings(scene);
+        this.createSettings(scene);
         //this.createSettingsButton(scene);
         
         this.setupKeyboardInput(scene);
@@ -148,8 +160,8 @@ export class Buttons {
     }
 
     private createTurboButton(scene: GameScene): void {
-        const x = this.isMobile ? this.width * 0.866 : this.width * 0.88;
-        const y = this.isMobile ? this.height * 0.85 : this.height * 0.29;
+        const x = this.isMobile ? this.width * 0.915 : this.width * 0.88;
+        const y = this.isMobile ? this.mobile_buttons_y : this.height * 0.29;
         const container = scene.add.container(x, y) as ButtonContainer;
 
         this.turboButton = scene.add.image(0, 0, 'turboButton') as ButtonImage;
@@ -185,7 +197,7 @@ export class Buttons {
             this.mobile_buttons_y = container.y;
         }
         container.name = 'turboContainer';
-        container.setScale(this.isMobile ? 0.8 : 1);
+        container.setScale(this.isMobile ? 0.5 : 1);
         this.buttonContainer.add(container);
 
         container.setInteractive(
@@ -226,9 +238,9 @@ export class Buttons {
             }
 
             // If autoplay is active, stop it
-            if (scene.buttons.autoplay.isAutoPlaying) {
-                scene.buttons.autoplay.stop();
-                scene.buttons.resetAutoplayButtons();
+            if (scene.autoplay.isAutoPlaying) {
+                scene.autoplay.stop();
+                this.resetAutoplayButtons();
                 Events.emitter.emit(Events.AUTOPLAY_STOP); 
             }
 
@@ -253,14 +265,14 @@ export class Buttons {
         const container = scene.add.container(x, y) as ButtonContainer;
 
         this.spinButton = scene.add.image(0, 0, 'spinButton') as ButtonImage;
-        const width = this.isMobile ? this.spinButton.width / 2.5 : this.spinButton.width * 0.75;
-        const height = this.isMobile ? this.spinButton.height / 2.5 : this.spinButton.height * 0.75;
+        const width = this.isMobile ? this.spinButton.width / 3.25 : this.spinButton.width * 0.75;
+        const height = this.isMobile ? this.spinButton.height / 3.25 : this.spinButton.height * 0.75;
 
         this.freeSpinBtn = scene.add.image(x, y, 'greenCircBtn') as ButtonImage;
         this.autoplayIndicator = scene.add.image(0, 0, 'autoplayIndicator') as ButtonImage;
 
-        const widthgcb = this.isMobile ? this.freeSpinBtn.width / 2.25 : this.freeSpinBtn.width * 0.9;
-        const heightgcb = this.isMobile ? this.freeSpinBtn.height / 2.25 : this.freeSpinBtn.height * 0.9;
+        const widthgcb = this.isMobile ? this.freeSpinBtn.width / 2.5 : this.freeSpinBtn.width * 0.9;
+        const heightgcb = this.isMobile ? this.freeSpinBtn.height / 2.5 : this.freeSpinBtn.height * 0.9;
 
         const spinButtonBackgroundCircle = scene.add.graphics();
         spinButtonBackgroundCircle.fillStyle(0x000000, 0.15);
@@ -283,7 +295,7 @@ export class Buttons {
         this.autoplayIndicator.setInteractive().isButton = true;
         this.autoplayIndicator.setScale(0.95, 0.95);
         if(this.isMobile) {
-            this.autoplayIndicator.setScale(0.5, 0.5);
+            this.autoplayIndicator.setScale(0.3, 0.3);
         }
         
         container.add(this.freeSpinBtn);
@@ -312,7 +324,7 @@ export class Buttons {
         };
 
         const canIdleRotate = () => {
-            return !scene.gameData.isSpinning && !this.autoplay.isAutoPlaying;
+            return !scene.gameData.isSpinning && !scene.autoplay.isAutoPlaying;
         };
 
         const updateSpinButtonState = () => {
@@ -342,8 +354,8 @@ export class Buttons {
             }
 
             // If autoplay is active, stop it
-            if (this.autoplay.isAutoPlaying) {
-                this.autoplay.stop();
+            if (scene.autoplay.isAutoPlaying) {
+                scene.autoplay.stop();
                 this.resetAutoplayButtons();
                 Events.emitter.emit(Events.AUTOPLAY_STOP);
             }
@@ -395,6 +407,11 @@ export class Buttons {
             updateSpinButtonState();
         });
 
+        // Add a manual update call for SPIN_ANIMATION_END
+        Events.emitter.on(Events.SPIN_ANIMATION_END, () => {
+            updateSpinButtonState();
+        });
+
         // Initial state
         updateSpinButtonState();
         if (canIdleRotate()) {
@@ -402,9 +419,24 @@ export class Buttons {
         }
     }
 
+    // Public method to manually update spin button state
+    public updateSpinButtonState(scene: GameScene): void {
+        if (scene.gameData.isSpinning || scene.slotMachine.activeWinOverlay) {
+            this.spinButton.setAlpha(0.5);
+            this.spinButton.disableInteractive();
+            this.autoplayButton?.setAlpha(0.5);
+            this.autoplayButton?.disableInteractive();
+        } else {
+            this.spinButton.setAlpha(1);
+            this.spinButton.setInteractive();
+            this.autoplayButton?.setAlpha(1);
+            this.autoplayButton?.setInteractive();
+        }
+    }
+
     private createAutoplay(scene: GameScene): void {
-        const x = this.isMobile ? this.width * 0.15 : this.width * 0.88;
-        const y = this.isMobile ? this.mobile_buttons_y : this.height * 0.598;
+        const x = this.isMobile ? this.width * 0.28 : this.width * 0.88;
+        const y = this.isMobile ? this.mobile_buttons_y  : this.height * 0.598;
         const radius = 60;
         const padding = 32; 
         const textPadding = 4;
@@ -413,8 +445,8 @@ export class Buttons {
 
         this.autoplayButton = scene.add.image(0, 0, 'autoplayButton') as ButtonImage;
         this.autoplayOnButton = scene.add.image(0, 0, 'autoplayOn') as ButtonImage;
-        this.autoplayButton.setScale(this.isMobile ? 0.6 : 1);
-        this.autoplayOnButton.setScale(this.isMobile ? 0.6 : 1);
+        this.autoplayButton.setScale(this.isMobile ? 0.7 : 1);
+        this.autoplayOnButton.setScale(this.isMobile ? 0.4 : 1);
         
         const innerCircle = scene.add.graphics();
         innerCircle.fillStyle(0x000000, 0.5);
@@ -438,14 +470,14 @@ export class Buttons {
         this.buttonContainer.add(container);
 
         // --- AUTOPLAY SETTINGS POPUP ---
-        const popupWidth = 466;
+        const popupWidth = this.isMobile ? scene.scale.width : 466;
         const popupHeight = 547;
         const popup = scene.add.container(
-            this.isMobile ? scene.scale.width / 2 - popupWidth * 0.38: scene.scale.width / 2 - popupWidth / 2,
-            this.isMobile ? scene.scale.height / 2 - popupHeight * 0.42: scene.scale.height / 2 - popupHeight / 2);
+            this.isMobile ? 0 : scene.scale.width / 2 - popupWidth / 2,
+            this.isMobile ? scene.scale.height / 2  - popupHeight * 0.42 : scene.scale.height / 2 - popupHeight / 2);
         popup.setDepth(1000);
         popup.setVisible(false);
-        popup.setScale(this.isMobile ? 0.75 : 1);
+        popup.setScale(this.isMobile ? 1 : 1);
 
         // Store popup reference for external access
         this.autoplayPopup = popup;
@@ -718,7 +750,7 @@ export class Buttons {
                     }
                 });
                 
-                scene.gameData.debugLog("autoplay.isAutoPlaying", this.autoplay.isAutoPlaying);
+                scene.gameData.debugLog("autoplay.isAutoPlaying", scene.autoplay.isAutoPlaying);
                 // Start autoplay 
                 Events.emitter.emit(Events.AUTOPLAY_START, selectedSpins);
 
@@ -806,6 +838,21 @@ export class Buttons {
             this.autoplayButton.visible = true;
             this.autoplayOnButton.visible = false;
         });
+        
+
+        if(this.isMobile){
+            const autoplayText = scene.add.text(0, 30,
+                'Autoplay',
+                {
+                    fontSize: '12px',
+                    color: '#FFFFFF',   
+                    fontFamily: 'Poppins',
+                    align: 'center'
+                }
+            );
+            autoplayText.setOrigin(0.5, 0); // Center horizontally, top align vertically
+            container.add(autoplayText);
+        }
 
         //this.buttonContainer.add(popup);
     }
@@ -904,7 +951,7 @@ export class Buttons {
         const container = scene.add.container(x, y) as ButtonContainer;
 
         // Create a gradient texture for balance
-        const gradientTexture = scene.textures.createCanvas('balanceGradient', width, Buttons.PANEL_HEIGHT);
+        const gradientTexture = scene.textures.createCanvas('balanceGradient', this.isMobile ? width / 1.5 : width, Buttons.PANEL_HEIGHT);
         if (gradientTexture) {
             const context = gradientTexture.getContext();
             const gradient = context.createLinearGradient(0, 0, 0, Buttons.PANEL_HEIGHT);
@@ -918,33 +965,33 @@ export class Buttons {
         // Create the background with gradient and border
         this.balance = scene.add.graphics();
         this.balance.fillStyle(0x000000, 0.5);
-        this.balance.fillRoundedRect(0, 0, width, Buttons.PANEL_HEIGHT, cornerRadius);
+        this.balance.fillRoundedRect(0, 0, this.isMobile ? width / 1.5 : width, Buttons.PANEL_HEIGHT, cornerRadius);
         this.balance.lineStyle(1, 0x66D449);
-        this.balance.strokeRoundedRect(0, 0, width, Buttons.PANEL_HEIGHT, cornerRadius);
+        this.balance.strokeRoundedRect(0, 0, this.isMobile ? width / 1.5 : width, Buttons.PANEL_HEIGHT, cornerRadius);
         container.add(this.balance);
 
-        const text1 = scene.add.text(width * 0.5, Buttons.PANEL_HEIGHT * 0.3, 'BALANCE', {
+        const text1 = scene.add.text(this.isMobile ? width * 0.5 / 1.5 : width * 0.5, Buttons.PANEL_HEIGHT * 0.3, 'BALANCE', {
             fontSize: '25px',
             color: '#3FFF0D',
             align: 'center',
             fontStyle: 'bold',
             fontFamily: 'Poppins'
         }) as ButtonText;
-        text1.setScale(this.isMobile ? 1.25 : 1);
+        text1.setScale(this.isMobile ? 1 : 1);
         container.add(text1);
         text1.setOrigin(0.5, 0.5);
 
         const balance = scene.gameData.balance;
         const balanceString = balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        const text2 = scene.add.text(width * 0.5, Buttons.PANEL_HEIGHT * 0.65, `$ ${balanceString}`, {
+        const text2 = scene.add.text(this.isMobile ? width * 0.5 / 1.5 : width * 0.5, Buttons.PANEL_HEIGHT * 0.65, `$ ${balanceString}`, {
             fontSize: '35px',
             color: '#FFFFFF',
             align: 'center',
             fontStyle: 'bold',
             fontFamily: 'Poppins'
         }) as ButtonText;
-        text2.setScale(this.isMobile ? 1.25 : 1);
+        text2.setScale(this.isMobile ? 1 : 1);
         container.add(text2);
         text2.setOrigin(0.5, 0.5);
 
@@ -957,13 +1004,20 @@ export class Buttons {
         });
 
         Events.emitter.on(Events.UPDATE_BALANCE, () => {
-            scene.gameAPI.getBalance().then((data) => {
-                const balance = data.data.balance;
-                text2.setText(scene.gameData.currency + " " + balance); 
-                scene.gameData.debugLog("update balance " + balance);
+            try{
+                scene.gameAPI.getBalance().then((data) => {
+                    const balance = data.data.balance;
+                    text2.setText(scene.gameData.currency + " " + balance); 
+                    scene.gameData.debugLog("update balance " + balance);
 
-                scene.gameData.balance = parseFloat(balance);
-            });
+                    scene.gameData.balance = parseFloat(balance);
+                });
+            }
+            catch (error) {
+                console.error("Error updating balance:", error);
+                scene.gameData.balance = 987654321;
+                text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            }
         });
 
         container.setScale(this.isMobile ? 0.5 : 1);
@@ -980,7 +1034,7 @@ export class Buttons {
         const cornerRadius = 10;
 
         const container = scene.add.container(x, y) as ButtonContainer;
-        container.setDepth(4);
+        container.setDepth(14);
 
         // Create a gradient texture for totalWin
         const gradientTexture = scene.textures.createCanvas('totalWinGradient', width, Buttons.PANEL_HEIGHT);
@@ -1041,13 +1095,13 @@ export class Buttons {
     }
 
     private createBet(scene: GameScene): void {
-        const width = this.isMobile ? Buttons.PANEL_WIDTH * 1.5 : Buttons.PANEL_WIDTH;
-        const x = this.isMobile ? this.totalWinContainer.x : this.totalWinContainer.x + width * 1.5 + this.width * 0.01;
+        const width = this.isMobile ? Buttons.PANEL_WIDTH : Buttons.PANEL_WIDTH;
+        const x = this.isMobile ? this.totalWinContainer.x * 1.3 : this.totalWinContainer.x + width * 1.5 + this.width * 0.01;
         const y = this.isMobile ? this.totalWinContainer.y : this.height * 0.83;
-        const cornerRadius = 10;
+        const cornerRadius = 15;
 
         const container = scene.add.container(x, y) as ButtonContainer;
-        container.setDepth(4);
+        container.setDepth(14);
         const betOptions = [0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 5, 6, 8, 10, 14, 18, 24, 32 ,40, 60, 80, 100, 110 ,120, 130, 140, 150];
         let selectedBetIndex = 15;
 
@@ -1066,7 +1120,7 @@ export class Buttons {
             fontStyle: 'bold',
             fontFamily: 'Poppins'
         }) as ButtonText;
-        text1.setScale(this.isMobile ? 1.25 : 1);
+        text1.setScale(this.isMobile ? 1.1 : 1);
         container.add(text1);
         text1.setOrigin(0.5, 0.5);
 
@@ -1079,14 +1133,14 @@ export class Buttons {
             fontStyle: 'bold',
             fontFamily: 'Poppins'
         }) as ButtonText;
-        betValueText.setScale(this.isMobile ? 1.25 : 1);
+        betValueText.setScale(this.isMobile ? 1.1 : 1);
         container.add(betValueText);
         betValueText.setOrigin(0.5, 0.5);
 
         // plus button
         const plusBtn = scene.add.image(0, 0, 'plus') as ButtonImage;
-        plusBtn.setPosition(this.isMobile ? this.mobile_buttons_x * 0.425 : width - 50, this.isMobile ? this.mobile_buttons_y / 3.125 : Buttons.PANEL_HEIGHT * 0.65);
-        plusBtn.setScale(this.isMobile ? 0.5 : 0.3);
+        plusBtn.setPosition(this.isMobile ? betValueText.x + 80 : width - 50, this.isMobile ? betValueText.y - 5 : Buttons.PANEL_HEIGHT * 0.65);
+        plusBtn.setScale(this.isMobile ? 0.25 : 0.3);
         
         plusBtn.setInteractive().isButton = true;
         plusBtn.setAlpha(0.8);
@@ -1094,8 +1148,8 @@ export class Buttons {
 
         // minus button
         const minusBtn = scene.add.image(0, 0, 'minus') as ButtonImage;
-        minusBtn.setPosition(this.isMobile ? - plusBtn.x * 1.11 : 50, this.isMobile ? plusBtn.y : Buttons.PANEL_HEIGHT * 0.65);
-        minusBtn.setScale(this.isMobile ? 0.5 : 0.3);
+        minusBtn.setPosition(this.isMobile ? betValueText.x - 80 : 50, this.isMobile ? plusBtn.y : Buttons.PANEL_HEIGHT * 0.65);
+        minusBtn.setScale(this.isMobile ? 0.25 : 0.3);
 
         minusBtn.setInteractive().isButton = true;
         minusBtn.setAlpha(0.8); 
@@ -1154,7 +1208,7 @@ export class Buttons {
 
         // Create bet adjustment popup
         const betContainer = scene.add.container(0, 0);
-        betContainer.setScale(this.isMobile ? 0.75 : 1);
+        betContainer.setScale(this.isMobile ? 1 : 1);
         betContainer.setDepth(30);
         const padding = 32;
         // Create bet background
@@ -1370,8 +1424,8 @@ export class Buttons {
 
     private createBuyFeature(scene: GameScene): void {
         // Elliptical buy feature button in upper left
-        const x = this.isMobile ? this.width * 0.341 : this.width * 0.15;
-        const y = this.isMobile ? this.height * 0.67 : this.height * 0.13;
+        const x = this.isMobile ? this.width * 0.505 : this.width * 0.15;
+        const y = this.isMobile ? this.height * 0.75 : this.height * 0.13;
 
         const ellipseWidth = 277;
         const ellipseHeight = 114;
@@ -1394,17 +1448,6 @@ export class Buttons {
             (buttonBg as any).isButton = true;
             container.add(buttonBg);
         }
-
-        let starLeft : GameObjects.Image;
-        let starRight : GameObjects.Image;
-        // Stars
-        if(!this.isMobile){
-            starLeft = scene.add.image(-ellipseWidth/2 + 32, -24, 'star') as ButtonImage;
-            container.add(starLeft);
-            starRight = scene.add.image(ellipseWidth/2 - 32, -24, 'star') as ButtonImage;
-            container.add(starRight);
-        }
-        
         // BUY FEATURE text
         
         const buttonText = scene.add.text(0, -24, 'BUY FEATURE', {
@@ -1567,25 +1610,17 @@ export class Buttons {
         const updateButtonState = () => {
             // Disable if spinning, autoplay is active, or in bonus round
             const shouldDisable = scene.gameData.isSpinning || 
-                this.autoplay.isAutoPlaying || 
+                scene.autoplay.isAutoPlaying || 
                 scene.gameData.isBonusRound;
 
             if (shouldDisable) {
                 buttonBg.setAlpha(0.5);
                 this.buyFeaturePriceText.setAlpha(0.5);
-                buttonText.setAlpha(0.5);
-                if(!this.isMobile) {
-                    starLeft.setAlpha(0.5);
-                    starRight.setAlpha(0.5);
-                }
+                    buttonText.setAlpha(0.5);
             } else {
                 buttonBg.setAlpha(1);
                 this.buyFeaturePriceText.setAlpha(1);
                 buttonText.setAlpha(1);
-                if(!this.isMobile) {
-                    starLeft.setAlpha(1);
-                    starRight.setAlpha(1);
-                }
             }
         };
 
@@ -1593,7 +1628,7 @@ export class Buttons {
         const showBuyFeaturePopup = () => {
             // Don't show if spinning, autoplay is active, or in bonus round
             if (scene.gameData.isSpinning || 
-                this.autoplay.isAutoPlaying || 
+                scene.autoplay.isAutoPlaying || 
                 scene.gameData.isBonusRound) return;
             
             // Close autoplay settings if open
@@ -1679,8 +1714,8 @@ export class Buttons {
 
 
     private createDoubleFeature(scene: GameScene): void {
-        const x = this.isMobile ? this.width * 0.5125 : this.width * 0.8;
-        const y = this.isMobile ? this.height * 0.64 : this.height * 0.82;
+        const x = this.isMobile ? this.width * 0.73 : this.width * 0.8;
+        const y = this.isMobile ? this.mobile_buttons_y : this.height * 0.82;
 
         const width = this.isMobile ? 240 : 254;
         const height = this.isMobile ? 108 : 131;
@@ -1689,10 +1724,15 @@ export class Buttons {
 
         if(this.isMobile){
             // elliptical button
-            const bg = scene.add.image(width / 2, height / 2, 'doubleFeature') as ButtonImage;
-            bg.displayWidth = width;
-            bg.displayHeight = height;
+            const bg = scene.add.image(0, 0, 'amplifyBet') as ButtonImage;
             bg.setOrigin(0.5, 0.5);
+            bg.setScale(0.7);
+            bg.setInteractive().isButton = true;
+            bg.on('pointerdown', () => {
+                scene.gameData.doubleChanceEnabled = !scene.gameData.doubleChanceEnabled;
+                Events.emitter.emit(Events.ENHANCE_BET_TOGGLE, {});
+                scene.audioManager.UtilityButtonSFX.play();
+            });
             container.add(bg);
         }
         else{
@@ -1762,6 +1802,7 @@ export class Buttons {
             fontStyle: 'bold'
         }) as ButtonText;
         enhancedLabel.setFontSize(this.isMobile ? '22px' : '14px');
+        enhancedLabel.setVisible(this.isMobile ? false : true);
         container.add(enhancedLabel);
 
         // Toggle switch (right, middle)
@@ -1776,6 +1817,7 @@ export class Buttons {
         toggleBg.lineStyle(3, 0xFFFFFF, 0.5);
         toggleBg.strokeRoundedRect(toggleX, toggleY, toggleWidth, toggleHeight, toggleRadius);
         toggleBg.fillRoundedRect(toggleX, toggleY, toggleWidth, toggleHeight, toggleRadius);
+        toggleBg.setVisible(this.isMobile ? false : true);
         container.add(toggleBg);
         
 
@@ -1824,6 +1866,7 @@ export class Buttons {
             }
         };
         drawToggle();
+        toggleCircle.setVisible(this.isMobile ? false : true);
         container.add(toggleCircle);
 
         // Toggle logic
@@ -1851,12 +1894,69 @@ export class Buttons {
 
         container.setDepth(5);
         container.name = 'doubleFeatureContainer';
-        container.setScale(this.isMobile ? 0.5 : 1);
+        container.setScale(this.isMobile ? 1 : 1);
+        if(this.isMobile){
+            const amplifyBetText = scene.add.text(0, 30,
+                'Amplify Bet',
+                {
+                    fontSize: '12px',
+                    color: '#FFFFFF',
+                    fontFamily: 'Poppins',
+                    align: 'center'
+                }
+            );
+            amplifyBetText.setOrigin(0.5, 0); // Center horizontally, top align vertically
+            container.add(amplifyBetText);
+        }
+        
+        // Create "Double Chance For Feature" label with 2-line thick green border and black background, above the button
+        if(this.isMobile){
+            const labelWidth = 120;
+            const labelHeight = 48;
+            const borderThickness = 1;
+            const borderColor = 0x00FF00; // Green
+            const bgColor = 0x000000; // Black
+
+            // Container for the label
+            const labelContainer = scene.add.container(0, -(labelHeight/2 + 20));
+
+            // Draw black background rectangle
+            const bgRect = scene.add.graphics();
+            bgRect.fillStyle(bgColor, 1);
+            bgRect.fillRect(-labelWidth/2, -labelHeight/2, labelWidth, labelHeight);
+
+            // Draw 2-line thick green border
+            // Outer border
+            bgRect.lineStyle(borderThickness, borderColor, 1);
+            bgRect.strokeRect(-labelWidth/2, -labelHeight/2, labelWidth, labelHeight);
+            // Inner border (slightly inset)
+            bgRect.lineStyle(borderThickness, borderColor, 1);
+            bgRect.strokeRect(-labelWidth/2 + borderThickness, -labelHeight/2 + borderThickness, labelWidth - 2*borderThickness, labelHeight - 2*borderThickness);
+            bgRect.setScale(0.9, 0.8);
+
+            labelContainer.add(bgRect);
+
+            // Add the text
+            const labelText = scene.add.text(0, 0, 'Double Chance For Feature', {
+                fontSize: '12px',
+                color: '#FFFFFF',
+                fontFamily: 'Poppins',
+                align: 'center',
+                wordWrap: {
+                    width: labelWidth - 20
+                }   
+            }) as ButtonText;
+            labelText.setOrigin(0.5, 0.5);
+            labelContainer.add(labelText);
+
+
+            container.add(labelContainer);
+        }
         this.buttonContainer.add(container);
     }
 
     private createLogo(scene: GameScene): void {
-        const x = this.isMobile ? this.width * 0.22 : this.width * 0.88;
+        const x = this.isMobile ? this.width * 0.5 : this.width * 0.88;
         const y = this.isMobile ? this.height * 0.10 : this.height * 0.12;
         const container = scene.add.container(x, y) as ButtonContainer;
 
@@ -1925,8 +2025,8 @@ export class Buttons {
     }
 
     private createVolumeSettings(scene: GameScene): void {
-        const x = this.isMobile ? scene.scale.width * 0.88 : this.width * 0.05;
-        const y = this.isMobile ? scene.scale.height * 0.67 : this.height * 0.95;
+        const x = this.isMobile ? this.width * 0.15 : this.width * 0.05;
+        const y = this.isMobile ? this.mobile_buttons_y : this.height * 0.95;
         const container = scene.add.container(x, y) as ButtonContainer;
 
         const widthSlider = 180;
@@ -2246,6 +2346,61 @@ export class Buttons {
         });
 
     }
+
+    private createSettings(scene: GameScene): void {
+        const x = this.isMobile ? scene.scale.width * 0.11 : this.width * 0.05;
+        const y = this.isMobile ? this.mobile_buttons_y : this.height * 0.9;
+
+        const container = scene.add.container(x, y) as ButtonContainer;
+
+        const scaleFactor = 1;
+        const radius = 40 * scaleFactor;
+
+        const volumeIcon = scene.add.image(0, 0, this.isMobile ? 'hamburger' : 'volume') as ButtonImage;
+        volumeIcon.setOrigin(0.5, 0.5);
+        volumeIcon.setScale(this.isMobile ? 1 * scaleFactor : 0.6 * scaleFactor);
+
+        if(this.isMobile){
+            const innerCircle = scene.add.graphics();
+            innerCircle.fillStyle(0x000000, 0.5);
+            innerCircle.fillCircle(0, 0, volumeIcon.width);
+            container.add(innerCircle);
+        }
+        container.add(volumeIcon);
+
+        this.buttonContainer.add(container);
+
+        // Make container interactive
+        container.setInteractive(
+            new Geom.Rectangle(-radius, -radius, radius * 2, radius * 2),
+            Geom.Rectangle.Contains
+        ).isButton = true;
+
+        if(this.isMobile){
+            const settingsText = scene.add.text(0, 25,
+                'Menu',
+                {
+                    fontSize: '12px',
+                    color: '#FFFFFF',
+                    fontFamily: 'Poppins',
+                    align: 'center'
+                }
+            );
+            settingsText.setOrigin(0.5, 0);
+            container.add(settingsText);
+        }
+
+        if (!this.menu){
+            this.menu = new Menu();
+            this.menu.create(scene);
+        }
+        // Toggle menu on settings button click
+        container.on('pointerdown', () => {
+            scene.audioManager.UtilityButtonSFX.play();
+            this.menu.toggleMenu(scene);
+        });
+    }
+
 
     private createSettingsButton(scene: GameScene): void {
         const x = this.width * 0.0825;

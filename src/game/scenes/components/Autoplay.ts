@@ -10,6 +10,8 @@ interface GameScene extends Scene {
     audioManager: AudioManager;
     slotMachine: SlotMachine;
     buttons: Buttons;
+    helpScreen: any; // Add helpScreen property to match Buttons interface
+    autoplay: any;
 }
 
 export class Autoplay {
@@ -47,6 +49,8 @@ export class Autoplay {
     destroy(): void {
         Events.emitter.off(Events.AUTOPLAY_START, this.start);
         Events.emitter.off(Events.AUTOPLAY_STOP, this.stop);
+        Events.emitter.removeListener(Events.MATCHES_DONE);
+        Events.emitter.removeListener(Events.WIN_OVERLAY_HIDE);
     }
 
     addSpins(numSpins: number): void {
@@ -66,21 +70,40 @@ export class Autoplay {
             this.spin();
         
 
-        // Remove any existing event listener to avoid duplicates
+        // Remove any existing event listeners to avoid duplicates
         Events.emitter.removeListener(Events.MATCHES_DONE);
+        Events.emitter.removeListener(Events.WIN_OVERLAY_HIDE);
 
         // Listen for matches completion
         Events.emitter.on(Events.MATCHES_DONE, () => {
             if (this.isAutoPlaying && this.scene && !this.scene.gameData.isSpinning) {
-                // Clear any existing interval
-                if (this.spinInterval) {
-                    clearTimeout(this.spinInterval);
+                // Check if there's an active win overlay
+                if (this.scene.slotMachine.activeWinOverlay) {
+                    // Wait for win overlay to complete before proceeding
+                    this.scene.gameData.debugLog("Autoplay: Waiting for win overlay to complete");
+                    return;
                 }
                 
-                // Add a small delay before next spin
-                this.spinInterval = setTimeout(() => {
-                    this.spin();
-                }, 10);
+                // No win overlay active, proceed with next spin
+                this.scheduleNextSpin();
+            }
+        });
+
+        // Listen for win overlay completion
+        Events.emitter.on(Events.WIN_OVERLAY_HIDE, () => {
+            if (this.isAutoPlaying && this.scene && !this.scene.gameData.isSpinning) {
+                // Win overlay completed, proceed with next spin after a short delay
+                this.scene.gameData.debugLog("Autoplay: Win overlay completed, scheduling next spin");
+                this.scheduleNextSpin();
+            }
+        });
+
+        // Listen for win overlay show to ensure buttons are disabled
+        Events.emitter.on(Events.WIN_OVERLAY_SHOW, () => {
+            if (this.isAutoPlaying && this.scene) {
+                // Ensure buttons are properly disabled when win overlay shows
+                this.scene.buttons.updateSpinButtonState(this.scene);
+                this.scene.gameData.debugLog("Autoplay: Win overlay shown, buttons disabled");
             }
         });
     }
@@ -161,6 +184,7 @@ export class Autoplay {
         this.remainingSpins = 0;
         
         Events.emitter.removeListener(Events.MATCHES_DONE);
+        Events.emitter.removeListener(Events.WIN_OVERLAY_HIDE);
         
         // Remove both text and background
         if (this.remainingSpinsText) {
@@ -171,6 +195,21 @@ export class Autoplay {
             this.remainingSpinsBg.destroy();
             this.remainingSpinsBg = undefined;
         }
+    }
+
+    /**
+     * Schedule the next spin with a short delay to allow win animations to complete
+     */
+    private scheduleNextSpin(): void {
+        // Clear any existing interval
+        if (this.spinInterval) {
+            clearTimeout(this.spinInterval);
+        }
+        
+        // Add a short delay before next spin to ensure smooth transitions
+        this.spinInterval = setTimeout(() => {
+            this.spin();
+        }, 500); // 500ms delay to allow win animations and sounds to complete
     }
 
     private spin(): void {
@@ -187,13 +226,16 @@ export class Autoplay {
             return;
         }
 
-        // If music has resumed, destroy any active win overlay
+        // Additional safety check: don't spin if win overlay is active
         if (this.scene.slotMachine.activeWinOverlay) {
-            if(!this.scene.audioManager.BGChecker?.isPlaying) {
-                this.scene.slotMachine.destroyWinOverlay(this.scene);
-                this.scene.gameData.debugLog("b1 destroy win overlay");
-            }
+            this.scene.gameData.debugLog("Autoplay: Win overlay active, delaying spin");
+            // Reschedule the spin for later
+            this.scheduleNextSpin();
+            return;
         }
+
+        // Don't destroy win overlays during autoplay - let them complete naturally
+        // The win overlay will be handled by the event listeners
 
         // For free spins, don't check balance
         if (!this.scene.gameData.isBonusRound) {

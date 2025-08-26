@@ -11,7 +11,7 @@ const desktopConfig: Types.Core.GameConfig = {
     width: 1920,
     height: 1080,
     parent: 'game-container',
-    backgroundColor: '#000000',
+    transparent: true,
     scale: {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH
@@ -40,7 +40,7 @@ const mobileConfig: Types.Core.GameConfig = {
     width: 428,
     height: 926,
     parent: 'game-container',
-    backgroundColor: '#000000',
+    transparent: true,
     scale: {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH

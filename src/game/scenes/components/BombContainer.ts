@@ -31,18 +31,8 @@ export class BombContainer extends GameObjects.Container {
         // Set the animation time scale to 1
         this.bombSprite.animationState.timeScale = 1;
         // Set the animation based on the bomb type
-        switch(this.bombType){
-            case 'low':
-                this.bombSprite.animationState.setAnimation(0, 'low-static');
-                break;
-            case 'medium':
-                this.bombSprite.animationState.setAnimation(0, 'medium-static');
-                break;
-            case 'high':
-                this.bombSprite.animationState.setAnimation(0, 'high-static');
-                break;
-        }
 
+        this.bombSprite.animationState.setAnimation(0, '');
         
         // Create the text overlay
         this.textOverlay = scene.add.text(0, 0, `${this.multiplier}X`, {
@@ -138,20 +128,7 @@ export class BombContainer extends GameObjects.Container {
         this.gameData.debugLog('Playing bomb animation', { bombType: this.bombType });
         
         // Set the appropriate animation based on bomb type
-        switch (this.bombType) {
-            case 'low':
-                this.bombSprite.animationState.setAnimation(0, 'low-animation');
-                break;
-            case 'medium':
-                this.bombSprite.animationState.setAnimation(0, 'medium-animation');
-                break;
-            case 'high':
-                this.bombSprite.animationState.setAnimation(0, 'high-animation');
-                break;
-            default:
-                this.gameData.debugError('Unknown bomb type:', this.bombType);
-                break;
-        }
+        this.bombSprite.animationState.setAnimation(0, 'animation');
         
         // Animate text overlay appearance
         this.scene.tweens.add({

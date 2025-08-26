@@ -7,7 +7,8 @@ export class GameAPI {
     }   
 
     private async generateGameUrlToken(): Promise<{url: string, token: string}> {
-        const apiUrl = 'https://game-launcher.torrospins.com/api/v2/generate_url';
+        //const apiUrl = 'https://game-launcher.torrospins.com/api/v2/generate_url';
+        const apiUrl = 'http://192.168.0.17:3000/api/v1/generate_url';
         
         const requestBody = {
             operator_id: "18b03717-33a7-46d6-9c70-acee80c54d03",
@@ -83,8 +84,16 @@ export class GameAPI {
         }
     }
     public async getBalance(): Promise<any> {
+        if(!localStorage.getItem('gameToken')){
+            return {
+                data: {
+                    balance: 987654321
+                }
+            }
+        }
         try{
-            const response = await fetch('https://game-launcher.torrospins.com/api/v2/slots/balance', {
+            //const response = await fetch('https://game-launcher.torrospins.com/api/v2/slots/balance', {
+            const response = await fetch('http://192.168.0.17:3000/api/v1/slots/balance', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -108,6 +117,9 @@ export class GameAPI {
     }
 
     public async doSpin(bet: number): Promise<any> {
+        if(!localStorage.getItem('gameToken')){
+            return "error";
+        }
         try {
             // Decrypt the stored token
           // const decryptData = (encryptedData: string): string => {
@@ -121,7 +133,8 @@ export class GameAPI {
           // };
 //
           //  const token = decryptData(this.gameData.gameToken);
-            const response = await fetch('https://game-launcher.torrospins.com/api/v2/slots/bet', {
+            //const response = await fetch('https://game-launcher.torrospins.com/api/v2/slots/bet', {
+            const response = await fetch('http://192.168.0.17:3000/api/v1/slots/bet', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

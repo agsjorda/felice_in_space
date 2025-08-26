@@ -92,13 +92,13 @@ export class LoadingPage extends Scene {
         const height = this.isMobile ? 30 : 40;
         const innerHeight = this.isMobile ? 22 : 30;
         const borderRadius = this.isMobile ? 12 : 16;
-        const barWidth = this.isMobile ? 200 : 310;
+        const barWidth = this.isMobile ? 200 : 300;
         const fontSize = this.isMobile ? '18px' : '24px';
         
         // Adjust positioning based on device
         if (this.isMobile) {
             this.barX = this.cameras.main.centerX - barWidth / 2;
-            this.barY = this.cameras.main.centerY + barWidth * 2;
+            this.barY = this.cameras.main.centerY + barWidth * 1.6
         } else {
             this.barX = this.cameras.main.centerX + this.width + 100;
             this.barY = this.cameras.main.centerY + 160;

@@ -1,116 +1,105 @@
+import { Slot } from './GameData';  
+import { SymbolContainer } from './SymbolContainer';
+import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 import { Scene } from 'phaser';
-import { Slot } from './GameData';
 
 export class Animation {
     private scene: Scene;
-
     constructor(scene: Scene) {
         this.scene = scene;
     }
 
     preload(): void {
        // Felice in Space, 
-       /*
-       for(let i = 0 ; i < Slot.SYMBOLS; i++) {
-        this.scene.load.atlas(
-            `Symbol${i}_FIS`,
-            `assets/Symbols/Animations/Symbol${i}_FIS.png`,
-            `assets/Symbols/Animations/Symbol${i}_FIS.json`
-        );
-       }
-        */
-       for(let i = 0 ; i <= Slot.SYMBOLS; i++) {
-        this.scene.load.image(
-            `Symbol${i}_FIS`,
-            `assets/Symbols/Symbol${i}_FIS.png`
-        );
-       }
-       
-       // Load explosion atlas
-        this.scene.load.atlas(
-            'Explosion_FIS',
-            'assets/Symbols/Animations/Explosion_FIS.png',
-            'assets/Symbols/Animations/Explosion_FIS.json'
-        );
+        // Load symbol atlases - starting from 1 to 9 (not 0)
+        for (let i = 0; i <= Slot.SYMBOLS; i++) {
+            this.scene.load.spineAtlas(`Symbol${i}_FIS`,`assets/Symbols/Animations/Symbol${i}/Symbol${i}_FIS.atlas`);
+            this.scene.load.spineJson(`Symbol${i}_FIS`,`assets/Symbols/Animations/Symbol${i}/Symbol${i}_FIS.json`);
+        }
+        
     }
 
     create(): void {
-        // Create animations for each symbol
-      //  for (let i = 0; i <= Slot.SYMBOLS; i++) {
-      //      const frames = this.scene.anims.generateFrameNames(`Symbol${i}_FIS`, {
-      //          start: 0,
-      //          end: 29,
-      //          zeroPad: 5,
-      //          prefix: `Symbol${i}_FIS-`,
-      //          suffix: '.png'
-      //      });
-//
-      //      this.scene.anims.create({
-      //          key: `symbol${i}_anim`,
-      //          frames: frames,
-      //          frameRate: 30,
-      //          repeat: 0 // Don't repeat
-      //      });
-      //  }
 
-        // Create explosion animation
-        const explosionFrames = this.scene.anims.generateFrameNames('Explosion_FIS', {
-            start: 0,
-            end: 11,
-            zeroPad: 5,
-            prefix: 'Explosion_FIS-',
-            suffix: '.png'
-        });
+      for(let i = 0; i <= Slot.SYMBOLS; i++){
+        let symbol = this.scene.add.spine(0, 0, `Symbol${i}_FIS`, `Symbol${i}_FIS`) as SpineGameObject;
+        symbol.setPosition(0, 0);
+        symbol.setAlpha(0);
+      }
+    }
 
-        this.scene.anims.create({
-            key: 'explosion_anim',
-            frames: explosionFrames,
-            frameRate: 30,
-            repeat: 0 // Don't repeat
+    playSymbolAnimation(symbolSprite: Phaser.GameObjects.Sprite | SymbolContainer, symbolValue: number): Promise<void> {
+        return new Promise<void>((resolve) => {
+            if (symbolValue >= 0 && symbolValue <= Slot.SYMBOLS) {
+                // Play the animation for matched symbols
+                this.scene.gameData.debugLog("playing animation for symbol: " + symbolValue);
+                
+                let actualSprite: Phaser.GameObjects.Sprite;
+                
+                if (symbolSprite instanceof SymbolContainer) {
+                    // For SymbolContainer, get the internal sprite and play animation directly
+                    actualSprite = symbolSprite.getSymbolSprite() as unknown as Phaser.GameObjects.Sprite;
+                    symbolSprite.setDepth(symbolSprite.depth + 1000);
+                } else {
+                    // For regular sprites
+                    actualSprite = symbolSprite as Phaser.GameObjects.Sprite;
+                    actualSprite.setDepth(actualSprite.depth + 1000);
+                }
+                
+                // Play the animation using sprite.play() for both cases
+                const spineObject = actualSprite as unknown as SpineGameObject;
+                const animationState = spineObject.animationState.setAnimation(0, `animation`, false);
+                
+                // Set up listener for animation completion
+                animationState.listener = {
+                    complete: () => {
+                        // Remove the listener to prevent memory leaks
+                        animationState.listener = null;
+                        resolve();
+                    }
+                };
+                
+            } else {
+                // If symbol value is invalid, resolve immediately
+                resolve();
+            }
         });
     }
 
-    playSymbolAnimation(symbolSprite: Phaser.GameObjects.Sprite, symbolValue: number): void {
-        return; // wala pa nito
-
-        if (symbolValue >= 0 && symbolValue <= Slot.SYMBOLS) {
-            // Play the animation for matched symbols
-            this.scene.gameData.debugLog("playing animation for symbol: " + symbolValue);
-            symbolSprite.play(`symbol${symbolValue}_anim`);
-            symbolSprite.setDepth(symbolSprite.depth + 1000);
-            // Create and play explosion with delay
-            const explosion = this.scene.add.sprite(0, 0, 'Explosion_FIS');
-            explosion.setScale(0.7); // Match symbol scale
-            explosion.setDepth(symbolSprite.depth + 10); // Ensure explosion appears above symbol
-            
-            // Add explosion to the same container as the symbol
-            if (symbolSprite.parentContainer) {
-                symbolSprite.parentContainer.add(explosion);
-                // Position explosion at the same local coordinates as the symbol
-                explosion.x = symbolSprite.x;
-                explosion.y = symbolSprite.y;
-            }
-            
-            // Add delay before playing explosion
-            this.scene.time.delayedCall(420, () => {
-                try {
-                    explosion.play('explosion_anim');
-                    // Listen for animation complete to destroy the explosion sprite
-                    explosion.once('animationcomplete', () => {
-                        explosion.destroy();
-                    });
-                } catch (error) {
-                    this.scene.gameData.debugError("error playing explosion animation: " + error);
-                }
-                
-            });
+    stopSymbolAnimation(symbolSprite: Phaser.GameObjects.Sprite | SymbolContainer): void {
+        if (symbolSprite instanceof SymbolContainer) {
+            // For SymbolContainer, reset to idle
+            symbolSprite.getSymbolSprite().animationState.setAnimation(0, `animation`, false);
+        } else {
+            // For regular sprites, use the old method
+            // return; // wala pa nito - commented out to avoid unreachable code
+            // symbolSprite.stop();
+            // const symbolNum = symbolSprite.frame.texture.key.replace('Symbol', '').replace('_FIS', '');
+            // symbolSprite.setFrame(`Symbol${symbolNum}_FIS-00000.png`);
         }
     }
 
-    stopSymbolAnimation(symbolSprite: Phaser.GameObjects.Sprite): void {
-        return; // wala pa nito
-        symbolSprite.stop();
-        const symbolNum = symbolSprite.frame.texture.key.replace('Symbol', '').replace('_FIS', '');
-        symbolSprite.setFrame(`Symbol${symbolNum}_FIS-00000.png`);
+    /**
+     * Check if a symbol sprite is currently playing an animation
+     */
+    isSymbolAnimating(symbolSprite: Phaser.GameObjects.Sprite | SymbolContainer): boolean {
+        try {
+            let actualSprite: Phaser.GameObjects.Sprite;
+            
+            if (symbolSprite instanceof SymbolContainer) {
+                actualSprite = symbolSprite.getSymbolSprite() as unknown as Phaser.GameObjects.Sprite;
+            } else {
+                actualSprite = symbolSprite as Phaser.GameObjects.Sprite;
+            }
+            
+            const spineObject = actualSprite as unknown as SpineGameObject;
+            if (spineObject && spineObject.animationState) {
+                const currentAnimation = spineObject.animationState.getCurrent(0);
+                return !!(currentAnimation && currentAnimation.animation && currentAnimation.animation.name === 'animation');
+            }
+        } catch (error) {
+            this.scene.gameData.debugError("Error checking symbol animation state: " + error);
+        }
+        return false;
     }
 } 

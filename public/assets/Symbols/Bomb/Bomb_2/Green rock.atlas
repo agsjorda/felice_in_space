@@ -1,0 +1,97 @@
+GREEN ROCK.png
+size:2048,2048
+filter:Linear,Linear
+pma:true
+Green rock_00017
+bounds:697,672,679,679
+offsets:41,36,752,752
+Green rock_00019
+bounds:2,18,694,644
+offsets:29,52,752,752
+Green rock_00020
+bounds:697,1353,695,691
+offsets:28,25,752,752
+Green rock_00021
+bounds:2,1347,693,697
+offsets:30,23,752,752
+Green rock_00022
+bounds:2,664,689,681
+offsets:34,29,752,752
+Green rock_00023
+bounds:698,2,678,668
+offsets:41,31,752,752
+Green rock_00024
+bounds:1378,691,658,660
+offsets:54,36,752,752
+Green rock_00025
+bounds:1394,1419,621,625
+offsets:69,77,752,752
+Green rock_00026
+bounds:1378,96,599,593
+offsets:77,87,752,752
+Green rock_00028
+bounds:693,1344,1,1
+
+GREEN ROCK_2.png
+size:2048,2048
+filter:Linear,Linear
+pma:true
+Green rock_00005
+bounds:1494,18,480,488
+offsets:140,127,752,752
+Green rock_00006
+bounds:1008,14,484,492
+offsets:138,125,752,752
+Green rock_00007
+bounds:1556,1038,488,496
+offsets:136,123,752,752
+Green rock_00008
+bounds:1062,1010,492,500
+offsets:134,121,752,752
+Green rock_00009
+bounds:564,978,496,504
+offsets:132,119,752,752
+Green rock_00010
+bounds:1109,1536,500,508
+offsets:130,117,752,752
+Green rock_00011
+bounds:2,399,504,512
+offsets:128,115,752,752
+Green rock_00012
+bounds:508,405,498,506
+offsets:131,118,752,752
+Green rock_00013
+bounds:1062,508,492,500
+offsets:134,121,752,752
+Green rock_00014
+bounds:1556,542,484,494
+offsets:138,124,752,752
+Green rock_00015
+bounds:585,1512,522,532
+offsets:119,105,752,752
+Green rock_00016
+bounds:2,913,560,569
+offsets:100,86,752,752
+Green rock_00027
+bounds:2,1484,581,560
+offsets:90,98,752,752
+
+GREEN ROCK_3.png
+size:1404,1404
+filter:Linear,Linear
+pma:true
+Green rock_00000
+bounds:942,456,460,468
+offsets:150,137,752,752
+Green rock_00001
+bounds:476,444,464,472
+offsets:148,135,752,752
+Green rock_00002
+bounds:480,926,468,476
+offsets:146,133,752,752
+Green rock_00003
+bounds:2,436,472,480
+offsets:144,131,752,752
+Green rock_00004
+bounds:2,918,476,484
+offsets:142,129,752,752

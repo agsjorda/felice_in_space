@@ -20,7 +20,9 @@ interface GameScene extends Scene {
     background: Background;
     audioManager: AudioManager;
     buttons: Buttons;
-    slotMachine: SlotMachine;}
+    slotMachine: SlotMachine;
+    autoplay: any;
+}
 
 export class IdleState extends State {
     private spinEventListener?: (data: SpinEventData) => void;
@@ -66,8 +68,8 @@ export class IdleState extends State {
 
         if (scene.gameData.freeSpins > 0) 
         {
-            if(scene.buttons.autoplay.remainingSpins > 0) {
-                scene.buttons.autoplay.remainingSpins = 0; // stop autoplay if doing free spins
+            if(scene.autoplay.remainingSpins > 0) {
+                scene.autoplay.remainingSpins = 0; // stop autoplay if doing free spins
             }
             scene.gameData.freeSpins--;
             if (scene.gameData.freeSpins === 0) {
@@ -77,8 +79,8 @@ export class IdleState extends State {
                 scene.audioManager.changeBackgroundMusic(scene);
                 
                 // Stop autoplay when free spins are done
-                if (scene.buttons.autoplay.isAutoPlaying) {
-                    scene.buttons.autoplay.stop();
+                if (scene.autoplay.isAutoPlaying) {
+                    scene.autoplay.stop();
                 }
                 // Show bonus end summary after the last spin completes
                 const bonusWin = scene.gameData.totalBonusWin;

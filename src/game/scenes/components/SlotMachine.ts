@@ -9,20 +9,22 @@ import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3/dist/SpineGam
 import { WinOverlayContainer } from './WinOverlayContainer';
 import { GameAPI } from '../backend/GameAPI';
 import { BombContainer } from './BombContainer';
+import { SymbolContainer } from './SymbolContainer';
 
 // Extend Scene to include gameData and audioManager
 interface GameScene extends Scene {
     gameAPI: GameAPI;
     gameData: GameData;
     audioManager: AudioManager;
+    autoplay: any;
 }
 
 // Improved SymbolGrid interface with proper typing
 interface SymbolGrid {
-    [index: number]: (GameObjects.Sprite | SpineGameObject | BombContainer)[];
+    [index: number]: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[];
     length: number;
-    map: <T>(callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer)[], index: number) => T[]) => T[][];
-    forEach: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer)[], index: number) => void) => void;
+    map: <T>(callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[], index: number) => T[]) => T[][];
+    forEach: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[], index: number) => void) => void;
 }
 
 interface SpinData {
@@ -58,6 +60,10 @@ export class SlotMachine {
     private winAnimation: WinAnimation;
 
     private isMobile: boolean = false;
+    
+    // Add tumble history support
+    private tumbleHistory: any[] = [];
+    private currentTumbleIndex: number = 0;
 
     constructor() {
         this.symbolDisplayWidth = 153.17;
@@ -180,7 +186,7 @@ export class SlotMachine {
         maskShape.setVisible(false);
     }
 
-    private createReel(scene: GameScene, data: SpinData): void {
+    private async createReel(scene: GameScene, data: SpinData): Promise<void> {
         
         Events.emitter.emit(Events.UPDATE_BALANCE);
 
@@ -190,206 +196,980 @@ export class SlotMachine {
         });
 
         this.cleanupAloneSymbols();
+        
+        let newValues: number[][] = [];
+        
+        // Wait for doSpin to complete
+        
+        const result = await scene.gameAPI.doSpin(scene.gameData.bet);
+        if(result == "error"){
+            console.log("error", result);
+            newValues = data.symbols;
+        }
+        else{
+            scene.gameData.debugLog("result", result);
+            scene.gameData.debugLog("slotArea", result.data.slotArea.SlotArea);
+
+            newValues = transpose(result.data.slotArea.SlotArea);
+
+            for(let i = 0; i < newValues.length; i++){
+                for(let j = 0; j < newValues[i].length; j++){
+                    //newValues[i][j] = 1;
+                    if(newValues[i][j] == 0){
+                        //newValues[i][j] = -1;
+                        // currently disable scatter 
+                    }
+                }
+            }
+            
+            if (result.data.tumblehistory && result.data.tumblehistory.length > 0) {
+                this.tumbleHistory = result.data.tumblehistory;
+                this.currentTumbleIndex = 0;
+                console.log("=== TUMBLE HISTORY RECEIVED ===");
+                console.log("tumbleHistory:", this.tumbleHistory);
+                
+                // Log each tumble's data
+                this.tumbleHistory.forEach((tumble, index) => {
+                    console.log(`Tumble ${index}:`, tumble);
+                    if (tumble.newslotarea) {
+                        console.log(`  newslotarea:`, tumble.newslotarea);
+                    }
+                    if (tumble.slotarea) {
+                        console.log(`  slotarea:`, tumble.slotarea);
+                    }
+                    if (tumble.win) {
+                        console.log(`  win:`, tumble.win);
+                        if (tumble.win.symbol) {
+                            console.log(`  win symbol:`, tumble.win.symbol);
+                        }
+                    }
+                });
+                
+                scene.gameData.debugLog("tumbleHistory", this.tumbleHistory);
+            } else {
+                this.tumbleHistory = [];
+                this.currentTumbleIndex = 0;
+                console.log("No tumble history received");
+            }
+        }
+        if(scene.gameData.debugged){
+            newValues = data.symbols;
+        }
+
+        // Wait for all spin animations to complete
+        await this.playSpinAnimations(scene, newValues, data);
+        
+        // Now sequentially process matches and drop/refill
+        if (scene.gameData.debugged == true) {
+            await this.processMatchesSequentially(scene, newValues);
+        } else {
+            // Process API winning data
+            const wins = result.data.winDetails?.Wins || [];
+            if(result.data.winDetails.totalWin > 0 ){
+                console.log("wins", result.data.winDetails.tumbleHistory);
+            }
+            console.log('Processing API wins:', wins);
+            const allTransposedPositions: [number, number][] = [];
+            for (const win of wins) {
+                console.log('Processing win:', win);
+                // Transpose positions for the symbolGrid
+                const positions: [number, number][] = win.positions;
+                const transposedPositions = positions
+                    .map(([row, col]) => [col, row] as [number, number])
+                    .filter(pos => Array.isArray(pos) && pos.length === 2 && typeof pos[0] === 'number' && typeof pos[1] === 'number');
+                allTransposedPositions.push(...transposedPositions);
+                const animationPromises: Promise<void>[] = [];
+                for (const [row, col] of transposedPositions) {
+                    const symbolSprite = this.symbolGrid[row][col];
+                    if (symbolSprite) {
+                        console.log(`Animating removal of symbol at row ${row}, col ${col}`);
+                        
+                        // Use proper symbol animation for regular symbols, tween for bombs
+                        if (symbolSprite instanceof BombContainer) {
+                            const animationPromise = new Promise<void>((resolve) => {
+                                scene.tweens.add({
+                                    targets: symbolSprite,
+                                    alpha: 0,
+                                    scale: 0.5,
+                                    duration: 1000,
+                                    ease: 'Circ.easeInOut',
+                                    onComplete: () => {
+                                        console.log(`Destroyed bomb at row ${row}, col ${col}`);
+                                        symbolSprite.destroy();
+                                        resolve();
+                                    }
+                                });
+                            });
+                            animationPromises.push(animationPromise);
+                        } else {
+                            // Use playSymbolAnimation for regular symbols
+                            const symbolValue = win.symbol || 1; // Default to symbol 1 if not specified
+                            const animationPromise = this.animation.playSymbolAnimation(symbolSprite as Phaser.GameObjects.Sprite, symbolValue)
+                                .then(() => {
+                                    console.log(`Destroyed symbol at row ${row}, col ${col}`);
+                                    symbolSprite.destroy();
+                                });
+                            animationPromises.push(animationPromise);
+                        }
+                    }
+                }
+                console.log('Waiting for all animations to complete for this win...');
+                await Promise.all(animationPromises);
+                console.log('All animations complete for this win.');
+                // Remove symbols from grid
+                // (No need to add dummy symbols here; grid will be updated after all wins)
+            }
+            // --- SHIFT DOWN AND REFILL LOGIC (after all wins) ---
+            console.log('Preparing to shift down and refill columns...');
+            const numRows = newValues.length;
+            const numCols = newValues[0].length;
+            // Build toRemove mask
+            const toRemove = Array.from({ length: numRows }, () => Array(numCols).fill(false));
+            for (const [col, row] of allTransposedPositions) {
+                toRemove[row][col] = true;
+            }
+            // For each column, shift down and refill
+            for (let col = 0; col < numCols; col++) {
+                // Collect non-removed symbols in this column
+                const newCol = [];
+                for (let row = 0; row < numRows; row++) {
+                    if (!toRemove[row][col]) {
+                        newCol.push(newValues[row][col]);
+                    }
+                }
+                // Add new random symbols at the top for removed ones
+                while (newCol.length < numRows) {
+                    newCol.unshift(Math.floor(Math.random() * 9) + 1);
+                }
+                // Write back to newValues
+                for (let row = 0; row < numRows; row++) {
+                    newValues[row][col] = newCol[row];
+                }
+                //console.log(`Column ${col} after shift and refill:`, newCol);
+            }
+            console.log('Calling dropAndRefillAsync with updated grid...');
+            await this.dropAndRefillAsync(newValues, toRemove, scene);
+            console.log('Drop and refill complete. Allowing spinning again.');
+            // After all API wins processed, allow spinning again
+            scene.gameData.isSpinning = false;
+            // Emit additional event to ensure button state is updated
+            Events.emitter.emit(Events.SPIN_ANIMATION_END, { symbols: newValues });
+            // Direct button state update
+            if (scene.buttons && (scene.buttons as any).updateSpinButtonState) {
+                (scene.buttons as any).updateSpinButtonState(scene);
+            }
+        }
+        if(result?.data?.winDetails?.totalWin > 0){
+            console.log("winDetails", result.data.winDetails)
+        }
+        
+        // process API winning data
+        // result.data.winDetails contains "Wins": [ ],"totalWin":number,"tumbleHistory" :[ [ ] ]
+        // which contains "symbol": number, "symbolName": string, "count": number, "win": number, "positions", [[number, number]], "isScatter": boolean
+        // sample Wins data:
+        // "Wins": [ { "symbol": 1, "symbolName": "Symbol1_SW", "count": 8, "win": 250, "positions": [ [0,2],[1,2],[3,3],[3,4],[4,1],[4,4],[5,0],[5,1]], "isScatter": false }]
+        // the 'positions' will be used to select which symbols on the symbolGrid to animate and remove from the symbolGrid and use dropAndRefill for now since the backend is not yet configured properly.
+        // 'isScatter' will determine if the current symbols will initialize if there would be scatter match.
+        // 'count' will display in mobile view in the below the symbolGrid and above the buyFeature buttons, there is a whitespace gap there that we can place the 'count' 'symbol'and 'win' per insatancf
+        
+    }
+
+    private async playSpinAnimations(scene: GameScene, newValues: number[][], data: SpinData): Promise<void> {
         const numRows = Slot.ROWS;
         const numCols = Slot.COLUMNS;
         const width = this.symbolDisplayWidth;
         const height = this.symbolDisplayHeight;
         const horizontalSpacing = this.horizontalSpacing;
         const verticalSpacing = this.verticalSpacing;
-        let newValues: number[][] = [];
+
+        // Initialize newSymbolGrid with proper nested arrays
+        let newSymbolGrid = Array(numRows).fill(null).map(() => Array(numCols).fill(null)) as unknown as SymbolGrid;
+        Object.assign(newSymbolGrid, {
+            length: numRows,
+            map: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[], index: number) => any[]) => 
+                Array(numRows).fill(null).map((_, row) => callback(newSymbolGrid[row], row)),
+            forEach: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[], index: number) => void) => 
+                Array(numRows).fill(null).forEach((_, index) => callback(newSymbolGrid[index], index))
+        });
+
+        const rowInterval = 150; // ms between each row's arrival in a column
+        let turboSpeed = scene.gameData.turbo ? 0.2 : 1;
+        let offsetDelay = 1100;
         
-        scene.gameAPI.doSpin(scene.gameData.bet).then(result => {
-            scene.gameData.debugLog("result",result);
-            scene.gameData.debugLog("slotArea",result.data.slotArea);
+        if(scene.gameData.turbo){
+            scene.audioManager.TurboDrop.play();
+        }
 
-            newValues = transpose(result.data.slotArea.SlotArea);
+        const animationPromises: Promise<void>[] = [];
 
-          for(let i = 0; i < newValues.length; i++){
-              for(let j = 0; j < newValues[i].length; j++){
-                  if(newValues[i][j] == 0){
-                      newValues[i][j] = -1;
-                      // currently disable scatter 
-                  }
-              }
-          }
+        for (let col = 0; col < numCols; col++) {
+            for (let row = numRows - 1; row >= 0; row--) {
+                const symbol = this.symbolGrid[row][col];
+                const centerX = width * 0.5 + col * (width + horizontalSpacing);
+                const centerY = height * 0.5;
+                const symbolX = centerX;
+                const symbolY = centerY + row * (height + verticalSpacing);
+                const delay = (col * 250 + (numRows - 1 - row) * rowInterval) * turboSpeed;
 
-            if(scene.gameData.debugged){
-                newValues = data.symbols;
-            }
+                // Modify the symbol creation part
+                const symbolValue = newValues[row][col];
+                
+                let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer | null = null;
+                let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
+                const startY = symbolY - height * (numRows + 1);
 
-
-            let completedSymbols = 0;
-            const totalSymbols = numCols * numRows;
-
-            // Initialize newSymbolGrid with proper nested arrays
-            let newSymbolGrid = Array(numRows).fill(null).map(() => Array(numCols).fill(null)) as unknown as SymbolGrid;
-            Object.assign(newSymbolGrid, {
-                length: numRows,
-                map: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer)[], index: number) => any[]) => 
-                    Array(numRows).fill(null).map((_, row) => callback(newSymbolGrid[row], row)),
-                forEach: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer)[], index: number) => void) => 
-                    Array(numRows).fill(null).forEach((_, index) => callback(newSymbolGrid[index], index))
-            });
-
-            const rowInterval = 150; // ms between each row's arrival in a column
-            let turboSpeed = scene.gameData.turbo ? 0.2 : 1;
-            let offsetDelay = 1100;
-            
-
-            if(scene.gameData.turbo){
-                scene.audioManager.TurboDrop.play();
-            }
-            for (let col = 0; col < numCols; col++) {
-                for (let row = numRows - 1; row >= 0; row--) {
-                    const symbol = this.symbolGrid[row][col];
-                    const centerX = width * 0.5 + col * (width + horizontalSpacing);
-                    const centerY = height * 0.5;
-                    const symbolX = centerX;
-                    const symbolY = centerY + row * (height + verticalSpacing);
-                    const delay = (col * 250 + (numRows - 1 - row) * rowInterval) * turboSpeed;
-
-                    // Modify the symbol creation part
-                    const symbolValue = newValues[row][col];
-                    
-                    let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer | null = null;
-                    let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
-                    let frameKey = 'Symbol0_FIS-00000.png';
-                    const startY = symbolY - height * (numRows + 1);
-
-                    if (symbolValue >= 1 && symbolValue <= 9) {
-                        symbolKey = `Symbol${symbolValue}_FIS`;
-                        frameKey = `Symbol${symbolValue}_FIS-00000.png`;
-                        newSymbol = scene.add.sprite(symbolX, startY, symbolKey, frameKey) as GameObjects.Sprite;
-                    } else if (symbolValue >= 10 && symbolValue <= 22) {
-                        // Create BombContainer for bomb
-                        newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
-                        newSymbol.setBombDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
-                        scene.gameData.debugLog('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
-                    } else {
-                        newSymbol = scene.add.sprite(symbolX, startY, symbolKey, frameKey) as GameObjects.Sprite;
-                    }
-
-                    // Set the display size based on the symbol type
+                if (symbolValue >= 0 && symbolValue <= 9) {
+                    // Create SymbolContainer for symbols 0-9 (including scatter)
+                    newSymbol = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
                     if (symbolValue === 0) {
-                        newSymbol?.setDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
-                    } else if (symbolValue >= 10 && symbolValue <= 22) {
-                        // Handle BombContainer display size
-                        if (newSymbol instanceof BombContainer) {
-                            newSymbol.setBombDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
-                        } else if (newSymbol) {
-                            newSymbol.setDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
-                        }
-                        scene.gameData.debugLog("symbolValue", symbolValue);
+                        // Scatter symbol (Symbol 0)
+                        newSymbol.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
+                        //newSymbol.setScale(0.33);
+                        scene.gameData.debugLog('Created SymbolContainer for scatter symbol', { symbolValue, position: { x: symbolX, y: startY } });
                     } else {
-                        newSymbol?.setDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                    }
-
-                    // Calculate duration based on distance to maintain consistent speed
-                    const distance = symbolY - startY;
-                    const baseSpeed = 2; // pixels per millisecond
-                    let duration = (distance / baseSpeed) * turboSpeed;
-                    if (scene.gameData.turbo) {
-                        duration = Math.min(duration, 1250 * turboSpeed);
-                    }
-
-                    // Add extra delay for turbo mode to prevent overlap
-                    let tweenDelay = (delay + offsetDelay) * turboSpeed;
-                    if (scene.gameData.turbo) {
-                        tweenDelay += duration / turboSpeed;
-                    }
-
-                    // Tween out the old symbol
-                    if (symbol) {
-                        const endY = symbol.y + height * (numRows + 1);
-                        const distance = endY - symbol.y;
-                        const baseSpeed = 2;
-                        const durationOld = (distance / baseSpeed) * turboSpeed;
-
-                    
-                        // Create multiple motion trails
-                        const trails: Phaser.GameObjects.Sprite[] = [];
-                        const numTrails = 10;
-                        const trailSpacing = -100; // Space between trails
-
-                        for (let i = 0; i < numTrails; i++) {
-                            if(scene.gameData.turbo == false && 'texture' in symbol) {
-                                const trail = scene.add.sprite(symbol.x, symbol.y, symbol.texture.key, symbol.frame.name);
-                                trail.setDisplaySize(symbol.displayWidth, symbol.displayHeight);
-                                trail.setAlpha(0.7 - (i * 0.15)); // Decreasing alpha for each trail
-                                trail.setPipeline('BlurPostFX');
-
-                                (trail as any).blurStrength = 0.8 + (i * 0.1); // Increasing blur for each trail
-                                trail.setDepth(symbol.depth - (i + 1)); // Place trails behind the symbol
-                                this.container.add(trail);
-                                trails.push(trail);
-                            }
+                        // Regular symbols 1-9 with specific adjustments for symbols 2 and 4
+                        if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
+                            // Adjust ratio for symbols 2 and 4 to match other symbols
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
+                            scene.gameData.debugLog('Created SymbolContainer for symbol with adjusted ratio', { symbolValue, position: { x: symbolX, y: startY } });
+                        } else {
+                            // Regular symbols 1-9
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                            scene.gameData.debugLog('Created SymbolContainer for symbol', { symbolValue, position: { x: symbolX, y: startY } });
                         }
+                    }
+                } else if (symbolValue >= 10 && symbolValue <= 22) {
+                    // Create BombContainer for bomb
+                    newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    newSymbol.setBombDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
+                    scene.gameData.debugLog('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
+                }
 
+                // Set the display size based on the symbol type
+                if (symbolValue >= 10 && symbolValue <= 22) {
+                    // Handle BombContainer display size
+                    if (newSymbol instanceof BombContainer) {
+                        newSymbol.setBombDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
+                    }
+                    scene.gameData.debugLog("symbolValue", symbolValue);
+                }
+
+                // Calculate duration based on distance to maintain consistent speed
+                const distance = symbolY - startY;
+                const baseSpeed = 2; // pixels per millisecond
+                let duration = (distance / baseSpeed) * turboSpeed;
+                if (scene.gameData.turbo) {
+                    duration = Math.min(duration, 1250 * turboSpeed);
+                }
+
+                // Add extra delay for turbo mode to prevent overlap
+                let tweenDelay = (delay + offsetDelay) * turboSpeed;
+                if (scene.gameData.turbo) {
+                    tweenDelay += duration / turboSpeed;
+                }
+
+                // Tween out the old symbol
+                if (symbol) {
+                    const endY = symbol.y + height * (numRows + 1);
+                    const distance = endY - symbol.y;
+                    const baseSpeed = 2;
+                    const durationOld = (distance / baseSpeed) * turboSpeed;
+
+                    // Create multiple motion trails
+                    const trails: Phaser.GameObjects.Sprite[] = [];
+                    const numTrails = 10;
+                    const trailSpacing = -100; // Space between trails
+
+                    for (let i = 0; i < numTrails; i++) {
+                        if(scene.gameData.turbo == false && 'texture' in symbol) {
+                            const trail = scene.add.sprite(symbol.x, symbol.y, symbol.texture.key, symbol.frame.name);
+                            trail.setDisplaySize(symbol.displayWidth, symbol.displayHeight);
+                            trail.setAlpha(0.7 - (i * 0.15)); // Decreasing alpha for each trail
+                            trail.setPipeline('BlurPostFX');
+
+                            (trail as any).blurStrength = 0.8 + (i * 0.1); // Increasing blur for each trail
+                            trail.setDepth(symbol.depth - (i + 1) + 10); // Place trails behind the symbol
+                            this.container.add(trail);
+                            trails.push(trail);
+                        }
+                    }
+
+                    scene.tweens.add({
+                        targets: symbol,
+                        y: endY,
+                        alpha: 0.1,
+                        scale: 0.5,
+                        duration: durationOld,
+                        delay: delay,
+                        ease: 'Quart.easeInOut',
+                        onUpdate: () => {
+                            // Update trail positions and fade
+                            if(scene.gameData.turbo == false) {
+                                setTimeout(() => {
+                                    trails.forEach((trail, index) => {
+                                        trail.y = symbol.y - (trailSpacing * (index + 1));
+                                        trail.alpha = symbol.alpha * (0.7 - (index * 0.15));
+                                    });
+                                }, 100);
+                            }
+                        },
+                        onComplete: () => {
+                            trails.forEach(trail => trail.destroy());
+                            symbol.destroy();
+                        }
+                    });
+                }
+
+                // Move new symbol down
+                if(newSymbol) {
+                    const animationPromise = new Promise<void>((resolve) => {
                         scene.tweens.add({
-                            targets: symbol,
-                            y: endY,
-                            alpha: 0.1,
-                            scale: 0.5,
-                            duration: durationOld,
-                            delay: delay,
+                            targets: newSymbol as any,
+                            y: symbolY,
+                            duration: duration,
                             ease: 'Quart.easeInOut',
-                            onUpdate: () => {
-                                // Update trail positions and fade
-                                if(scene.gameData.turbo == false) {
-                                    setTimeout(() => {
-                                        trails.forEach((trail, index) => {
-                                            trail.y = symbol.y - (trailSpacing * (index + 1));
-                                            trail.alpha = symbol.alpha * (0.7 - (index * 0.15));
-                                        });
-                                    }, 100);
-                                }
-                            },
+                            delay: tweenDelay,
                             onComplete: () => {
-                                trails.forEach(trail => trail.destroy());
-                                symbol.destroy();
+                                if(row === 4){
+                                    if(!scene.gameData.turbo){
+                                        scene.audioManager.ReelDrop.play();
+                                    }
+                                }
+                                resolve();
                             }
                         });
-                    }
-
-                    // Move new symbol down
-                    if(newSymbol)
-                    scene.tweens.add({
-                        targets: newSymbol,
-                        y: symbolY,
-                        duration: duration,
-                        ease: 'Quart.easeInOut',
-                        delay: tweenDelay,
-                       onComplete: () => {
-                           completedSymbols++;
-                           if (completedSymbols === totalSymbols) {
-                               // console.log(newValues); debug symbols
-                               Events.emitter.emit(Events.SPIN_ANIMATION_END, {
-                                   symbols: newValues,
-                                   currentRow: data.currentRow
-                               });
-                               const result = this.checkMatch(newValues, scene);
-                               scene.gameData.debugLog(result);
-                               if(result === "No more matches" ) {
-                                   scene.gameData.isSpinning = false;
-                               }
-                           }
-                           
-                           if(row === 4){
-                               if(!scene.gameData.turbo){
-                                   scene.audioManager.ReelDrop.play();
-                               }
-                           }
-                       }
                     });
-
-                    if(newSymbol)
-                            this.container.add(newSymbol);
+                    animationPromises.push(animationPromise);
+                    
+                    this.container.add(newSymbol);
                     newSymbolGrid[row][col] = newSymbol;
                 }
             }
+        }
 
-            this.symbolGrid = newSymbolGrid;
+        this.symbolGrid = newSymbolGrid;
+        
+        // Wait for all animations to complete
+        await Promise.all(animationPromises);
+        
+        Events.emitter.emit(Events.SPIN_ANIMATION_END, {
+            symbols: newValues,
+            currentRow: data.currentRow
         });
+    }
+
+    private async processMatchesSequentially(scene: GameScene, symbolGrid: number[][]): Promise<void> {
+        let continueMatching = true;
+        let lastResult: string | undefined = undefined;
+        try {
+            while (continueMatching) {
+                const result = await this.checkMatchAsync(symbolGrid, scene);
+                scene.gameData.debugLog("Match result:", result);
+                lastResult = result;
+                if (result === "No more matches" || result === "free spins") {
+                    continueMatching = false;
+                }
+                // If result is "continue match", the loop will continue
+            }
+        } catch (error) {
+            scene.gameData.debugError("Error in match processing: " + error);
+        } finally {
+            // Only show win overlay at the end of all matches
+            const bet = scene.gameData.bet || 1;
+            const totalWin = scene.gameData.totalWin || 0;
+            const multiplierWin = totalWin / bet;
+            if (multiplierWin >= 10 && lastResult === "No more matches") {
+                this.showWinOverlay(scene, totalWin, bet);
+            }
+            Events.emitter.emit(Events.MATCHES_DONE, { symbolGrid });
+            scene.gameData.isSpinning = false;
+            // Emit additional event to ensure button state is updated
+            Events.emitter.emit(Events.SPIN_ANIMATION_END, { symbolGrid });
+            // Direct button state update
+            if (scene.buttons && (scene.buttons as any).updateSpinButtonState) {
+                (scene.buttons as any).updateSpinButtonState(scene);
+            }
+        }
+    }
+
+    private async checkMatchAsync(symbolGrid: number[][], scene: GameScene): Promise<string> {
+        const rows = symbolGrid.length;
+        const cols = symbolGrid[0].length;
+        const symbolCount: { [key: number]: number } = {};
+        const matchIndices: { [key: number]: { row: number; col: number; }[] } = {};
+
+        // 1. Count occurrences and collect indices
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const symbol = symbolGrid[row][col];
+                symbolCount[symbol] = (symbolCount[symbol] || 0) + 1;
+                if (!matchIndices[symbol]) matchIndices[symbol] = [];
+                matchIndices[symbol].push({ row, col });
+            }
+        }
+
+        // 2. Find symbols with >=8 matches
+        let foundMatch = false;
+        let matchedSymbol: number | null = null;
+        for (const symbol in symbolCount) {
+            if (symbolCount[symbol] >= 8) {
+                foundMatch = true;
+                matchedSymbol = parseInt(symbol);
+                break;
+            }
+        }
+
+        if (!foundMatch) {
+            // --- SCATTER CHECK ---
+            const scatterCount = symbolCount[0] || 0;
+            if (scatterCount >= 4 || (scene.gameData.isBonusRound && scatterCount >= 3)) {
+                return await this.handleScatterMatch(scene, symbolGrid, scatterCount);
+            }
+
+            // At the end, emit WIN to update totalWin text
+            Events.emitter.emit(Events.WIN, {});
+            scene.gameData.isSpinning = false;
+            Events.emitter.emit(Events.SPIN_ANIMATION_END, {
+                symbols: symbolGrid,
+                newRandomValues: symbolGrid
+            });
+
+            Events.emitter.emit(Events.MATCHES_DONE, { symbolGrid });
+            return "No more matches";
+        }
+
+        // 3. Get all matched indices for the symbol
+        const matchedCells = matchIndices[matchedSymbol!];
+
+        // 4. Add to totalWin and balance
+        const bet = scene.gameData.bet || 1;
+        // WIN AMOUNT SHOULD BE IN BACKEND 
+        // TEMPORARY ONLY FOR TESTING
+        let winAmount = 0;
+        if (matchedSymbol !== null) {
+            if (matchedCells.length === 8 || matchedCells.length === 9) {
+                winAmount = matchedSymbol === 0 ? 100 * bet :
+                        scene.gameData.winamounts[0][matchedSymbol] * bet;
+
+            } else if (matchedCells.length === 10 || matchedCells.length === 11) {
+                winAmount = matchedSymbol === 0 ? 5 * bet :
+                        scene.gameData.winamounts[1][matchedSymbol] * bet;
+
+            } else if (matchedCells.length >= 12) {
+                winAmount = matchedSymbol === 0 ? 3 * bet :
+                        scene.gameData.winamounts[2][matchedSymbol] * bet;
+            }
+        }
+
+        winAmount *= 3;
+
+        // TEMPORARY ONLY FOR TESTING
+        scene.gameData.totalWin += winAmount; // win amount should already be calculated in backend
+        scene.gameData.balance += winAmount; // balance should already be updated in backend
+        
+        // Track bonus wins separately
+        if (scene.gameData.isBonusRound) {
+            scene.gameData.totalBonusWin += winAmount; // bonus win amount should already be calculated in backend
+        }
+        
+        Events.emitter.emit(Events.WIN, {});
+   
+        if(this.isMobile) {
+            Events.emitter.emit(Events.UPDATE_TOTAL_WIN, winAmount);
+        }
+        else
+        {
+            // Popup text at the matched symbol closest to the center
+            const gridCenter = { row: (rows - 1) / 2, col: (cols - 1) / 2 };
+            let minDist = Infinity;
+            let popupPos = { x: scene.scale.width / 2, y: scene.scale.height / 2 };
+            matchedCells.forEach(({ row, col }) => {
+                const dist = Math.abs(row - gridCenter.row) + Math.abs(col - gridCenter.col);
+                if (dist < minDist && this.symbolGrid[row][col]) {
+                    minDist = dist;
+                    const symbolSprite = this.symbolGrid[row][col];
+                    popupPos = { x: symbolSprite.x, y: symbolSprite.y };
+                }
+            });
+
+            const popupText = scene.add.text(
+                popupPos.x,
+                popupPos.y,
+                `+$${winAmount.toFixed(2)}`,
+                {
+                    fontSize: '64px',
+                    color: '#FFD700',
+                    fontStyle: 'bold',
+                    stroke: '#000',
+                    strokeThickness: 6,
+                    fontFamily: 'Poppins'
+                }
+            );
+
+            popupText.setOrigin(0.5, 0.5);
+            popupText.setDepth(100);
+
+            // Animate the popup text with scale and float effect
+            scene.tweens.add({
+                targets: popupText,
+                y: popupPos.y - 80,
+                alpha: 0,
+                scale: 1.5,
+                duration: 2000,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                    popupText.destroy();
+                }
+            });
+        }
+
+        // 5. Mark matched cells for removal
+        const toRemove = Array.from({ length: rows }, () => Array(cols).fill(false));
+        matchedCells.forEach(({ row, col }) => {
+            toRemove[row][col] = true;
+        });
+
+        // 6. Animate matched symbols out with particles
+        await this.animateMatchedSymbols(scene, matchedCells.map(cell => ({ ...cell, symbol: matchedSymbol! })));
+
+        // Store matched cells for reference
+        scene.gameData.currentMatchingSymbols = matchedCells.map(() => 
+            matchedSymbol !== null ? matchedSymbol : 0
+        );
+
+        // After finding matches of 8 or more symbols
+        if (matchedCells.length >= 8 && matchedSymbol !== null && matchedSymbol >= 1 && matchedSymbol <= 9) {
+            matchedCells.forEach(({ row, col }) => {
+                const symbolSprite = this.symbolGrid[row][col];
+                if (symbolSprite) {
+                    if (symbolSprite instanceof SymbolContainer || symbolSprite instanceof GameObjects.Sprite) {
+                        this.animation.playSymbolAnimation(symbolSprite, matchedSymbol);
+                    }
+                }
+            });
+        }
+
+        // 7. Drop and refill
+        await this.dropAndRefillAsync(symbolGrid, toRemove, scene);
+
+        return "continue match";
+    }
+
+    private async handleScatterMatch(scene: GameScene, symbolGrid: number[][], scatterCount: number): Promise<string> {
+        // Only stop autoplay if this is the initial bonus trigger and we're not already in bonus round
+        if (!scene.gameData.isBonusRound) {
+            Events.emitter.emit(Events.AUTOPLAY_STOP, {});
+        }
+
+        // Prevent new spins during scatter sequence
+        scene.gameData.isSpinning = true;
+        
+        // Play animation for all scatter symbols
+        let scatterSprites: (GameObjects.Sprite | SymbolContainer)[] = [];
+        for (let row = 0; row < symbolGrid.length; row++) {
+            for (let col = 0; col < symbolGrid[row].length; col++) {
+                if (symbolGrid[row][col] === 0 && this.symbolGrid[row][col]) {
+                    const symbolSprite = this.symbolGrid[row][col];
+                    if (symbolSprite instanceof GameObjects.Sprite || symbolSprite instanceof SymbolContainer) {
+                        scatterSprites.push(symbolSprite);
+                    }
+                }
+            }
+        }
+        
+        await this.animateScatterSymbols(scene, scatterSprites, scatterCount);
+        
+        Events.emitter.emit(Events.MATCHES_DONE, { symbolGrid });
+        return "free spins";
+    }
+
+    private async animateScatterSymbols(scene: GameScene, scatterSprites: (GameObjects.Sprite | SymbolContainer)[], scatterCount: number): Promise<void> {
+        scene.audioManager.ScatterSFX.play();
+        
+        const animationPromises: Promise<void>[] = [];
+        
+        scatterSprites.forEach((sprite) => {
+            // Create particles for scatter explosion
+            this.createWinParticles(scene, sprite.x, sprite.y, 0xFF0000);
+            
+            // Play scatter symbol animation
+            const animationPromise = this.animation.playSymbolAnimation(sprite as Phaser.GameObjects.Sprite, 0)
+                .then(() => {
+                    sprite.alpha = 0;
+                });
+            animationPromises.push(animationPromise);
+        });
+        
+        await Promise.all(animationPromises);
+        
+        // Handle scatter rewards
+        this.handleScatterRewards(scene, scatterCount);
+    }
+
+    private handleScatterRewards(scene: GameScene, scatterCount: number): void {
+        // Award free spins based on scatterCount
+        let freeSpins = scene.gameData.freeSpins || 0;
+
+        if (scene.gameData.isBonusRound) {
+            // During bonus round, add 5 spins for 3+ scatters
+            let addFreeSpins = 0;
+            if (scatterCount === 3) addFreeSpins = 3;
+            else if (scatterCount === 4) addFreeSpins = 5;
+            else if (scatterCount === 5) addFreeSpins = 10;
+            else if (scatterCount === 6) addFreeSpins = 15;
+
+            scene.gameData.totalFreeSpins += addFreeSpins;
+            scene.gameData.freeSpins += addFreeSpins;
+            scene.autoplay.addSpins(addFreeSpins);      
+            
+            // Update the remaining spins display
+            if (scene.autoplay.isAutoPlaying) {
+                scene.autoplay.updateRemainingSpinsDisplay();
+            }
+
+            // Show popup with retrigger info
+            this.showRetriggerPopup(scene, addFreeSpins);
+        } else {
+            // Initial bonus trigger
+            if (scatterCount === 4) freeSpins += 10;
+            else if (scatterCount === 5) freeSpins += 12;
+            else if (scatterCount === 6) freeSpins += 15;
+
+            // Enable bonus round state
+            scene.gameData.totalFreeSpins = 0 + freeSpins;
+            scene.gameData.freeSpins = freeSpins;
+            scene.gameData.totalBonusWin = 0; // Reset bonus win counter at start
+            
+            scene.gameData.isBonusRound = true;
+            scene.background.toggleBackground(scene);
+            scene.audioManager.changeBackgroundMusic(scene);
+
+            // If in autoplay, stop it before showing free spins popup
+            if (scene.autoplay.isAutoPlaying) {
+                scene.autoplay.stop();
+            }
+
+            // Start autoplay with the number of free spins gained
+            Events.emitter.emit(Events.AUTOPLAY_START, freeSpins);
+
+            // Show the popup for initial trigger
+            this.showFreeSpinsPopup(scene, freeSpins);
+        }
+    }
+
+    private showRetriggerPopup(scene: GameScene, addFreeSpins: number): void {
+        const popupContainer = scene.add.container(
+            this.isMobile ? scene.scale.width * 0.5: scene.scale.width/2,
+            this.isMobile ? scene.scale.height * 0.5 : scene.scale.height/2);
+        popupContainer.setDepth(1000);
+    
+        const bg = scene.add.image(0, 0, 'buyFeatBG');
+        bg.setOrigin(0.5, 0.5);
+        popupContainer.add(bg);
+        if ((scene.sys.game.renderer as any).pipelines) {
+            bg.setPipeline('BlurPostFX');
+        }
+        const text = scene.add.text(0, 0, `You won\n\n\n\nmore free spins`, {
+            fontSize: '48px',
+            color: '#FFFFFF',
+            fontFamily: 'Poppins', 
+            fontStyle: 'bold',
+            align: 'center', 
+        });
+        text.setOrigin(0.5, 0.5);
+
+        const freeSpinsCount = scene.add.text(0, 0, `${addFreeSpins}`, {
+            fontSize: '88px',
+            color: '#FFFFFF',
+            fontFamily: 'Poppins', 
+            fontStyle: 'bold',
+            align: 'center'
+        });
+        freeSpinsCount.setOrigin(0.5, 0.5);
+        
+        const gradient = freeSpinsCount.context.createLinearGradient(0,0,0,freeSpinsCount.height);
+        gradient.addColorStop(0, '#FFF15A');
+        gradient.addColorStop(0.5, '#FFD000');
+        gradient.addColorStop(1, '#FFB400');
+        freeSpinsCount.setFill(gradient);
+
+        popupContainer.add(text);
+        popupContainer.add(freeSpinsCount);
+        popupContainer.setScale(this.isMobile ? 0.5 : 1);
+
+        // Make container interactive
+        popupContainer.setInteractive(new Phaser.Geom.Rectangle(-popupContainer.width/2, -popupContainer.height/2, popupContainer.width, popupContainer.height), Phaser.Geom.Rectangle.Contains);
+        
+        // Auto-hide popup after 1 second
+        scene.time.delayedCall(1000, () => {
+            scene.tweens.add({
+                targets: popupContainer,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    popupContainer.destroy();
+                    
+                    // Continue with next spin since we're already in bonus
+                    scene.gameData.isSpinning = false;
+                    Events.emitter.emit(Events.SPIN, {
+                        currentRow: scene.gameData.currentRow,
+                        symbols: scene.gameData.slot.values
+                    });
+                }
+            });
+        });
+
+        // Also allow manual click to dismiss
+        popupContainer.once('pointerdown', () => {
+            scene.tweens.add({
+                targets: popupContainer,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    popupContainer.destroy();
+                    
+                    // Continue with next spin since we're already in bonus
+                    scene.gameData.isSpinning = false;
+                    Events.emitter.emit(Events.SPIN, {
+                        currentRow: scene.gameData.currentRow,
+                        symbols: scene.gameData.slot.values
+                    });
+                }
+            });
+        });
+    }
+
+    private async animateMatchedSymbols(scene: GameScene, matchedCells: { row: number; col: number; symbol: number }[]): Promise<void> {
+        scene.audioManager.playRandomQuickWin();
+
+        const animationPromises: Promise<void>[] = [];
+        matchedCells.forEach(({ row, col, symbol }) => {
+            const symbolSprite = this.symbolGrid[row][col];
+            if (symbolSprite) {
+                // If it's a bomb, keep the old tween logic
+                if (symbolSprite instanceof BombContainer) {
+                    const animationPromise = new Promise<void>((resolve) => {
+                        scene.tweens.add({
+                            targets: symbolSprite,
+                            alpha: 0,
+                            scale: 0.5,
+                            duration: 1000,
+                            ease: 'Circ.easeInOut',
+                            onComplete: () => {
+                                symbolSprite.destroy();
+                                resolve();
+                            }
+                        });
+                    });
+                    animationPromises.push(animationPromise);
+                } else {
+                    // Use playSymbolAnimation for regular symbols and scatter symbols
+                    if (symbolSprite instanceof SymbolContainer || symbolSprite instanceof GameObjects.Sprite) {
+                        const animationPromise = this.animation.playSymbolAnimation(symbolSprite, symbol)
+                            .then(() => {
+                                symbolSprite.destroy();
+                            });
+                        animationPromises.push(animationPromise);
+                    } else {
+                        // Handle other types (like SpineGameObject) with a simple destroy
+                        symbolSprite.destroy();
+                    }
+                }
+            }
+        });
+        
+        // Wait for all symbol animations to complete before proceeding
+        await Promise.all(animationPromises);
+    }
+
+    private async dropAndRefillAsync(symbolGrid: number[][], toRemove: boolean[][], scene: GameScene): Promise<void> {
+        scene.gameData.debugLog("drop and refill requested");
+        
+        // Wait for any ongoing symbol animations to complete before proceeding
+        await this.waitForSymbolAnimationsToComplete();
+        
+        const rows = symbolGrid.length;
+        const cols = symbolGrid[0].length;
+        const width = this.symbolDisplayWidth;
+        const height = this.symbolDisplayHeight;
+        const horizontalSpacing = this.horizontalSpacing;
+        const verticalSpacing = this.verticalSpacing;
+        const dropTweens: Promise<void>[] = [];
+        const newSymbols: (GameObjects.Sprite | SpineGameObject | BombContainer)[] = [];
+
+        // Clean up any Alone symbols that might be left on screen
+        this.cleanupAloneSymbols();
+
+        // For each column, drop down and fill new randoms
+        for (let col = 0; col < cols; col++) {
+            // Build new column after removals
+            const newCol: number[] = [];
+            let dropMap: number[] = [];
+            for (let row = rows - 1; row >= 0; row--) {
+                if (!toRemove[row][col]) {
+                    newCol.unshift(symbolGrid[row][col]);
+                    dropMap.unshift(row);
+                }
+            }
+
+            // Fill the rest with new symbols from tumble history or random
+            const numNew = rows - newCol.length;
+            for (let i = 0; i < numNew; i++) {
+                let newSymbol: number;
+                
+                // Use tumble history data if available
+                if (this.tumbleHistory.length > 0 && this.currentTumbleIndex < this.tumbleHistory.length) {
+                    const currentTumble = this.tumbleHistory[this.currentTumbleIndex];
+                    
+                    console.log(`=== PROCESSING TUMBLE ${this.currentTumbleIndex} for col ${col}, row ${i} ===`);
+                    console.log("currentTumble:", currentTumble);
+                    
+                    if (currentTumble && currentTumble.newslotarea && currentTumble.slotarea) {
+                        console.log("newslotarea (raw):", currentTumble.newslotarea);
+                        console.log("slotarea (raw):", currentTumble.slotarea);
+                        
+                        // Calculate which symbols need to be added based on the difference
+                        const newSlotArea = transpose(currentTumble.newslotarea);
+                        const oldSlotArea = transpose(currentTumble.slotarea);
+                        
+                        console.log("newslotarea (transposed):", newSlotArea);
+                        console.log("slotarea (transposed):", oldSlotArea);
+                        
+                        // Find the new symbol for this position by comparing arrays
+                        const newSymbolAtPosition = newSlotArea[i] && newSlotArea[i][col] !== undefined ? newSlotArea[i][col] : null;
+                        const oldSymbolAtPosition = oldSlotArea[i] && oldSlotArea[i][col] !== undefined ? oldSlotArea[i][col] : null;
+                        
+                        console.log(`Position [${i}][${col}] - new: ${newSymbolAtPosition}, old: ${oldSymbolAtPosition}`);
+                        
+                        // If there's a new symbol at this position, use it
+                        if (newSymbolAtPosition !== null && newSymbolAtPosition !== oldSymbolAtPosition) {
+                            newSymbol = newSymbolAtPosition;
+                            console.log(`Using new symbol from position: ${newSymbol}`);
+                        } else {
+                            // Fallback to finding added symbols in the tumble
+                            const addedSymbols = this.getAddedSymbolsFromTumble(currentTumble, col, i);
+                            newSymbol = addedSymbols.length > 0 ? addedSymbols[0] : Math.floor(Math.random() * 9) + 1;
+                            console.log(`Using added symbols or random: ${newSymbol}, addedSymbols:`, addedSymbols);
+                        }
+                        
+                        if (currentTumble.win && currentTumble.win.symbol) {
+                            console.log(`Win symbol for this tumble: ${currentTumble.win.symbol}`);
+                        }
+                    } else {
+                        newSymbol = Math.floor(Math.random() * 9) + 1;
+                        console.log(`Missing tumble data, using random: ${newSymbol}`);
+                    }
+                } else {
+                    // Fallback to random if no tumble history available
+                    newSymbol = Math.floor(Math.random() * 9) + 1;
+                    console.log(`No tumble history available, using random: ${newSymbol}`);
+                }
+                
+                console.log(`=== FINAL SYMBOL ASSIGNMENT ===`);
+                console.log(`Final newSymbol for col ${col}, row ${i}: ${newSymbol}`);
+                
+                newCol.unshift(newSymbol);
+                scene.gameData.debugLog("newCol " + i + " " + col, newCol);
+            }
+                
+
+            // Create a temporary grid to track the new positions
+            const tempSymbolGrid: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[] = [];
+            
+            // Animate drop for each cell in this column
+            let targetRow = rows - 1;
+            for (let i = dropMap.length - 1; i >= 0; i--) {
+                const fromRow = dropMap[i];
+                const symbolSprite = this.symbolGrid[fromRow][col];
+                if (symbolSprite && symbolSprite.active) {
+                    const newY = (height * 0.5) + targetRow * (height + verticalSpacing);
+                    dropTweens.push(new Promise(resolve => {
+                        scene.tweens.add({
+                            targets: symbolSprite,
+                            y: newY,
+                            duration: 300,
+                            ease: 'Cubic.easeIn',
+                            onComplete: () => resolve()
+                        });
+                    }));
+                    tempSymbolGrid[targetRow] = symbolSprite;
+                    symbolGrid[targetRow][col] = symbolGrid[fromRow][col];
+                }
+                targetRow--;
+            }
+
+            // Create and animate new symbols at the top
+            for (let i = 0; i < numNew; i++) {
+                const symbolValue = newCol[i];
+                let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
+                if (symbolValue >= 1 && symbolValue <= 9) {
+                    symbolKey = `Symbol${symbolValue}_FIS`;
+                }
+                const centerX = width * 0.5;
+                const centerY = height * 0.5;
+                const symbolX = centerX + col * (width + horizontalSpacing);
+                const startY = centerY + (i - numNew) * (height + verticalSpacing);
+                const endY = centerY + i * (height + verticalSpacing);
+                let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer | null = null;
+                if (symbolValue >= 0 && symbolValue <= 9) {
+                    newSymbol = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    if (symbolValue === 0) {
+                        newSymbol.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
+                        //newSymbol.setScale(0.33);
+                        scene.gameData.debugLog('Created SymbolContainer for scatter symbol in dropAndRefillAsync', { symbolValue, position: { x: symbolX, y: startY } });
+                    } else {
+                        // Regular symbols 1-9 with specific adjustments for symbols 2 and 4
+                        if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
+                            // Adjust ratio for symbols 2 and 4 to match other symbols
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
+                            scene.gameData.debugLog('Created SymbolContainer for symbol with adjusted ratio in dropAndRefillAsync', { symbolValue, position: { x: symbolX, y: startY } });
+                        } else {
+                            // Regular symbols 1-9
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                            scene.gameData.debugLog('Created SymbolContainer for symbol in dropAndRefillAsync', { symbolValue, position: { x: symbolX, y: startY } });
+                        }
+                    }
+                } else if (symbolValue >= 10 && symbolValue <= 22) {
+                    newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    newSymbol.setBombDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
+                    scene.gameData.debugLog('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
+                }
+                if (newSymbol) {
+                    this.container.add(newSymbol);
+                    //@ts-ignore
+                    newSymbols.push(newSymbol);
+                    tempSymbolGrid[i] = newSymbol;
+                    symbolGrid[i][col] = symbolValue;
+                    dropTweens.push(new Promise(resolve => {
+                        scene.tweens.add({
+                            targets: newSymbol as any,
+                            y: endY,
+                            duration: 300,
+                            ease: 'Cubic.easeIn',
+                            onComplete: () => resolve()
+                        });
+                    }));
+                }
+            }
+            
+            // Update the symbol grid for this column after all tweens are set up
+            for (let row = 0; row < rows; row++) {
+                if (tempSymbolGrid[row]) {
+                    this.symbolGrid[row][col] = tempSymbolGrid[row];
+                }
+            }
+        }
+
+        // After all drops complete, check for new matches
+        await Promise.all(dropTweens);
+        
+        // Increment tumble index after processing this tumble
+        if (this.tumbleHistory.length > 0 && this.currentTumbleIndex < this.tumbleHistory.length) {
+            this.currentTumbleIndex++;
+            scene.gameData.debugLog("Tumble index incremented to:", this.currentTumbleIndex);
+        }
     }
 
     private eventListeners(scene: GameScene): void {
@@ -414,9 +1194,9 @@ export class SlotMachine {
         // Initialize the symbolGrid with proper nested arrays
         this.symbolGrid = Array(numRows).fill(null).map(() => Array(numCols).fill(null)) as SymbolGrid;
         Object.assign(this.symbolGrid, {
-            map: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer)[], index: number) => any[]) => 
+            map: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[], index: number) => any[]) => 
                 Array(numRows).fill(null).map((_, row) => callback(this.symbolGrid[row], row)),
-            forEach: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer)[], index: number) => void) => 
+            forEach: (callback: (row: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[], index: number) => void) => 
                 Array(numRows).fill(null).forEach((_, index) => callback(this.symbolGrid[index], index))
         });
 
@@ -424,29 +1204,35 @@ export class SlotMachine {
             let sampleScatterCount = 0;
             for (let col = 0; col < numCols; col++) {
                 const symbolValue = symbols[row][col];
-                let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
-                //let frameKey = 'Symbol0_FIS-00000.png';
-                if (symbolValue >= 1 && symbolValue <= 9) {
-                    symbolKey = `Symbol${symbolValue}_FIS`;
-                    //frameKey = `Symbol${symbolValue}_FIS-00000.png`;
-                }
                 const centerX = width * 0.5;
                 const centerY = height * 0.5;
                 const symbolX = centerX + col * (width + horizontalSpacing);
                 const symbolY = centerY + row * (height + verticalSpacing);
-
-                const symbol = scene.add.sprite(symbolX, symbolY, symbolKey//, frameKey
-                ) as GameObjects.Sprite;
-
-                if (symbolValue === 0 && sampleScatterCount < 3){
-                    sampleScatterCount++;
-                    symbol.setDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
-                } else {
-                    symbol.setDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                let symbol: GameObjects.Sprite | SymbolContainer | null = null;
+                if (symbolValue >= 0 && symbolValue <= 9) {
+                    symbol = new SymbolContainer(scene, symbolX, symbolY, symbolValue, scene.gameData);
+                    if (symbolValue === 0) {
+                        symbol.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
+                        //symbol.setScale(0.33);
+                        sampleScatterCount++;
+                        scene.gameData.debugLog('Created SymbolContainer for scatter symbol in createSampleSymbols', { symbolValue, position: { x: symbolX, y: symbolY } });
+                    } else {
+                        // Regular symbols 1-9 with specific adjustments for symbols 2 and 4
+                        if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
+                            // Adjust ratio for symbols 2 and 4 to match other symbols
+                            symbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
+                            scene.gameData.debugLog('Created SymbolContainer for symbol with adjusted ratio in createSampleSymbols', { symbolValue, position: { x: symbolX, y: symbolY } });
+                        } else {
+                            // Regular symbols 1-9
+                            symbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                            scene.gameData.debugLog('Created SymbolContainer for symbol in createSampleSymbols', { symbolValue, position: { x: symbolX, y: symbolY } });
+                        }
+                    }
                 }
-
-                this.container.add(symbol);
-                this.symbolGrid[row][col] = symbol;
+                if (symbol) {
+                    this.container.add(symbol);
+                    this.symbolGrid[row][col] = symbol;
+                }
             }
         }
     }
@@ -454,7 +1240,9 @@ export class SlotMachine {
 
     public async spin(scene: Scene, data: any): Promise<void> {
         // Clear previous bomb animations
-        
+        this.tumbleHistory = [];
+        this.currentTumbleIndex = 0;
+
         const gameScene = scene as GameScene;
         gameScene.gameData.isSpinning = true;
         
@@ -521,7 +1309,7 @@ export class SlotMachine {
         this.winOverlayContainers.push(winOverlay);
         this.activeWinOverlay = true;
 
-        winOverlay.show(totalWin, -2);
+        winOverlay.show(totalWin, 'Congrats');
 
         scene.buttons.freeSpinBtn.visible = false;
     }
@@ -555,21 +1343,22 @@ export class SlotMachine {
 
 
     private showWinOverlay(scene: GameScene, totalWin: number, bet: number): void {
-        // Calculate multiplier for win type
-        let multiplier = 1;
-        if(bet > 0)
-             multiplier = totalWin / bet;
-        else
-            multiplier = bet;
-
         // Create new win overlay container
         const winOverlay = new WinOverlayContainer(scene, this.winAnimation);
         this.winOverlayContainers.push(winOverlay);
         this.activeWinOverlay = true;
 
+        // Determine win type based on bet parameter
+        let winType: string | undefined;
+        if (bet === -1) {
+            winType = 'FreeSpin';
+        } else if (bet === -2) {
+            winType = 'Congrats';
+        }
+
         // Show the win overlay
-        if(multiplier != 0)
-            winOverlay.show(totalWin, multiplier);
+        if(totalWin > 0)
+            winOverlay.show(totalWin, winType);
     }
 
     public destroyWinOverlay(scene: GameScene): void {
@@ -680,11 +1469,14 @@ export class SlotMachine {
                 scene.gameData.isSpinning = true;
                 
                 // Play animation for all scatter symbols
-                let scatterSprites: GameObjects.Sprite[] = [];
+                let scatterSprites: (GameObjects.Sprite | SymbolContainer)[] = [];
                 for (let row = 0; row < rows; row++) {
                     for (let col = 0; col < cols; col++) {
                         if (symbolGrid[row][col] === 0 && this.symbolGrid[row][col]) {
-                            scatterSprites.push(this.symbolGrid[row][col] as GameObjects.Sprite);
+                            const symbolSprite = this.symbolGrid[row][col];
+                            if (symbolSprite instanceof GameObjects.Sprite || symbolSprite instanceof SymbolContainer) {
+                                scatterSprites.push(symbolSprite);
+                            }
                         }
                     }
                 }
@@ -704,11 +1496,11 @@ export class SlotMachine {
 
                         scene.gameData.totalFreeSpins += addFreeSpins;
                         scene.gameData.freeSpins += addFreeSpins;
-                        scene.buttons.autoplay.addSpins(addFreeSpins);
+                        scene.autoplay.addSpins(addFreeSpins);
                         
                         // Update the remaining spins display
-                        if (scene.buttons.autoplay.isAutoPlaying) {
-                            scene.buttons.autoplay.updateRemainingSpinsDisplay();
+                        if (scene.autoplay.isAutoPlaying) {
+                            scene.autoplay.updateRemainingSpinsDisplay();
                         }
 
                         // Show popup with retrigger info
@@ -809,8 +1601,8 @@ export class SlotMachine {
                         scene.audioManager.changeBackgroundMusic(scene);
 
                         // If in autoplay, stop it before showing free spins popup
-                        if (scene.buttons.autoplay.isAutoPlaying) {
-                            scene.buttons.autoplay.stop();
+                        if (scene.autoplay.isAutoPlaying) {
+                            scene.autoplay.stop();
                         }
 
                         // Start autoplay with the number of free spins gained
@@ -830,6 +1622,9 @@ export class SlotMachine {
                     const toRemove = Array.from({ length: rows }, () => Array(cols).fill(false));
                     let scatterAnimationsComplete = 0;
                     
+                    // Create animation promises for all scatter symbols
+                    const scatterAnimationPromises: Promise<void>[] = [];
+                    
                     scatterSprites.forEach((sprite) => {
                         // Find the grid position of this scatter sprite
                         for (let row = 0; row < rows; row++) {
@@ -844,25 +1639,32 @@ export class SlotMachine {
                         // Create particles for scatter explosion
                         this.createWinParticles(scene, sprite.x, sprite.y, 0xFF0000);
                         
-                        // Play scatter symbol animation
-                        this.animation.playSymbolAnimation(sprite, 0);
+                        // Play scatter symbol animation using Animation.ts
+                        const animationPromise = this.animation.playSymbolAnimation(sprite, 0)
+                            .then(() => {
+                                // After animation completes, fade out the sprite
+                                scene.tweens.add({
+                                    targets: sprite,
+                                    alpha: 0,
+                                    scale: 0.5,
+                                    duration: 500,
+                                    ease: 'Circ.easeInOut',
+                                    onComplete: () => {
+                                        sprite.destroy();
+                                    }
+                                });
+                            });
                         
-                        return; // wala pa nito
-                        sprite.once('animationcomplete', () => {
-                            sprite.alpha = 0;
-                            scatterAnimationsComplete++;
-                            animationsToComplete--;
-                            
-                            if (animationsToComplete === 0) {
-                                onAllAnimationsComplete();
-                                scene.gameData.debugLog("scatter animations complete");
-                                
-                                // Only trigger drop and refill after all scatter animations are done
-                                if (scatterAnimationsComplete === scatterSprites.length) {
-                                    this.dropAndRefillWithOverlayCheck(symbolGrid, toRemove, scene);
-                                }
-                            }
-                        });
+                        scatterAnimationPromises.push(animationPromise);
+                    });
+                    
+                    // Wait for all scatter animations to complete
+                    Promise.all(scatterAnimationPromises).then(() => {
+                        onAllAnimationsComplete();
+                        scene.gameData.debugLog("scatter animations complete");
+                        
+                        // Trigger drop and refill after all scatter animations are done
+                        this.dropAndRefillWithOverlayCheck(symbolGrid, toRemove, scene);
                     });
                 }
 
@@ -1017,11 +1819,13 @@ export class SlotMachine {
             );
 
             // After finding matches of 8 or more symbols
-            if (matchedCells.length >= 8 && matchedSymbol !== null && matchedSymbol >= 1 && matchedSymbol <= 9) {
+            if (matchedCells.length >= 8 && matchedSymbol !== null) {
                 matchedCells.forEach(({ row, col }) => {
                     const symbolSprite = this.symbolGrid[row][col];
                     if (symbolSprite) {
-                        this.animation.playSymbolAnimation(symbolSprite as GameObjects.Sprite, matchedSymbol);
+                        if (symbolSprite instanceof SymbolContainer || symbolSprite instanceof GameObjects.Sprite) {
+                            this.animation.playSymbolAnimation(symbolSprite, matchedSymbol);
+                        }
                     }
                 });
             }
@@ -1064,11 +1868,15 @@ export class SlotMachine {
             return true;
         }
         
-        // Check if any BombContainer is playing animation
+        // Check if any BombContainer or SymbolContainer is playing animation
         for (let row = 0; row < this.symbolGrid.length; row++) {
             for (let col = 0; col < this.symbolGrid[row].length; col++) {
                 const symbol = this.symbolGrid[row][col];
                 if (symbol instanceof BombContainer) {
+                    if (symbol.isPlayingAnimation()) {
+                        return true;
+                    }
+                } else if (symbol instanceof SymbolContainer) {
                     if (symbol.isPlayingAnimation()) {
                         return true;
                     }
@@ -1134,17 +1942,69 @@ export class SlotMachine {
                 }
             }
 
-            // Fill the rest with new random symbols at the top
+            // Fill the rest with new symbols from tumble history or random
             const numNew = rows - newCol.length;
             for (let i = 0; i < numNew; i++) {
-                const newSymbol = symbolGrid[i][col]
+                let newSymbol: number;
+                
+                // Use tumble history data if available
+                if (this.tumbleHistory.length > 0 && this.currentTumbleIndex < this.tumbleHistory.length) {
+                    const currentTumble = this.tumbleHistory[this.currentTumbleIndex];
+                    
+                    console.log(`=== PROCESSING TUMBLE ${this.currentTumbleIndex} for col ${col}, row ${i} ===`);
+                    console.log("currentTumble:", currentTumble);
+                    
+                    if (currentTumble && currentTumble.newslotarea && currentTumble.slotarea) {
+                        console.log("newslotarea (raw):", currentTumble.newslotarea);
+                        console.log("slotarea (raw):", currentTumble.slotarea);
+                        
+                        // Calculate which symbols need to be added based on the difference
+                        const newSlotArea = transpose(currentTumble.newslotarea);
+                        const oldSlotArea = transpose(currentTumble.slotarea);
+                        
+                        console.log("newslotarea (transposed):", newSlotArea);
+                        console.log("slotarea (transposed):", oldSlotArea);
+                        
+                        // Find the new symbol for this position by comparing arrays
+                        const newSymbolAtPosition = newSlotArea[i] && newSlotArea[i][col] !== undefined ? newSlotArea[i][col] : null;
+                        const oldSymbolAtPosition = oldSlotArea[i] && oldSlotArea[i][col] !== undefined ? oldSlotArea[i][col] : null;
+                        
+                        console.log(`Position [${i}][${col}] - new: ${newSymbolAtPosition}, old: ${oldSymbolAtPosition}`);
+                        
+                        // If there's a new symbol at this position, use it
+                        if (newSymbolAtPosition !== null && newSymbolAtPosition !== oldSymbolAtPosition) {
+                            newSymbol = newSymbolAtPosition;
+                            console.log(`Using new symbol from position: ${newSymbol}`);
+                        } else {
+                            // Fallback to finding added symbols in the tumble
+                            const addedSymbols = this.getAddedSymbolsFromTumble(currentTumble, col, i);
+                            newSymbol = addedSymbols.length > 0 ? addedSymbols[0] : Math.floor(Math.random() * 9) + 1;
+                            console.log(`Using added symbols or random: ${newSymbol}, addedSymbols:`, addedSymbols);
+                        }
+                        
+                        if (currentTumble.win && currentTumble.win.symbol) {
+                            console.log(`Win symbol for this tumble: ${currentTumble.win.symbol}`);
+                        }
+                    } else {
+                        newSymbol = Math.floor(Math.random() * 9) + 1;
+                        console.log(`Missing tumble data, using random: ${newSymbol}`);
+                    }
+                } else {
+                    // Fallback to random if no tumble history available
+                    newSymbol = Math.floor(Math.random() * 9) + 1;
+                    console.log(`No tumble history available, using random: ${newSymbol}`);
+                }
+                
+                console.log(`=== FINAL SYMBOL ASSIGNMENT ===`);
+                console.log(`Final newSymbol for col ${col}, row ${i}: ${newSymbol}`);
+                
                 newCol.unshift(newSymbol);
-                console.log("newCol " + i + " " + col, newCol);
+                scene.gameData.debugLog("newCol " + i + " " + col, newCol);
             }
                 
 
             // Create a temporary grid to track the new positions
-            const tempSymbolGrid: (GameObjects.Sprite | SpineGameObject | BombContainer)[] = [];
+            const tempSymbolGrid: (GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer)[] = [];
             
             // Animate drop for each cell in this column
             let targetRow = rows - 1;
@@ -1172,50 +2032,54 @@ export class SlotMachine {
             for (let i = 0; i < numNew; i++) {
                 const symbolValue = newCol[i];
                 let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
-                //let frameKey = 'Symbol0_FIS-00000.png';
-                
                 if (symbolValue >= 1 && symbolValue <= 9) {
                     symbolKey = `Symbol${symbolValue}_FIS`;
-                    //frameKey = `Symbol${symbolValue}_FIS-00000.png`;
                 }
-                
                 const centerX = width * 0.5;
                 const centerY = height * 0.5;
                 const symbolX = centerX + col * (width + horizontalSpacing);
                 const startY = centerY + (i - numNew) * (height + verticalSpacing);
                 const endY = centerY + i * (height + verticalSpacing);
-                
-                let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer;
-                
-                if (symbolValue >= 10 && symbolValue <= 22) {
-                    // Create BombContainer for bomb
+                let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer | null = null;
+                if (symbolValue >= 0 && symbolValue <= 9) {
+                    newSymbol = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    if (symbolValue === 0) {
+                        newSymbol.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
+                        //newSymbol.setScale(0.33);
+                        scene.gameData.debugLog('Created SymbolContainer for scatter symbol in dropAndRefillAsync', { symbolValue, position: { x: symbolX, y: startY } });
+                    } else {
+                        // Regular symbols 1-9 with specific adjustments for symbols 2 and 4
+                        if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6 ) {
+                            // Adjust ratio for symbols 2 and 4 to match other symbols
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
+                            scene.gameData.debugLog('Created SymbolContainer for symbol with adjusted ratio in dropAndRefillAsync', { symbolValue, position: { x: symbolX, y: startY } });
+                        } else {
+                            // Regular symbols 1-9
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                            scene.gameData.debugLog('Created SymbolContainer for symbol in dropAndRefillAsync', { symbolValue, position: { x: symbolX, y: startY } });
+                        }
+                    }
+                } else if (symbolValue >= 10 && symbolValue <= 22) {
                     newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
                     newSymbol.setBombDisplaySize(width * Slot.BOMB_SIZE_X, height * Slot.BOMB_SIZE_Y);
                     scene.gameData.debugLog('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
-                } else {
-                    newSymbol = scene.add.sprite(symbolX, startY, symbolKey//, frameKey
-                    ) as GameObjects.Sprite;
-                    if (symbolValue === 0) {
-                        newSymbol.setDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
-                    } else {
-                        newSymbol.setDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                    }
                 }
-
-                this.container.add(newSymbol);
-                newSymbols.push(newSymbol);
-                tempSymbolGrid[i] = newSymbol;
-                symbolGrid[i][col] = symbolValue;
-
-                dropTweens.push(new Promise(resolve => {
-                    scene.tweens.add({
-                        targets: newSymbol,
-                        y: endY,
-                        duration: 300,
-                        ease: 'Cubic.easeIn',
-                        onComplete: () => resolve()
-                    });
-                }));
+                if (newSymbol) {
+                    this.container.add(newSymbol);
+                    //@ts-ignore
+                    newSymbols.push(newSymbol);
+                    tempSymbolGrid[i] = newSymbol;
+                    symbolGrid[i][col] = symbolValue;
+                    dropTweens.push(new Promise(resolve => {
+                        scene.tweens.add({
+                            targets: newSymbol as any,
+                            y: endY,
+                            duration: 300,
+                            ease: 'Cubic.easeIn',
+                            onComplete: () => resolve()
+                        });
+                    }));
+                }
             }
             
             // Update the symbol grid for this column after all tweens are set up
@@ -1228,6 +2092,12 @@ export class SlotMachine {
 
         // After all drops complete, check for new matches
         Promise.all(dropTweens).then(async () => {
+            // Increment tumble index after processing this tumble
+            if (this.tumbleHistory.length > 0 && this.currentTumbleIndex < this.tumbleHistory.length) {
+                this.currentTumbleIndex++;
+                scene.gameData.debugLog("Tumble index incremented to:", this.currentTumbleIndex);
+            }
+            
             const result = this.checkMatch(symbolGrid, scene);
             if (result === "No more matches" || result === "free spins") {
                 // Wait 1.5 seconds before showing win animation
@@ -1239,13 +2109,18 @@ export class SlotMachine {
                     const totalWin = scene.gameData.totalWin || 0;
                     const multiplierWin = totalWin / bet;
                     
-                    if (multiplierWin >= 10 ) {//|| scene.gameData.isBonusRound) {
+                    if (multiplierWin >= scene.gameData.winRank[1] ) {//|| scene.gameData.isBonusRound) {
                         this.showWinOverlay(scene, totalWin, bet);
                     }
-                    scene.audioManager.playWinSFX(multiplierWin, scene);
                 });
                 Events.emitter.emit(Events.MATCHES_DONE, { symbolGrid });
                 scene.gameData.isSpinning = false;
+                // Emit additional event to ensure button state is updated
+                Events.emitter.emit(Events.SPIN_ANIMATION_END, { symbolGrid });
+                // Direct button state update
+                if (scene.buttons && (scene.buttons as any).updateSpinButtonState) {
+                    (scene.buttons as any).updateSpinButtonState(scene);
+                }
             }
             
             // Wait for any active bomb animations and win overlays before processing next queued drop and refill
@@ -1277,6 +2152,51 @@ export class SlotMachine {
         checkForCompletion();
     }
 
+    private getAddedSymbolsFromTumble(tumbleData: any, col: number, row: number): number[] {
+        const addedSymbols: number[] = [];
+        
+        console.log(`=== getAddedSymbolsFromTumble for col ${col}, row ${row} ===`);
+        
+        try {
+            if (tumbleData && tumbleData.newslotarea && tumbleData.slotarea) {
+                const newSlotArea = transpose(tumbleData.newslotarea);
+                const oldSlotArea = transpose(tumbleData.slotarea);
+                
+                console.log("newSlotArea in getAddedSymbols:", newSlotArea);
+                console.log("oldSlotArea in getAddedSymbols:", oldSlotArea);
+                
+                // Compare the arrays to find new symbols
+                if (newSlotArea[row] && oldSlotArea[row]) {
+                    const newSymbol = newSlotArea[row][col];
+                    const oldSymbol = oldSlotArea[row][col];
+                    
+                    console.log(`Comparing [${row}][${col}] - new: ${newSymbol}, old: ${oldSymbol}`);
+                    
+                    // If the symbol is different or new, add it
+                    if (newSymbol !== oldSymbol && newSymbol !== undefined) {
+                        addedSymbols.push(newSymbol);
+                        console.log(`Added symbol ${newSymbol} to addedSymbols`);
+                    }
+                } else if (newSlotArea[row]) {
+                    // If there's no old symbol but there's a new one, it's added
+                    const newSymbol = newSlotArea[row][col];
+                    if (newSymbol !== undefined) {
+                        addedSymbols.push(newSymbol);
+                        console.log(`Added new symbol ${newSymbol} (no old symbol)`);
+                    }
+                }
+                
+                console.log(`Final addedSymbols for [${row}][${col}]:`, addedSymbols);
+            } else {
+                console.log("Missing tumbleData, newslotarea, or slotarea");
+            }
+        } catch (error) {
+            console.error("Error getting added symbols from tumble:", error);
+        }
+        
+        return addedSymbols;
+    }
+
     private processNextQueuedDropAndRefill(scene: GameScene): void {
         this.ongoingDropAndRefill = false;
         scene.gameData.debugLog("drop and refill complete");
@@ -1293,7 +2213,10 @@ export class SlotMachine {
     private cleanupAloneSymbols(): void {
         // Clean up any symbols that might be left on screen but not in the grid
         this.container.each((child: any) => {
-            if ((child instanceof Phaser.GameObjects.Sprite || child instanceof SpineGameObject) && child.active) {
+            if ((child instanceof Phaser.GameObjects.Sprite || 
+                 child instanceof SpineGameObject || 
+                 child instanceof SymbolContainer || 
+                 child instanceof BombContainer) && child.active) {
                 let foundInGrid = false;
                 for (let row = 0; row < this.symbolGrid.length; row++) {
                     for (let col = 0; col < this.symbolGrid[row].length; col++) {
@@ -1310,6 +2233,44 @@ export class SlotMachine {
                     child.destroy();
                 }
             }
+        });
+    }
+
+    /**
+     * Wait for all symbol animations to complete before proceeding
+     */
+    private async waitForSymbolAnimationsToComplete(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            const checkAnimations = () => {
+                let anyAnimating = false;
+                
+                // Check all symbols in the grid for ongoing animations
+                for (let row = 0; row < this.symbolGrid.length; row++) {
+                    for (let col = 0; col < this.symbolGrid[row].length; col++) {
+                        const symbol = this.symbolGrid[row][col];
+                        if (symbol && symbol.active) {
+                            // Skip bomb containers as they have their own animation logic
+                            if (!(symbol instanceof BombContainer)) {
+                                if (this.animation.isSymbolAnimating(symbol as Phaser.GameObjects.Sprite)) {
+                                    anyAnimating = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (anyAnimating) break;
+                }
+                
+                if (anyAnimating) {
+                    // Check again in 100ms
+                    setTimeout(checkAnimations, 100);
+                } else {
+                    resolve();
+                }
+            };
+            
+            // Start checking
+            checkAnimations();
         });
     }
 

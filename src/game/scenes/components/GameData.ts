@@ -100,7 +100,8 @@ export class GameData {
     currentMatchingSymbols: number[] = [];
     doubleChanceMultiplier: number = 2;
     
-    winRank : number[] = [1, 10, 20, 30, 50];
+    //winRank : number[] = [1, 10, 20, 30, 50];
+    winRank : number[] = [1, 21, 34, 56, 78];
 
     public gameUrl: string = '';
     public gameToken: string = '';
@@ -150,16 +151,17 @@ export class Slot {
     static readonly TOGGLE_WIN_EFFECT: boolean = false;
     static readonly TOGGLE_FRONTEND: boolean = true;
 
-    static readonly DIFFICULTY_SYMBOLS: number = 2;
+    static readonly DIFFICULTY_SYMBOLS: number = 1;
     static readonly SYMBOLS: number = 9;
     static readonly ROWS: number = 5;
     static readonly COLUMNS: number = 6;
     static readonly SCATTER_SYMBOL: number = 0;
-    static readonly SCATTER_SIZE: number = 1.25;
-    static readonly SYMBOL_SIZE: number = 1;
-    static readonly BOMB_SIZE_X: number = 1.25;
-    static readonly BOMB_SIZE_Y: number = 1.0;
+    static readonly SCATTER_SIZE: number = 1.25 * 0.9;
+    static readonly SYMBOL_SIZE: number = 1 * 0.9;
+    static readonly BOMB_SIZE_X: number = 1.25 * 0.9;
+    static readonly BOMB_SIZE_Y: number = 1.0 * 0.9;
     static readonly BOMBS_MAX_COUNT: number = 3;
+    static readonly SYMBOL_SIZE_ADJUSTMENT: number = 0.1;
 
     values: number[][] = [];
     scatterCount: number = 0;
@@ -200,7 +202,7 @@ export class Slot {
             for (let c = 0; c < Slot.COLUMNS; c++) {
                 allCells.push({ row: r, col: c });
             }
-        }
+        }   
 
         // Shuffle
         for (let i = allCells.length - 1; i > 0; i--) {
