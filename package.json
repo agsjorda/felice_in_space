@@ -1,4 +1,4 @@
-{
+
     "name": "template-vite-ts",
     "description": "A Phaser 3 TypeScript template using Vite.",
     "version": "1.4.0",
@@ -29,4 +29,3 @@
         "phaser3-rex-plugins": "^1.80.16",
         "terser": "^5.39.0"
     }
-}
