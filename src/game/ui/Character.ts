@@ -26,6 +26,7 @@ export class Character {
 
     // Function to detect if the device is mobile
     private isMobileDevice(): boolean {
+        return true;
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.innerWidth <= 768;
     }
@@ -43,18 +44,18 @@ export class Character {
         let width = this.scene.scale.width;
         let height = this.scene.scale.height;
         let x = this.isMobileDevice() ? width * 0.80 : width * 0.14;
-        let y = this.isMobileDevice() ? height * 0.19 : height * 0.90;
+        let y = this.isMobileDevice() ? height * 0.24 : height * 0.90;
 
         this.spineObject = this.scene.add.spine(x, y, 'character', 'character-atlas') as SpineGameObject;
         this.spineObject.setScale(
-                this.isMobileDevice() ? 0 : -0.25, 
-                this.isMobileDevice() ? 0 : 0.25
+                this.isMobileDevice() ? 0.08 : -0.25, 
+                this.isMobileDevice() ? 0.08 : 0.25
             );
 
         this.animationY = this.spineObject.y;
 
         this.currAnim = this.spineObject.animationState.setAnimation(0, 'idle', true);
-        this.spineObject.setDepth(10);
+        this.spineObject.setDepth(0);
         this.lastAnimationTime = Date.now();
         this.isAnimating = true;
 
@@ -71,15 +72,15 @@ export class Character {
                             this.lastAnimationTime = Date.now();
                             this.isAnimating = true;
                             
-                            this.currAnim.listener = {
-                                complete: () => {
-                                    this.currWinAnim = this.spineObject?.animationState.setAnimation(0, 'win', false);
-                                    this.lastAnimationTime = Date.now();
-                                    this.isAnimating = true;
+                            // this.currAnim.listener = {
+                            //     complete: () => {
+                            //         this.currWinAnim = this.spineObject?.animationState.setAnimation(0, 'win', false);
+                            //         this.lastAnimationTime = Date.now();
+                            //         this.isAnimating = true;
                                     
-                                    this.spineObject?.setY(this.animationY+25/5);
-                                }
-                            };
+                            //         this.spineObject?.setY(this.animationY+25/5);
+                            //     }
+                            // };
                         }
                     };
                     
@@ -107,7 +108,7 @@ export class Character {
         
         // Check if animation has been running for too long without completion
         if (this.isAnimating && (currentTime - this.lastAnimationTime) > this.ANIMATION_TIMEOUT) {
-            //this.scene.gameData.debugLog('Character animation appears stuck, recreating...');
+            //console.log('Character animation appears stuck, recreating...');
             this.recreateCharacter();
             return;
         }
@@ -116,12 +117,12 @@ export class Character {
         try {
             const currentAnimation = this.spineObject.animationState.getCurrent(0);
             if (!currentAnimation || !currentAnimation.animation) {
-                //this.scene.gameData.debugLog('Character has no active animation, recreating...');
+                //console.log('Character has no active animation, recreating...');
                 this.recreateCharacter();
                 return;
             }
         } catch (error) {
-            //this.scene.gameData.debugLog('Error checking character animation state, recreating...', error);
+            //console.log('Error checking character animation state, recreating...', error);
             this.recreateCharacter();
             return;
         }

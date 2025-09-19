@@ -10,6 +10,11 @@ import { AudioManager } from './components/AudioManager';
 import { Autoplay } from './components/Autoplay';
 import { HelpScreen } from './components/HelpScreen';
 import { GameAPI } from './backend/GameAPI';
+import { BuyFeaturePopup } from './components/BuyFeaturePopup';
+import { SessionTimeoutPopup } from './components/SessionTimeoutPopup';
+import { InsufficientBalancePopup } from './components/InsufficientBalancePopup';
+
+
 
 // Interface for component lifecycle management
 interface GameComponent {
@@ -30,6 +35,9 @@ export class Game extends Scene {
     public autoplay: Autoplay;
     public helpScreen: HelpScreen;
     public gameAPI: GameAPI;
+    public buyFeaturePopup: BuyFeaturePopup;
+    public sessionTimeoutPopup: SessionTimeoutPopup;
+    public insufficientBalancePopup: InsufficientBalancePopup;
 
     private components: GameComponent[];
 
@@ -38,7 +46,13 @@ export class Game extends Scene {
         
         // Initialize all components
         this.stateMachine = new StateMachine();
+        
+        // Create a temporary gameAPI for gameData initialization
+        this.gameAPI = {} as GameAPI; // Temporary placeholder
         this.gameData = new GameData(this.gameAPI);
+        // Now create the real gameAPI with gameData
+        this.gameAPI = new GameAPI(this.gameData);
+        
         this.background = new Background();
         this.slotMachine = new SlotMachine();
         this.character = new Character();
@@ -46,7 +60,12 @@ export class Game extends Scene {
         this.audioManager = new AudioManager();
         this.autoplay = new Autoplay();
         this.helpScreen = new HelpScreen();
-        this.gameAPI = new GameAPI(this.gameData);
+        this.buyFeaturePopup = new BuyFeaturePopup();
+        this.sessionTimeoutPopup = new SessionTimeoutPopup();
+        this.insufficientBalancePopup = new InsufficientBalancePopup();
+        
+        // Inject the single autoplay instance into buttons
+        this.buttons.autoplay = this.autoplay;
         // Store components for lifecycle management
         this.components = [
             this.background,
@@ -56,6 +75,9 @@ export class Game extends Scene {
             this.audioManager,
             this.autoplay,
             this.helpScreen,
+            this.buyFeaturePopup,
+            this.sessionTimeoutPopup,
+            this.insufficientBalancePopup,
         ];
     }
 
@@ -75,11 +97,6 @@ export class Game extends Scene {
     
     create(): void {
         try {
-            // Debug logging example
-            this.gameData.debugLog('Game scene created');
-            this.gameData.debugLog('Current bet:', this.gameData.bet);
-            this.gameData.debugLog('Current balance:', this.gameData.balance);
-            
             // Set initial state
             this.stateMachine.setState(new StartState(), this);
 
@@ -127,8 +144,8 @@ export class Game extends Scene {
     update(time: number, delta: number): void {
         try {
             // Debug logging example (only logs every 60 frames to avoid spam)
-            if (this.gameData.debugged && time % 1000 < 16) { // ~60fps
-                //this.gameData.debugLog('Game update - isSpinning:', this.gameData.isSpinning);
+            if (this.gameData.debugged > 0 && time % 1000 < 16) { // ~60fps
+                this.gameData.debugLog('Game update - isSpinning:', this.gameData.isSpinning);
             }
             
             // Update state machine
@@ -169,10 +186,10 @@ export class Game extends Scene {
     }
 
     showHelpScreen(): void {
-        this.helpScreen.show();
+        this.helpScreen.show(this);
     }
 
     hideHelpScreen(): void {
-        this.helpScreen.hide();
+        this.helpScreen.hide(this);
     }
 } 

@@ -12,7 +12,7 @@ export class StartState extends State {
     }
 
     update(_scene: Scene, _time: number, _delta: number): void {
-        //_scene.gameData.debugLog("Update");
+        //_console.log("Update");
     }
 
     end(_scene: Scene): void {

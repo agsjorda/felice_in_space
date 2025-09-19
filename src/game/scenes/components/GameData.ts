@@ -44,13 +44,13 @@ export class GameData {
         logUrlParameters();
         
         // Log debug mode status
-        if (this.debugged) {
+        if (this.debugged > 0) {
             console.log('🔧 Debug mode enabled');
         }
     }
 
     winamounts: number[][] = [
-            [100, 50, 25, 15, 12, 10, 8, 5, 0.4, 2, 100],
+            [100, 50, 25, 15, 12, 10, 8, 5, 4, 2, 100],
             [5, 25, 10, 5, 2, 1.5, 1.2, 1, 0.9, 0.75, 5],
             [3, 10, 2.5, 2, 1, 1, 0.8, 0.5, 0.4, 0.25, 3]
     ];
@@ -68,8 +68,12 @@ export class GameData {
     
     totalBet: number = 0;
     totalWin: number = 0;
+
+    totalWinFreeSpin: number[] = [];
+    totalWinFreeSpinPerTumble: number[] = [];
     totalBonusWin: number = 0; // Track bonus round wins separately
     doubleChanceEnabled: boolean = false;
+    buyFeatureEnabled: boolean = false;
     isSpinning: boolean = false;
     turbo: boolean = false;
     isBonusRound: boolean = false;
@@ -100,8 +104,7 @@ export class GameData {
     currentMatchingSymbols: number[] = [];
     doubleChanceMultiplier: number = 2;
     
-    //winRank : number[] = [1, 10, 20, 30, 50];
-    winRank : number[] = [1, 21, 34, 56, 78];
+    winRank : number[] = [1, 20, 30, 45, 60, 21000];
 
     public gameUrl: string = '';
     public gameToken: string = '';
@@ -109,11 +112,28 @@ export class GameData {
     freeSpins: number = 0;
     totalFreeSpins: number = 0;
 
+    // API-driven free spins
+    public apiBet : number = 1;
+    public apiFreeSpins: any[] = [];
+    public apiFreeSpinsIndex: number = 0;
+    public useApiFreeSpins: boolean = false;
+    public totalBombWin: number = 0;
+
+    // Current free spin progress (1-based when in use)
+    public currentFreeSpinIndex: number = 0;
+
+    // Base-game autoplay state (separate from bonus/free spins)
+    public autoplayRemainingSpins: number = 0; // persists when bonus starts
+    public autoplayWasPaused: boolean = false; // true when autoplay was paused due to bonus
+
     // Debug mode property - initialized from URL parameter
-    public debugged: boolean = (() => {
+    public debugged: number = (() => {
         const debugParam = getUrlParameter('debug');
-        return debugParam === '1';
+        console.log('debugParam', debugParam, parseInt(debugParam || '0'));
+        return debugParam ? parseInt(debugParam) : 0;
     })();
+
+    public demoMode: boolean = false;
 
     getDoubleFeaturePrice(): number {
         const doubleMultiplier = 1.25; // temporary multiplier
@@ -127,40 +147,40 @@ export class GameData {
 
     // Utility method to check if debug mode is enabled
     isDebugMode(): boolean {
-        return this.debugged;
+        return this.debugged > 0;
     }
 
     // Debug error logging method - only logs when debug mode is enabled
     debugError(message: string, ...args: any[]): void {
-        if (this.debugged) {
+        if (this.debugged > 0) {
             console.error(`%c[DEBUG ERROR] ${message}`, 'color: #ff0000', ...args);
         }
     }
 
-    
     // Debug logging method - only logs when debug mode is enabled
     debugLog(message: string, ...args: any[]): void {
-        if (this.debugged) {
+        if (this.debugged > 0) {
             console.log(`[DEBUG] ${message}`, ...args);
         }
     }
 }
 
 export class Slot {
-    static readonly TOGGLE_DIFFICULTY: boolean = true;
+    static TOGGLE_DIFFICULTY: boolean = true;
     static readonly TOGGLE_WIN_EFFECT: boolean = false;
-    static readonly TOGGLE_FRONTEND: boolean = true;
 
-    static readonly DIFFICULTY_SYMBOLS: number = 1;
+    static DIFFICULTY_SYMBOLS: number = 1;
     static readonly SYMBOLS: number = 9;
     static readonly ROWS: number = 5;
     static readonly COLUMNS: number = 6;
     static readonly SCATTER_SYMBOL: number = 0;
-    static readonly SCATTER_SIZE: number = 1.25 * 0.9;
-    static readonly SYMBOL_SIZE: number = 1 * 0.9;
-    static readonly BOMB_SIZE_X: number = 1.25 * 0.9;
-    static readonly BOMB_SIZE_Y: number = 1.0 * 0.9;
+    static readonly SCATTER_SIZE: number = 1.125;
+    static readonly SYMBOL_SIZE: number = 0.9;
+    static readonly BOMB_SIZE_X: number = 1.125;
+    static readonly BOMB_SIZE_Y: number = 0.9;
     static readonly BOMBS_MAX_COUNT: number = 3;
+
+    static readonly BOMB_SCALE: number = 1.5;
     static readonly SYMBOL_SIZE_ADJUSTMENT: number = 0.1;
 
     values: number[][] = [];
@@ -202,7 +222,7 @@ export class Slot {
             for (let c = 0; c < Slot.COLUMNS; c++) {
                 allCells.push({ row: r, col: c });
             }
-        }   
+        }
 
         // Shuffle
         for (let i = allCells.length - 1; i > 0; i--) {

@@ -1,4 +1,5 @@
 import { Scene, Sound } from 'phaser';
+import chalk from 'chalk';
 
 export class AudioManager {
     private musicVolume: number = 1.0; // Default music volume (0.0 - 1.0)
@@ -146,7 +147,6 @@ export class AudioManager {
             }
         });
     }
-
     changeBackgroundMusic(scene: Scene): void {
         if (scene.gameData.isBonusRound) {
             this.BonusBG.play();
@@ -174,6 +174,7 @@ export class AudioManager {
                 break;
         }
     }
+
     /**
      * Add a win SFX to the queue to be played sequentially
      * @param winName - The name of the win SFX to queue
@@ -181,7 +182,7 @@ export class AudioManager {
     queueWinSFX(winNames: string[]): void {
         winNames.forEach(winName => {
             this.winSFXQueue.push(winName);
-            console.log(winName);
+            //console.log(winName);
         });
         
         // If not currently playing from queue, start playing
@@ -220,16 +221,13 @@ export class AudioManager {
             // Stop sounds directly without scene reference
             
             this.BigW.stop();
-            this.BigWinSkip.stop();
             this.MegaW.stop();
-            this.MegaWinSkip.stop();
             this.EpicW.stop();
-            this.EpicWinSkip.stop();
             this.SuperW.stop();
-            this.SuperWinSkip.stop();
+            this.WinSkip.stop();
 
             this.BGChecker.resume();
-            this.setMusicVolume(this.getMusicVolume() / 0.01);
+            // this.setMusicVolume(this.getMusicVolume() / 0.01);
             if(this.getMusicVolume() > 1) {
                 this.setMusicVolume(1);
             }
@@ -253,15 +251,17 @@ export class AudioManager {
     playWinSFX(winName: string): void {
         let winSound: Sound.WebAudioSound | undefined;
         if(winName === 'FreeSpin') {
-            this.BGChecker.pause();
-            this.setMusicVolume(this.getMusicVolume() * 0.01);
+            this.BGChecker.stop();
+            //if(this.getMusicVolume() > 0.01){
+            //    this.setMusicVolume(this.getMusicVolume() * 0.01);
+            //}
             let winSound: Sound.WebAudioSound | undefined;
             winSound = this.FreeSpinWon;
 
             if (winSound) {
                 winSound.once('complete', () => {
-                    this.BGChecker.pause();
-                    this.setMusicVolume(this.getMusicVolume() * 0.01);
+                    this.BGChecker.resume();
+                    //this.setMusicVolume(this.getMusicVolume() / 0.01);
                     // Play next in queue if we're using the queue system
                     if (this.isPlayingQueue) {
                         this.playNextInQueue();
@@ -273,31 +273,31 @@ export class AudioManager {
         }
         else
         { 
-            this.BGChecker.pause();
-            this.setMusicVolume(this.getMusicVolume() * 0.01);
+            this.BGChecker.stop();
+            //this.setMusicVolume(this.getMusicVolume() * 0.01);
 
             if (winName === 'BigWin') {
                 winSound = this.BigW;
             } else if (winName === 'BigWinSkip') {
-                winSound = this.BigWinSkip;
+                //winSound = this.WinSkip;
             } else if (winName === 'EpicWin') {
                 winSound = this.EpicW;
             } else if (winName === 'EpicWinSkip') {
-                winSound = this.EpicWinSkip;
+                //winSound = this.WinSkip;
             } else if (winName === 'MegaWin') {
                 winSound = this.MegaW;
             } else if (winName === 'MegaWinSkip') {
-                winSound = this.MegaWinSkip;
+                //winSound = this.WinSkip;
             } else if (winName === 'SuperWin') {
                 winSound = this.SuperW;
             } else if (winName === 'SuperWinSkip') {
-                winSound = this.SuperWinSkip;
+                //winSound = this.WinSkip;
             }
             
             if (winSound) {
                 winSound.once('complete', () => {
                     this.winIsPlaying = false;
-                    this.BGChecker.resume();
+                    this.BGChecker.play();
                     // Play next in queue if we're using the queue system
                     if (this.isPlayingQueue) {
                         console.log('playing next in queue');
@@ -310,8 +310,9 @@ export class AudioManager {
     }
 
     stopWinSFX(_scene: Scene): void {   
-        this.BGChecker.resume();
-        this.setMusicVolume(this.getMusicVolume() / 0.01);
+        this.BGChecker.play();
+        // this.setMusicVolume(this.getMusicVolume() / 0.01);
+        console.log(this.getMusicVolume());
         if(this.getMusicVolume() > 1) {
             this.setMusicVolume(1);
         }
@@ -319,6 +320,7 @@ export class AudioManager {
         this.MegaW.stop();
         this.SuperW.stop();
         this.BigW.stop();
+        this.WinSkip.stop();
         // Also clear the queue when stopping
         this.winSFXQueue = [];
         this.isPlayingQueue = false;
@@ -332,6 +334,7 @@ export class AudioManager {
         return this.isPlayingQueue;
     }
 
+
     update(_scene: Scene, _time: number, _delta: number): void {
         // Empty implementation
     }
@@ -340,6 +343,7 @@ export class AudioManager {
         this.musicVolume = vol;
         if (this.MainBG) this.MainBG.setVolume(this.musicVolume);
         if (this.BonusBG) this.BonusBG.setVolume(this.musicVolume);
+        console.log(chalk.blueBright.bold("setMusicVolume" + this.musicVolume));
     }
 
     getMusicVolume(): number {
@@ -350,6 +354,10 @@ export class AudioManager {
         this.sfxVolume = vol;
         // Update all SFX objects
         if (this.ClickSFX) this.ClickSFX.setVolume(this.sfxVolume);
+        if (this.TWin1) this.TWin1.setVolume(this.sfxVolume);
+        if (this.TWin2) this.TWin2.setVolume(this.sfxVolume);
+        if (this.TWin3) this.TWin3.setVolume(this.sfxVolume);
+        if (this.TWin4) this.TWin4.setVolume(this.sfxVolume);
         if (this.ReelDrop) this.ReelDrop.setVolume(this.sfxVolume);
         if (this.SpinSFX) this.SpinSFX.setVolume(this.sfxVolume);
         if (this.UtilityButtonSFX) this.UtilityButtonSFX.setVolume(this.sfxVolume);
@@ -363,10 +371,6 @@ export class AudioManager {
         if (this.TExplosion) this.TExplosion.setVolume(this.sfxVolume);
         if (this.CongratsW) this.CongratsW.setVolume(0);
         if (this.FreeSpinW) this.FreeSpinW.setVolume(0);
-        if (this.TWin1) this.TWin1.setVolume(this.sfxVolume);
-        if (this.TWin2) this.TWin2.setVolume(this.sfxVolume);
-        if (this.TWin3) this.TWin3.setVolume(this.sfxVolume);
-        if (this.TWin4) this.TWin4.setVolume(this.sfxVolume);
     }
 
     getSFXVolume(): number {

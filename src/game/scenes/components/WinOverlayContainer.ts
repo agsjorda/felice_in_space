@@ -5,13 +5,16 @@ import { WinAnimation } from './WinAnimation';
 import { GameData } from './GameData';
 import { Buttons } from '../../ui/Buttons';
 import { AudioManager } from './AudioManager';
+import { GameAPI } from '../backend/GameAPI';
 
 // Extend Scene to include gameData and audioManager
 interface GameScene extends Scene {
+    gameAPI: GameAPI;
     gameData: GameData;
     audioManager: AudioManager;
     buttons: Buttons;
     autoplay: any;
+    slotMachine: any;
 }
 
 export class WinOverlayContainer {
@@ -20,7 +23,7 @@ export class WinOverlayContainer {
     private winAnimation: WinAnimation;
     private winText: GameObjects.Text;
     private winText_x: number = 0;
-    private winText_y: number = 0;
+    private winText_y: number = 20;
 
 
     private freeSpinsText: GameObjects.Text;
@@ -32,6 +35,9 @@ export class WinOverlayContainer {
     private isMobile: boolean = false;
     private buttonZone: GameObjects.Zone;
     private skipOnce :boolean[] = [false, false, false, false, false];
+    private onSpaceDown?: (event: KeyboardEvent) => void;
+    private inputLocked: boolean = false; // Prevent skipping for a minimum display time
+    private currentWinType?: string;
 
     constructor(scene: GameScene, winAnimation: WinAnimation) {
         this.scene = scene;
@@ -45,6 +51,7 @@ export class WinOverlayContainer {
     }
 
     private isMobileDevice(): boolean {
+        return true;
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.innerWidth <= 768;
     }
@@ -58,21 +65,20 @@ export class WinOverlayContainer {
         const bg = this.scene.add.graphics();
         bg.fillStyle(0x000000, 0.7);
         bg.fillRect(0, 0, this.scene.scale.width * 2, this.scene.scale.height * 2);
-        if(this.isMobile) {
-            bg.setScale(2, 2);
-        }
+       
         this.container.add(bg);
 
         // Create container for content
         const contentContainer = this.scene.add.container(
-            this.isMobile ? this.scene.scale.width : this.scene.scale.width / 2,
-            this.isMobile ? this.scene.scale.height : this.scene.scale.height / 2);
+            this.isMobile ? this.scene.scale.width : this.scene.scale.width * 0.55,
+            this.isMobile ? this.scene.scale.height : this.scene.scale.height * 0.55);
         this.container.add(contentContainer);
 
         // Add win animation
         this.winAnim = this.scene.add.spine(0, 0, 'myWinAnim2', 'myWinAnim2') as SpineGameObject;
-        this.winAnim.setScale(this.isMobile ? 0.6 : 1);
-        this.winAnim.setOrigin(this.isMobile ? 0.5 : 0.5, this.isMobile ? 0.5 : 0.5);
+        this.winAnim.setScale(this.isMobile ? 1 : 1);
+        this.winAnim.setOrigin(this.isMobile ? 0.475 : 0.5, this.isMobile ? 0.5 : 0.5);
+        this.winAnim.name = 'winAnim';
         contentContainer.add(this.winAnim);
 
         // Add win amount text
@@ -110,7 +116,7 @@ export class WinOverlayContainer {
         // Add free spins text
         this.freeSpinsText = this.scene.add.text(0, 0, '0.00', {
             fontSize: '84px',
-            color: '#FFD700',
+            color: '#111111',
             fontFamily: 'Poppins',
             fontStyle: 'bold',
             align: 'center',
@@ -125,24 +131,23 @@ export class WinOverlayContainer {
                 fill: false
             }
         });
-        
-        const gradient2  = this.freeSpinsText.context.createLinearGradient(0,0,0,this.freeSpinsText.height);
+
+        const gradient2 = this.freeSpinsText.context.createLinearGradient(0,0,0,this.freeSpinsText.height);
         gradient2.addColorStop(0, '#00FF88');
         gradient2.addColorStop(0.5, '#00DD55');
         gradient2.addColorStop(1, '#00AA33');
         this.freeSpinsText.setFill(gradient2);
 
-        this.freeSpinsText.setStroke('#00FF88', 4);
-        this.freeSpinsText.setShadow(0, 0, '#00FF88', 15);
-
+        
+        
         this.freeSpinsText.setOrigin(0.5);
         this.freeSpinsText.visible = false;
-        this.freeSpinsText.setPosition(-110, 95);
+        this.freeSpinsText.setPosition(this.isMobile ? -100 : -150, 0);
         
         contentContainer.add(this.freeSpinsText);
 
         // Add continue button
-        this.buttonText = this.scene.add.text(100, 300, 'Press anywhere to continue', {
+        this.buttonText = this.scene.add.text(0, this.winText_y + 100, 'Press anywhere to continue', {
             fontSize: '32px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
@@ -177,19 +182,25 @@ export class WinOverlayContainer {
 
     private setupEventListeners(): void {
         Events.emitter.on(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN, (totalWin: number, winType: string) => {
+            if (this.currentWinType === 'FreeSpin') {
+                this.winText.setPosition(this.isMobile ? 0 : 0, 0);
+                this.winText.setText(`${totalWin.toFixed(0)}`);
+                this.freeSpinsText.visible = false;
+                return;
+            }
             if (winType === 'Congrats') {
-                this.winText.setPosition(0, -60);
+                this.winText.setPosition(this.isMobile ? 0 : -60, -60);
                 this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-                this.freeSpinsText.visible = true;
+                this.winText.setScale(this.isMobile ? 0.75 : 1);
+                this.freeSpinsText.visible = false;
                 this.freeSpinsText.setText(`${this.scene.gameData.totalFreeSpins.toFixed(0)}`);
             } else if (winType === 'FreeSpin') {
-                this.winText.setPosition(0, -60);
+                this.winText.setPosition(this.isMobile ? 0 : 0, 0);
                 this.winText.setText(`${totalWin.toFixed(0)}`);
                 this.freeSpinsText.visible = false;
 
             } else {
-                //this.winText.setPosition(20, 130);
-                //this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                
                 this.startCounting(this.winAnim, totalWin);
                 this.freeSpinsText.visible = false;
             }
@@ -198,22 +209,16 @@ export class WinOverlayContainer {
     
 
         this.buttonZone.on('pointerdown', () => {
-            if (this.multiplier === -1) {
-                // Handle free spins case      
-                this.buttonZone.disableInteractive(true);
-                this.endWinAnimation(() => {
-                    // Start free spins autoplay without stopping existing autoplay
-                    if (!this.scene.autoplay.isAutoPlaying) {
-                        Events.emitter.emit(Events.AUTOPLAY_START, this.scene.gameData.freeSpins);
-                    }
-                    this.destroy();
-                });
-            } else {
-                console.log('regular win case', this.currentCount, this.targetCount);
-                // Handle regular win case with animation transitions
-                this.handleButtonPressDuringCounting();
-            }
+            this.handleSkipInput();
         });
+
+        // Desktop-only: allow spacebar to skip overlays
+        if (!this.isMobile && this.scene.input.keyboard) {
+            this.onSpaceDown = () => {
+                this.handleSkipInput();
+            };
+            this.scene.input.keyboard.on('keydown-SPACE', this.onSpaceDown);
+        }
     }
 
     public async show(totalWin: number, winType?: string): Promise<void> {
@@ -223,9 +228,17 @@ export class WinOverlayContainer {
 
         this.isActive = true;
         this.isAnimating = true;
+        this.currentWinType = winType;
+
+        // Lock input to prevent skipping too quickly (10s for FreeSpin, 1s otherwise)
+        this.inputLocked = true;
+        const lockMs = 333;//(winType === 'FreeSpin') ? 1000 : 1000;
+        this.scene.time.delayedCall(lockMs, () => {
+            this.inputLocked = false;
+        });
 
         // Set up gradient colors for win text
-        let colorGradient = ['#00FF8A', '#00E676', '#00C75F'];
+        let colorGradient = ['#FFF15A','#FFD000', '#FFB400'];
         let colorMid = 0.5;
 
         // Apply gradient to win text
@@ -237,11 +250,17 @@ export class WinOverlayContainer {
 
         // Handle different win types
         if (winType === 'FreeSpin') {
-            this.winText.setPosition(0, -60);
+            this.winText.setPosition(0, -100);
             this.winText.setText(`${totalWin.toFixed(0)}`);
+            this.winText.setScale(this.winText.scale * 2);
             this.freeSpinsText.visible = false;
             this.multiplier = -1;
             this.playWinSound(totalWin);
+            if(this.winAnim){
+                this.winAnimation.playWinAnimation(this.winAnim, totalWin, 'FreeSpin');
+                this.winAnim.setPosition(this.isMobile ? 0 : 0, this.isMobile ? 0 : 0);
+                this.buttonText.setPosition(this.buttonText.x, this.buttonText.y + 150);
+            }
         } else if (winType === 'Congrats') {
             this.winText.setPosition(0, -60);
             this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
@@ -249,11 +268,18 @@ export class WinOverlayContainer {
             this.freeSpinsText.setText(`${this.scene.gameData.totalFreeSpins.toFixed(0)}`);
             this.multiplier = -2;
             this.playWinSound(totalWin);
+            if(this.winAnim){
+                this.winAnimation.playWinAnimation(this.winAnim, totalWin, 'Congrats');
+                this.winAnim.setPosition(this.winAnim.x, this.winAnim.y + 150);
+                this.buttonText.setPosition(this.buttonText.x, this.buttonText.y + 150);
+            }
+            
         } else {
             // Regular win - use counting animation
             //this.winText.setPosition(20, 130);
             this.freeSpinsText.visible = false;
             this.multiplier = 0;
+            
             this.startCounting(this.winAnim, totalWin);
         }
 
@@ -294,20 +320,34 @@ export class WinOverlayContainer {
 
     public destroy(): void {
         if (this.isActive) {
+
             this.scene.slotMachine.activeWinOverlay = false;
             this.winAnimation.exitAnimation();
             Events.emitter.off(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN);
+            
+            // Clean up any active timers
+            if (this.countInterval) {
+                this.scene.time.removeEvent(this.countInterval);
+                this.countInterval = undefined;
+            }
+            
             this.container.destroy();
+            this.buttonZone = null as any; // Explicitly set to null to prevent access after destruction
             this.isActive = false;
             this.isAnimating = false;
             this.isIntroPlaying = false; // Reset the intro playing flag
+            this.currentWinType = undefined;
             this.scene.audioManager.stopWinSFX(this.scene);
             
             Events.emitter.emit(Events.WIN_OVERLAY_HIDE);
+            if (this.onSpaceDown && this.scene.input.keyboard) {
+                this.scene.input.keyboard.off('keydown-SPACE', this.onSpaceDown);
+                this.onSpaceDown = undefined;
+            }
         }
     }
     
-	private currentCount: number = 0;
+	private currentCount: number = 10;
     //@ts-ignore
 	private targetCount: number = 0;
 	private countInterval?: Phaser.Time.TimerEvent;
@@ -319,20 +359,26 @@ export class WinOverlayContainer {
 	private isIntroPlaying: boolean = false; // Flag to track if intro animation is currently playing
 
 	startCounting(winAnim: SpineGameObject, totalWin: number) {
+        if (this.currentWinType === 'FreeSpin' || this.multiplier === -1) {
+            return;
+        }
         this.winAnim = winAnim;
         this.finalBetTotal = totalWin;
-		console.log('Starting win counting algorithm...');
+		//console.log('Starting win counting algorithm...', totalWin);
 		
 		// Play appropriate win sound based on total win amount (only for regular wins)
 		if (this.multiplier === 0) {
 		//	this.playWinSound(totalWin);
 		}
 		this.winText.setVisible(false); 
+        if(!this.isMobile){
+            this.winAnim.setPosition(this.winAnim.x, this.scene.scale.height * 0.1);
+        }
 		this.playBigwinIntro();
 	}
 
 	winTextFadeIn(){
-		this.winText?.setScale(3);
+		this.winText?.setScale(2);
 		this.scene.tweens.add({
 			targets: this.winText,
 			scale: 1,
@@ -349,44 +395,43 @@ export class WinOverlayContainer {
 		
 		// Check if intro is already playing
 		if (this.isIntroPlaying) {
-			console.log('Intro already playing, skipping bigwin intro');
+			//console.log('Intro already playing, skipping bigwin intro');
 			return;
 		}
 		
-		console.log('Playing bigwin_intro_fis, winText:', this.winText.text);
+		//console.log('Playing bigwin_intro_sw, winText:', this.winText.text);
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'bigwin_intro';
+
 		this.winAnim.animationState.setAnimation(0, 'bigwin_intro_fis', false);
+		this.winText.setPosition(this.winText_x, this.winText_y);
 		this.winTextFadeIn();
+        
+        this.scene.audioManager.queueWinSFX(['BigWin']);
 
-		// Queue the appropriate sounds
-		if (this.skipIdleAnimation) {
-			// If skipping idle, queue both skip and win sounds
-			this.scene.audioManager.queueWinSFX(['BigWinSkip']);
-		} else {
-			// Normal flow, just queue the win sound
-			this.scene.audioManager.queueWinSFX(['BigWin']);
-		}
-
-		setTimeout(() => {
-			this.isIntroPlaying = false; // Reset flag
-			if (this.skipIdleAnimation) {
-				// Skip idle animation and handle based on target count
-				this.skipIdleAnimation = false; // Reset flag
-				this.handleIntroSkip();
-			} else {
-				this.playBigwinIdle();
-			}
-		}, 500); // 0.5 second pause
+        this.winAnim.animationState.addListener({
+            complete: () => {
+                this.isIntroPlaying = false; // Reset flag
+                if (this.skipIdleAnimation) {
+                    // Skip idle animation and handle based on target count
+                    this.skipIdleAnimation = false; // Reset flag
+                    this.scene.audioManager.clearWinSFXQueue();
+                    this.handleIntroSkip();
+                } else {
+                    this.playBigwinIdle();
+                }
+            }
+        });
 	}
 
 	playBigwinIdle() {
 		if (!this.winAnimation || !this.winText) return;
-		console.log('Playing bigwin_idle_fis, resuming count from:', this.winText.text);
+		//console.log('Playing bigwin_idle_sw, resuming count from:', this.winText.text);
 		this.currentAnimationPhase = 'bigwin_idle';
-		this.winAnim.animationState.setAnimation(0, 'bigwin_idle_fis', true);
+
+		this.winAnim.animationState.setAnimation(0, 'BigWin-Idle', true);
 		let incrementTo = this.finalBetTotal
-		if(this.finalBetTotal > this.scene.gameData.bet * this.scene.gameData.winRank[1]){
+		if(this.finalBetTotal - 0.01 > this.scene.gameData.bet * this.scene.gameData.winRank[1]){
 			incrementTo = this.scene.gameData.bet * this.scene.gameData.winRank[1];
 		}
 
@@ -398,50 +443,42 @@ export class WinOverlayContainer {
 
 		// Check if intro is already playing
 		if (this.isIntroPlaying) {
-			console.log('Intro already playing, skipping megawin intro');
+			//console.log('Intro already playing, skipping megawin intro');
 			return;
 		}
 
-		console.log('Playing megawin_intro_fis, winText:', this.winText.text);
+		//console.log('Playing megawin_intro_sw, winText:', this.winText.text);
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'megawin_intro';
-            
-		this.winAnim.animationState.setAnimation(0, 'megawin_intro_fis', false); 
+        
+		this.winAnim.animationState.setAnimation(0, 'MegaWin-Intro', false); 
+		this.winText.setPosition(this.winText_x, this.winText_y);
 		this.winTextFadeIn();
+        this.scene.audioManager.queueWinSFX(['MegaWin']);
 
-		// Queue the appropriate sounds
-		if (this.skipIdleAnimation) {
-			// If skipping idle, queue skip sound only (win sound will be queued based on target count)
-			this.scene.audioManager.queueWinSFX(['MegaWinSkip']);
-		} else {
-			// Normal flow, just queue the win sound
-			this.scene.audioManager.queueWinSFX(['BigWinSkip']);
-            setTimeout(() => {  
-                this.scene.audioManager.clearWinSFXQueue();
-                this.scene.audioManager.queueWinSFX(['MegaWin']);
-            }, 1000);
-		}
-
-		setTimeout(() => {
-			this.isIntroPlaying = false; // Reset flag
-			if (this.skipIdleAnimation) {
-				// Skip idle animation and handle based on target count
-				this.skipIdleAnimation = false; // Reset flag
-				this.handleIntroSkip();
-			} else {
-				this.playMegawinIdle();
-			}
-		}, 1000); // 1 second pause
+        this.winAnim.animationState.addListener({
+            complete: () => {
+                this.isIntroPlaying = false; // Reset flag
+                if (this.skipIdleAnimation) {
+                    // Skip idle animation and handle based on target count
+                    this.skipIdleAnimation = false; // Reset flag
+                    this.scene.audioManager.clearWinSFXQueue();
+                    this.handleIntroSkip();
+                } else {
+                    this.playMegawinIdle();
+                }
+            }
+        });
 	}
 
 	playMegawinIdle() {
 		if (!this.winAnimation || !this.winText) return;
-		console.log('Playing megawin_idle_fis, resuming count from:', this.winText.text);
+		//console.log('Playing megawin_idle_sw, resuming count from:', this.winText.text);
 		this.currentAnimationPhase = 'megawin_idle';
-		this.winAnim.animationState.setAnimation(0, 'megawin_idle_fis', true);
+		this.winAnim.animationState.setAnimation(0, 'MegaWin-Idle', true);
 
 		let incrementTo = this.finalBetTotal
-		if(this.finalBetTotal > this.scene.gameData.bet * this.scene.gameData.winRank[2]){
+		if(this.finalBetTotal - 0.01 > this.scene.gameData.bet * this.scene.gameData.winRank[2]){
 			incrementTo = this.scene.gameData.bet * this.scene.gameData.winRank[2];
 		}
 
@@ -453,50 +490,42 @@ export class WinOverlayContainer {
 
 		// Check if intro is already playing
 		if (this.isIntroPlaying) {
-			console.log('Intro already playing, skipping epicwin intro');
+			//console.log('Intro already playing, skipping epicwin intro');
 			return;
 		}
 
-		console.log('Playing epicwin_intro_fis, winText:', this.winText.text);
+		//console.log('Playing epicwin_intro_sw, winText:', this.winText.text);
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'epicwin_intro';
-		this.winAnim.animationState.setAnimation(0, 'epicwin_intro_fis', false);
-		this.winText.setPosition(this.winText_x, this.winText_y - 80);
+		this.winAnim.animationState.setAnimation(0, 'EpicWin-Intro', false);
+		this.winText.setPosition(this.winText_x, this.winText_y);
 		this.winTextFadeIn();
 
-		// Queue the appropriate sounds
-		if (this.skipIdleAnimation) {
-			// If skipping idle, queue skip sound only (win sound will be queued based on target count)
-			this.scene.audioManager.queueWinSFX(['EpicWinSkip']);
-		} else {
-			// Normal flow, just queue the win sound
-			this.scene.audioManager.queueWinSFX(['MegaWinSkip']);
-            setTimeout(() => {  
-                this.scene.audioManager.clearWinSFXQueue();
-                this.scene.audioManager.queueWinSFX(['EpicWin']);
-            }, 1000);
-		}
+        this.winAnim.animationState.addListener({
+            complete: () => {
+                this.isIntroPlaying = false; // Reset flag
+                if (this.skipIdleAnimation) {
+                    // Skip idle animation and handle based on target count
+                    this.skipIdleAnimation = false; // Reset flag
+                    this.scene.audioManager.clearWinSFXQueue();
+                    this.handleIntroSkip();
+                } else {
+                    this.scene.audioManager.queueWinSFX(['EpicWin']);
+                    this.playEpicwinIdle();
+                }
+            }
+        });
 
-		setTimeout(() => {
-			this.isIntroPlaying = false; // Reset flag
-			if (this.skipIdleAnimation) {
-				// Skip idle animation and handle based on target count
-				this.skipIdleAnimation = false; // Reset flag
-				this.handleIntroSkip();
-			} else {
-				this.playEpicwinIdle();
-			}
-		}, 1000); // 1 second pause
 	}
 
 	playEpicwinIdle() {
 		if (!this.winAnimation || !this.winText) return;
-		console.log('Playing epicwin_idle_fis, resuming count from:', this.winText.text);
+		//console.log('Playing epicwin_idle_sw, resuming count from:', this.winText.text);
 		this.currentAnimationPhase = 'epicwin_idle';
-		this.winAnim.animationState.setAnimation(0, 'epicwin_idle_fis', true);
+		this.winAnim.animationState.setAnimation(0, 'EpicWin-Idle', true);
 
 		let incrementTo = this.finalBetTotal
-		if(this.finalBetTotal > this.scene.gameData.bet * this.scene.gameData.winRank[3]){
+            if(this.finalBetTotal - 0.01 > this.scene.gameData.bet * this.scene.gameData.winRank[3]){
 			incrementTo = this.scene.gameData.bet * this.scene.gameData.winRank[3];
 		}
 
@@ -508,47 +537,40 @@ export class WinOverlayContainer {
 
 		// Check if intro is already playing
 		if (this.isIntroPlaying) {
-			console.log('Intro already playing, skipping superwin intro');
+			//console.log('Intro already playing, skipping superwin intro');
 			return;
 		}
 
-		console.log('Playing superwin_intro_fis, winText:', this.winText.text);
+		//console.log('Playing superwin_intro_sw, winText:', this.winText.text);
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'superwin_intro';
+		this.winAnim.animationState.setAnimation(0, 'SuperWin-Intro', false);
 		this.winText.setPosition(this.winText_x, this.winText_y);
-		this.winAnim.animationState.setAnimation(0, 'superwin_intro_fis', false);
 		this.winTextFadeIn();
 
-		// Queue the appropriate sounds
-		if (this.skipIdleAnimation) {
-			// If skipping idle, queue skip sound only (win sound will be queued based on target count)
-			this.scene.audioManager.queueWinSFX(['SuperWinSkip']);
-		} else {
-			// Normal flow, just queue the win sound
-			this.scene.audioManager.queueWinSFX(['EpicWinSkip']);
-            setTimeout(() => {
-                this.scene.audioManager.clearWinSFXQueue();
-                this.scene.audioManager.queueWinSFX(['SuperWin']);
-            }, 1000);
-		}
+        
 
-		setTimeout(() => {
-			this.isIntroPlaying = false; // Reset flag
-			if (this.skipIdleAnimation) {
-				// Skip idle animation and handle based on target count
-				this.skipIdleAnimation = false; // Reset flag
-				this.handleIntroSkip();
-			} else {
-				this.playSuperwinIdle();
-			}
-		}, 1000); // 1 second pause
+        this.winAnim.animationState.addListener({
+            complete: () => {
+                this.isIntroPlaying = false; // Reset flag
+                if (this.skipIdleAnimation) {
+                    // Skip idle animation and handle based on target count
+                    this.skipIdleAnimation = false; // Reset flag
+                    this.scene.audioManager.clearWinSFXQueue();
+                    this.handleIntroSkip();
+                } else {
+                    this.scene.audioManager.queueWinSFX(['SuperWin']);
+                    this.playSuperwinIdle();
+                }
+            }
+        });
 	}
     
 	playSuperwinIdle() {
 		if (!this.winAnimation || !this.winText) return;
-		console.log('Playing superwin_idle_fis, resuming count from:', this.winText.text);
+		//console.log('Playing superwin_idle_sw, resuming count from:', this.winText.text);
 		this.currentAnimationPhase = 'superwin_idle';
-		this.winAnim.animationState.setAnimation(0, 'superwin_idle_fis', true);
+		this.winAnim.animationState.setAnimation(0, 'SuperWin-Idle', true);
 
 		this.startCountUp(this.finalBetTotal, 6000); // 6 seconds to count to final total
 	}
@@ -586,7 +608,7 @@ export class WinOverlayContainer {
 
 					// Stop progression if we've reached the final total
 					if (this.currentCount >= this.finalBetTotal) {
-						console.log('Final count reached:', this.winText?.text);
+						//console.log('Final count reached:', this.winText?.text);
 						this.handleFinalWin();
 						return; // Exit early, don't proceed to next animation
 					}
@@ -614,11 +636,49 @@ export class WinOverlayContainer {
 				else {
 					this.winText.setVisible(true);
 				}
-				this.winText.setText(this.currentCount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+				this.winText?.setText(this.currentCount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 			}
-
     }
 
+    private handleSkipInput(): void {
+        // Ignore input if still locked
+        if (this.inputLocked) {
+            return;
+        }
+        if (this.multiplier === -1) {
+            if (this.buttonZone) {
+                this.buttonZone.disableInteractive(true);
+            }
+            this.endWinAnimation(() => {
+                this.scene.time.delayedCall(200, () => {
+                    if (this.scene.gameData.useApiFreeSpins && this.scene.slotMachine?.startApiFreeSpins) {
+                        this.scene.slotMachine.startApiFreeSpins(this.scene);
+                    } else if (!this.scene.autoplay.isAutoPlaying) {
+                        Events.emitter.emit(Events.AUTOPLAY_START, this.scene.gameData.freeSpins);
+                    }
+                    this.destroy();
+                });
+            });
+        } else if (this.multiplier === -2) {
+            if (this.buttonZone) {
+                this.buttonZone.disableInteractive(true);
+            }
+            this.endWinAnimation(() => {
+                this.scene.time.delayedCall(200, () => {
+                    this.scene.background.toggleBackground(this.scene);
+                    this.scene.audioManager.changeBackgroundMusic(this.scene);
+                    if (this.scene.gameData.useApiFreeSpins && this.scene.slotMachine?.startApiFreeSpins) {
+                        this.scene.slotMachine.startApiFreeSpins(this.scene);
+                    } else if (!this.scene.autoplay.isAutoPlaying) {
+                        Events.emitter.emit(Events.AUTOPLAY_START, this.scene.gameData.freeSpins);
+                    }
+                    this.destroy();
+                });
+            });
+        } else {
+            this.handleButtonPressDuringCounting();
+        }
+    }
     /**
      * Handle button press during counting animation
      */
@@ -648,8 +708,10 @@ export class WinOverlayContainer {
             this.transitionToNextAnimation(nextPhase);
         } else {
             // No more phases, end the animation
-            console.log('end win animation - no more phases');
-            this.buttonZone.disableInteractive(true);
+            //console.log('end win animation - no more phases');
+            if (this.buttonZone) {
+                this.buttonZone.disableInteractive(true);
+            }
             this.endWinAnimation(() => {
                 this.destroy();
             });
@@ -695,7 +757,9 @@ export class WinOverlayContainer {
      * Transition to the next animation phase
      */
     private transitionToNextAnimation(phase: string): void {
-        console.log(`Transitioning to ${phase} animation`);
+        //console.log(`Transitioning to ${phase} animation`);
+        // Reset skip flag so the NEXT phase will play its idle and count up again
+        this.skipIdleAnimation = false;
         
         switch (phase) {
             case 'bigwin':
@@ -727,7 +791,7 @@ export class WinOverlayContainer {
             // Continue counting to the next target
             const currentWinAmount = this.currentCount;
             const nextTarget = this.calculateNextTarget(currentWinAmount);
-            console.log(`Continuing count from ${currentWinAmount} to ${nextTarget}`);
+            //console.log(`Continuing count from ${currentWinAmount} to ${nextTarget}`);
             this.startCountUp(nextTarget, 6000); // 6 seconds to count to next target
         }
     }
@@ -742,11 +806,9 @@ export class WinOverlayContainer {
         if (currentPhase === 'bigwin_intro') {
             if (this.targetCount > this.scene.gameData.bet * this.scene.gameData.winRank[1]) {
                 // Transition to megawin - queue megawin sound
-                this.scene.audioManager.queueWinSFX(['BigWinSkip']);
-                setTimeout(() => {
+                //this.scene.audioManager.queueWinSFX(['BigWinSkip']);
                     this.scene.audioManager.clearWinSFXQueue();
                     this.scene.audioManager.queueWinSFX(['MegaWin']);
-                }, 1000);
                 this.transitionToNextAnimation('megawin');
             } else {
                 // Stay in bigwin idle - queue bigwin sound
@@ -756,11 +818,9 @@ export class WinOverlayContainer {
         } else if (currentPhase === 'megawin_intro') {
             if (this.targetCount > this.scene.gameData.bet * this.scene.gameData.winRank[2]) {
                 // Transition to epicwin - queue epicwin sound
-                this.scene.audioManager.queueWinSFX(['MegaWinSkip']);
-                setTimeout(() => {
-                    this.scene.audioManager.clearWinSFXQueue();
-                    this.scene.audioManager.queueWinSFX(['EpicWin']);
-                }, 1000);
+                //this.scene.audioManager.queueWinSFX(['MegaWinSkip']);
+                this.scene.audioManager.clearWinSFXQueue();
+                this.scene.audioManager.queueWinSFX(['EpicWin']);
                 this.transitionToNextAnimation('epicwin');
             } else {
                 // Stay in megawin idle - queue megawin sound
@@ -770,11 +830,10 @@ export class WinOverlayContainer {
         } else if (currentPhase === 'epicwin_intro') {
             if (this.targetCount > this.scene.gameData.bet * this.scene.gameData.winRank[3]) {
                 // Transition to superwin - queue superwin sound
-                this.scene.audioManager.queueWinSFX(['EpicWinSkip']);
-                setTimeout(() => {
-                    this.scene.audioManager.clearWinSFXQueue();
-                    this.scene.audioManager.queueWinSFX(['SuperWin']);
-                }, 1000);
+                // this.scene.audioManager.queueWinSFX(['EpicWinSkip']);
+                this.scene.audioManager.clearWinSFXQueue();
+                this.scene.audioManager.queueWinSFX(['SuperWin']);
+                
                 this.transitionToNextAnimation('superwin');
             } else {
                 // Stay in epicwin idle - queue epicwin sound
@@ -821,15 +880,19 @@ export class WinOverlayContainer {
      * Handle superwin skip - play skip sound and end animation after 1 second
      */
     private handleSuperwinSkip(): void {
-        console.log('Handling superwin skip');
-        this.scene.audioManager.queueWinSFX(['SuperWinSkip']);
+        //console.log('Handling superwin skip');
+       // this.scene.audioManager.queueWinSFX(['SuperWinSkip']);
         
         // End the animation after 1 second
-        this.buttonZone.disableInteractive(true);
+        if (this.buttonZone) {
+            this.buttonZone.disableInteractive(true);
+        }
         setTimeout(() => {
-            this.endWinAnimation(() => {
-                this.destroy();
-            });
+            if (this.isActive) {
+                this.endWinAnimation(() => {
+                    this.destroy();
+                });
+            }
         }, 2000);
     }
 
@@ -853,25 +916,29 @@ export class WinOverlayContainer {
      * Handle the final win case when count reaches final total
      */
     private handleFinalWin(): void {
-        console.log('Handling final win');
+        //console.log('Handling final win');
         this.scene.audioManager.queueWinSFX(['SuperWinSkip']);
         
         // End the animation after a short delay
-        this.buttonZone.setInteractive(false);
-        setTimeout(() => {
-            this.endWinAnimation(() => {
-                this.destroy();
-            });
-        }, 1000); // 1 second delay to let the skip sound play
+        if (this.buttonZone) {
+            this.buttonZone.setInteractive(false);
+        }
+            if (this.isActive) {
+                this.endWinAnimation(() => {
+                    this.destroy();
+                });
+            }
     }
 
     endWinAnimation(functionToCall: () => void){
-        this.buttonZone.disableInteractive(true);
+        if (this.buttonZone) {
+            this.buttonZone.disableInteractive(true);
+        }
         this.scene.tweens.add({
             targets: this.container,
-            alpha: 0,
-            y: -this.scene.scale.height,
-            duration: 1000,
+            alpha: 0.5,
+            //y: -this.scene.scale.height,
+            duration: 333,
             ease: 'Power2',
             onComplete: () => {
                 functionToCall();

@@ -1,5 +1,5 @@
 import { Scene, GameObjects } from 'phaser';
-import { GameData } from './GameData';
+import { GameData, Slot } from './GameData';
 import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 
 /**
@@ -28,26 +28,30 @@ export class SymbolContainer extends GameObjects.Container {
         // Add the sprite to the container
         this.add(this.symbolSprite);
         
-        // Debug logging
-        this.gameData.debugLog('SymbolContainer created', {
-            symbolValue,
-            position: { x, y },
-            symbolKey
-            //frameKey
-        });
+        // console.log('SymbolContainer created', {
+        //     symbolValue,
+        //     position: { x, y },
+        //     symbolKey
+        //     //frameKey
+        // });
     }
 
     /**
      * Set the display size for the symbol sprite
      */
     setSymbolDisplaySize(width: number, height: number): void {
-        this.symbolSprite.setDisplaySize(width, height);
-        
-        this.gameData.debugLog('Symbol display size set', { 
-            symbolValue: this.symbolValue, 
-            width, 
-            height 
-        });
+        const _symbolValue = this.symbolValue;
+        if(_symbolValue == 2 || _symbolValue == 4 || _symbolValue == 6) {
+            this.symbolSprite.setDisplaySize(width * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
+        }
+        else {
+            this.symbolSprite.setDisplaySize(width, height);
+        }
+        // console.log('Symbol display size set', { 
+        //     symbolValue: _symbolValue, 
+        //     width, 
+        //     height 
+        // });
     }
 
     /**
@@ -55,7 +59,7 @@ export class SymbolContainer extends GameObjects.Container {
      * Note: This method is kept for compatibility, but Animation.ts now calls the sprite directly
      */
     playSymbolAnimation(): void {
-        this.gameData.debugLog('Playing symbol animation', { symbolValue: this.symbolValue });
+        console.log('Playing symbol animation', { symbolValue: this.symbolValue });
         
         try {
             // Play the symbol animation using the animation key created in Animation.ts
@@ -72,7 +76,7 @@ export class SymbolContainer extends GameObjects.Container {
      * Check if the symbol is currently playing an animation
      */
     isPlayingAnimation(): boolean {
-        if (this.symbolSprite && this.symbolSprite.animationState) {
+        if (this.symbolSprite && this.symbolSprite.animationState.timeScale == 1) {
             return true;
         }
         return false;
@@ -99,9 +103,7 @@ export class SymbolContainer extends GameObjects.Container {
     /**
      * Clean up the symbol container
      */
-    destroy(): void {
-        this.gameData.debugLog('Destroying symbol container', { symbolValue: this.symbolValue });
-        
+    destroy(): void {        
         if (this.symbolSprite) {
             this.symbolSprite.destroy();
         }

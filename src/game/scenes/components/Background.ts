@@ -35,6 +35,7 @@ export class Background {
 
     // Function to detect if the device is mobile
     private isMobileDevice(): boolean {
+        return true;
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.innerWidth <= 768;
     }
@@ -74,11 +75,6 @@ export class Background {
     create(scene: Scene): void {
         this.createBackground(scene);
         
-        // Only create lanterns for desktop
-        if (!this.isMobile) {
-            //this.createLanterns(scene);
-        }
-
         scene.gameData.isBonusRound = false;
         this.toggleBackground(scene);
     }

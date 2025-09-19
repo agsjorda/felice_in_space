@@ -32,7 +32,7 @@ export class Animation {
         return new Promise<void>((resolve) => {
             if (symbolValue >= 0 && symbolValue <= Slot.SYMBOLS) {
                 // Play the animation for matched symbols
-                this.scene.gameData.debugLog("playing animation for symbol: " + symbolValue);
+                console.error("playing animation for symbol: " + symbolValue);
                 
                 let actualSprite: Phaser.GameObjects.Sprite;
                 
@@ -50,6 +50,7 @@ export class Animation {
                 const spineObject = actualSprite as unknown as SpineGameObject;
                 const animationState = spineObject.animationState.setAnimation(0, `animation`, false);
                 
+                animationState.timeScale = 1;
                 // Set up listener for animation completion
                 animationState.listener = {
                     complete: () => {
