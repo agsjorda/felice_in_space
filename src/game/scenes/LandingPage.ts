@@ -169,12 +169,12 @@ export class LandingPage extends Scene {
 
            // return;
            // Fade out the current scene
-           this.cameras.main.fadeOut(250, 0, 0, 0);
+        //    this.cameras.main.fadeOut(250, 0, 0, 0);
 
-           this.scene.remove('LoadingPage');
-           // When fade out is complete, start the Game scene
-           this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('Game');
-            });
+        //    this.scene.remove('LoadingPage');
+        //    // When fade out is complete, start the Game scene
+        //    this.cameras.main.once('camerafadeoutcomplete', () => {
+        //         this.scene.start('Game');
+        //     });
     }
-}                                                                                           
+}
