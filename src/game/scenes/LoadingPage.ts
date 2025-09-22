@@ -7,7 +7,6 @@ import { Character } from '../ui/Character';
 import { Buttons } from '../ui/Buttons';
 import { AudioManager } from './components/AudioManager';
 import { Autoplay } from './components/Autoplay';
-import { HelpScreen } from './components/HelpScreen';
 import { getFontFamily } from '../utils/fonts';
 export class LoadingPage extends Scene {
     private loadingBar!: Phaser.GameObjects.Graphics;
@@ -25,7 +24,6 @@ export class LoadingPage extends Scene {
     public buttons: Buttons;
     public audioManager: AudioManager;
     public autoplay: Autoplay;
-    public helpScreen: HelpScreen;
 
     private components: any[];
 
@@ -40,7 +38,6 @@ export class LoadingPage extends Scene {
         this.buttons = new Buttons();
         this.audioManager = new AudioManager();
         this.autoplay = new Autoplay();
-        this.helpScreen = new HelpScreen();
 
         // Store components for lifecycle management
         this.components = [
@@ -50,7 +47,6 @@ export class LoadingPage extends Scene {
             this.buttons,
             this.audioManager,
             this.autoplay,
-            this.helpScreen
         ];
     }
 

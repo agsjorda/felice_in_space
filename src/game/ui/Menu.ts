@@ -92,6 +92,57 @@ export class Menu {
         scene.load.image('icon_most_right', 'assets/Mobile/Menu/icon_most_right.png');
 
         scene.load.image('loading_icon', 'assets/Mobile/Menu/loading.png');
+
+        
+        const prefix = 'assets/Symbols/HelpScreen/';
+        scene.load.image('ScatterLabel', `${prefix}ScatterSymbol.png`);
+        scene.load.image('BuyFeatHelp', `${prefix}BuyFeatHelp.png`);
+        scene.load.image('DoubleHelp', `${prefix}DoubleHelp.png`);
+        scene.load.image('BuyFeatMobile', `${prefix}BuyFeatMobile.png`);
+        scene.load.image('DoubleHelpMobile', `${prefix}DoubleHelpMobile.png`);
+
+        scene.load.image('tumbleSymbol', `${prefix}tumbleIcon.png`);
+        scene.load.image('tumbleGame', `${prefix}tumbleGame.png`);
+        scene.load.image('tumbleWin', `${prefix}tumbleWin.png`);
+
+        scene.load.image('scatterIcon', `${prefix}scatterIcon.png`);
+        scene.load.image('scatterGame', `${prefix}scatterGame.png`);
+        scene.load.image('scatterWin', `${prefix}scatterWin.png`);
+
+        scene.load.image('multiplierIcon', `${prefix}multiplierIcon.png`);
+        scene.load.image('multiplierGame', `${prefix}multiplierGame.png`);
+
+        scene.load.image('paylineWin1', `${prefix}paylineWin1.png`);
+        scene.load.image('paylineWin2', `${prefix}paylineWin2.png`);
+        scene.load.image('paylineNoWin1', `${prefix}paylineNoWin1.png`);
+        scene.load.image('paylineNoWin2', `${prefix}paylineNoWin2.png`);
+        scene.load.image('paylineMobileWin', `${prefix}paylineMobileWin.png`);
+        scene.load.image('paylineMobileNoWin', `${prefix}paylineMobileNoWin.png`);
+
+        scene.load.image('howToPlay1', `${prefix}HowToPlay1.png`);
+        scene.load.image('howToPlay2', `${prefix}HowToPlay2.png`);
+        scene.load.image('howToPlay3', `${prefix}HowToPlay3.png`);
+        scene.load.image('howToPlay4', `${prefix}HowToPlay4.png`);
+        scene.load.image('howToPlay5', `${prefix}HowToPlay5.png`);
+        scene.load.image('howToPlay6', `${prefix}HowToPlay6.png`);
+        scene.load.image('howToPlay7', `${prefix}HowToPlay7.png`);
+        scene.load.image('howToPlay8', `${prefix}HowToPlay8.png`);
+        scene.load.image('howToPlay9', `${prefix}HowToPlay9.png`);
+        scene.load.image('howToPlay10', `${prefix}HowToPlay10.png`);
+
+        scene.load.image('howToPlay1Mobile', `${prefix}HowToPlay1Mobile.png`);
+        scene.load.image('howToPlay2Mobile', `${prefix}HowToPlay2Mobile.png`);
+        scene.load.image('howToPlay3Mobile', `${prefix}HowToPlay3Mobile.png`);
+        scene.load.image('howToPlay4Mobile', `${prefix}HowToPlay4Mobile.png`);
+        scene.load.image('howToPlay8Mobile', `${prefix}HowToPlay8Mobile.png`);
+        scene.load.image('howToPlay9Mobile', `${prefix}HowToPlay9Mobile.png`);
+        scene.load.image('howToPlay10Mobile', `${prefix}HowToPlay10Mobile.png`);
+        scene.load.image('howToPlay11Mobile', `${prefix}HowToPlay11Mobile.png`);
+        scene.load.image('howToPlay12Mobile', `${prefix}HowToPlay12Mobile.png`);
+
+        // Load UI elements
+        scene.load.image('greenRectBtn', 'assets/Buttons/greenRectBtn.png');
+        scene.load.image('ekis', 'assets/Buttons/ekis.png');
     }
 
     create(scene: GameScene){

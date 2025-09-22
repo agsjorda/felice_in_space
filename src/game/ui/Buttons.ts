@@ -4,7 +4,6 @@ import { GameData } from '../scenes/components/GameData';
 import { Autoplay } from '../scenes/components/Autoplay';
 import { AudioManager } from '../scenes/components/AudioManager';
 import { SlotMachine } from '../scenes/components/SlotMachine';
-import { HelpScreen } from '../scenes/components/HelpScreen';
 import { Menu } from './Menu';
 import { BuyFeaturePopup } from '../scenes/components/BuyFeaturePopup';
 import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
@@ -23,7 +22,6 @@ interface GameScene extends Scene {
     gameData: GameData;
     audioManager: AudioManager;
     slotMachine: SlotMachine;
-    helpScreen: HelpScreen;
     autoplay: Autoplay;
     buyFeaturePopup: BuyFeaturePopup;
 }
@@ -151,8 +149,6 @@ export class Buttons {
         scene.load.spineJson( 'Amplify_Bet', 'assets/Controllers/Animation/AmplifyBet/Amplify Bet.json');
 
         // Preload help screen assets
-        const helpScreen = new HelpScreen();
-        helpScreen.preload(scene);
         const menu = new Menu(false);
         menu.preload(scene);
         const buyFeaturePopup = new BuyFeaturePopup();
@@ -542,11 +538,6 @@ export class Buttons {
             // IMMEDIATELY disable buttons visually for instant feedback (don't touch game logic)
             this.disableButtonsVisually(scene);
 
-            // Close help screen if it's open
-            if (scene.gameData.isHelpScreenVisible) {
-                scene.helpScreen.hide(scene );
-                return;
-            }
 
             // If autoplay is active, stop it
             if (scene.buttons.autoplay.isAutoPlaying) {
@@ -702,11 +693,6 @@ export class Buttons {
             this.spinInProgress = true; // Set local flag immediately
             // IMMEDIATELY disable buttons visually for instant feedback (don't touch game logic)
             this.disableButtonsVisually(scene);
-
-            // Close help screen if it's open
-            if (scene.gameData.isHelpScreenVisible) {
-                scene.helpScreen.hide(scene);
-            }
 
             // If autoplay is active, stop it
             if (this.autoplay.isAutoPlaying) {
@@ -1391,22 +1377,6 @@ export class Buttons {
         const toggleInfo = () => {
             scene.audioManager.UtilityButtonSFX.play();
             this.hideBetPopup(scene);
-            
-            if (scene.gameData.isHelpScreenVisible) {
-                // If help screen is visible, hide and destroy it
-                scene.helpScreen.hide(scene);
-                infoButton.visible = true;
-                infoOnButton.visible = false;
-            } else {
-                // If help screen is hidden, create and show it
-                if (!scene.helpScreen) {
-                    scene.helpScreen = new HelpScreen();
-                }
-                scene.helpScreen.create(scene);
-                scene.helpScreen.show(scene);
-                infoButton.visible = false;
-                infoOnButton.visible = true;
-            }
             
             scene.gameData.isHelpScreenVisible = !scene.gameData.isHelpScreenVisible;
         };

@@ -153,12 +153,6 @@ export class GameAPI {
         }
     }
     public async getBalance(): Promise<any> {
-        return {
-            data:
-            {
-                balance: 10000
-            }
-        }
         try{
             const response = await fetch(`${getApiBaseUrl()}/api/v1/slots/balance`, {
                 method: 'POST',

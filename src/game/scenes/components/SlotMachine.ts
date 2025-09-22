@@ -21,7 +21,6 @@ interface GameScene extends Scene {
     gameData: GameData;
     audioManager: AudioManager;
     buttons: any; // Reference to buttons for immediate state updates
-    helpScreen: any; // Reference to help screen
     slotMachine: any; // Reference to slot machine for win overlay checks
     background: any; // Reference to background for bonus round changes
     autoplay: any;
@@ -293,9 +292,9 @@ export class SlotMachine {
 
     private createSlot(scene: GameScene): void {
         const x = scene.scale.width * 0;
-        const y = scene.scale.height * 0.21;
+        const y = scene.scale.height * 0.23;
         const width = this.totalGridWidth * 1.01;
-        const height = this.totalGridHeight * 1.01;
+        const height = this.totalGridHeight * 0.97;
         
         const maskShape = scene.add.graphics();
         maskShape.fillRect(x, y, width, height);

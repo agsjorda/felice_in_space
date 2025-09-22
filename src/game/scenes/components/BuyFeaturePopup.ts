@@ -4,7 +4,6 @@ import { GameData } from './GameData';
 import { AudioManager } from './AudioManager';
 import { Autoplay } from './Autoplay';
 import { SlotMachine } from './SlotMachine';
-import { HelpScreen } from './HelpScreen';
 
 // Custom button interfaces with proper type safety
 interface ButtonBase {
@@ -19,7 +18,6 @@ interface GameScene extends Scene {
     gameData: GameData;
     audioManager: AudioManager;
     slotMachine: SlotMachine;
-    helpScreen: HelpScreen;
     autoplay: Autoplay;
 }
 

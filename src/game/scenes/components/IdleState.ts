@@ -22,7 +22,6 @@ interface GameScene extends Scene {
     audioManager: AudioManager;
     buttons: Buttons;
     slotMachine: SlotMachine;
-    helpScreen: any; // Reference to help screen
     autoplay: any; // Add this property to match Buttons.ts
     buyFeaturePopup: BuyFeaturePopup;
 }
