@@ -649,8 +649,12 @@ export class SlotMachine {
                 console.log(chalk.grey(`[SCATTER] (API) Animating scatter symbol idx = `) + chalk.white.bold(index));
                 this.createWinParticles(scene, sprite.x, sprite.y, 0xFF0000);
                 try {
-                    const target: any = (sprite instanceof SymbolContainer) ? sprite.getSymbolSprite() : sprite;
-                    this.animation.playSymbolAnimation(target, 0).then(() => resolve()).catch(() => resolve());
+                    if (sprite instanceof SymbolContainer) {
+                        sprite.playSymbolAnimation().then(() => resolve()).catch(() => resolve());
+                    } else {
+                        // Fallback to Animation service for non-Container sprites
+                        this.animation.playSymbolAnimation(sprite as any, 0).then(() => resolve()).catch(() => resolve());
+                    }
                 } catch (_e) { resolve(); }
             });
             animationPromises.push(animationPromise);
@@ -1526,11 +1530,18 @@ export class SlotMachine {
                 // Play animation and resolve on completion
                 try {
                     console.log(`[SCATTER] Animating scatter symbol idx=${index}`);
-                    const target: any = (sprite instanceof SymbolContainer) ? sprite.getSymbolSprite() : sprite;
-                    this.animation.playSymbolAnimation(target, 0).then(() => {
-                        (sprite as any).alpha = 0;
-                        resolve();
-                    }).catch(() => { (sprite as any).alpha = 0; resolve(); });
+                    if (sprite instanceof SymbolContainer) {
+                        sprite.playSymbolAnimation().then(() => {
+                            (sprite as any).alpha = 0;
+                            resolve();
+                        }).catch(() => { (sprite as any).alpha = 0; resolve(); });
+                    } else {
+                        // Fallback to Animation service for non-Container sprites
+                        this.animation.playSymbolAnimation(sprite as any, 0).then(() => {
+                            (sprite as any).alpha = 0;
+                            resolve();
+                        }).catch(() => { (sprite as any).alpha = 0; resolve(); });
+                    }
                 } catch (_e) { (sprite as any).alpha = 0; resolve(); }
             });
             animationPromises.push(animationPromise);
@@ -1690,15 +1701,21 @@ export class SlotMachine {
                     });
                     animationPromises.push(animationPromise);
                 } else {
-                    // Use playSymbolAnimation for regular symbols (SymbolContainer or Spine)
+                    // Use SymbolContainer.playSymbolAnimation when available; else fallback
                     const symbolValue = symbol;
                     const animationPromise = new Promise<void>((resolve) => {
                         try {
-                            const target: any = (symbolSprite instanceof SymbolContainer) ? symbolSprite.getSymbolSprite() : symbolSprite;
-                            this.animation.playSymbolAnimation(target, symbolValue).then(() => {
-                                (symbolSprite as any).destroy();
-                                resolve();
-                            }).catch(() => { (symbolSprite as any).destroy(); resolve(); });
+                            if (symbolSprite instanceof SymbolContainer) {
+                                symbolSprite.playSymbolAnimation().then(() => {
+                                    (symbolSprite as any).destroy();
+                                    resolve();
+                                }).catch(() => { (symbolSprite as any).destroy(); resolve(); });
+                            } else {
+                                this.animation.playSymbolAnimation(symbolSprite as any, symbolValue).then(() => {
+                                    (symbolSprite as any).destroy();
+                                    resolve();
+                                }).catch(() => { (symbolSprite as any).destroy(); resolve(); });
+                            }
                         } catch (_e) { (symbolSprite as any).destroy(); resolve(); }
                     });
                     animationPromises.push(animationPromise);

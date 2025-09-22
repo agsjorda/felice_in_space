@@ -55,21 +55,36 @@ export class SymbolContainer extends GameObjects.Container {
     }
 
     /**
-     * Play the main animation for this symbol
-     * Note: This method is kept for compatibility, but Animation.ts now calls the sprite directly
+     * Play the main animation for this symbol and resolve when complete
      */
-    playSymbolAnimation(): void {
-        console.log('Playing symbol animation', { symbolValue: this.symbolValue });
-        
-        try {
-            // Play the symbol animation using the animation key created in Animation.ts
-            this.symbolSprite.animationState.setAnimation(0, `animation`, false);
-        } catch (error) {
-            this.gameData.debugError('Could not play animation for symbol', { 
-                symbolValue: this.symbolValue, 
-                error 
-            });
-        }
+    playSymbolAnimation(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            try {
+                // Bring above others while animating
+                this.setDepth(this.depth + 1000);
+
+                const trackEntry = this.symbolSprite.animationState.setAnimation(0, `animation`, false);
+                this.symbolSprite.animationState.timeScale = 1;
+
+                // Resolve when spine animation completes
+                if (trackEntry) {
+                    trackEntry.listener = {
+                        complete: () => {
+                            trackEntry.listener = null;
+                            resolve();
+                        }
+                    } as any;
+                } else {
+                    resolve();
+                }
+            } catch (error) {
+                this.gameData.debugError('Could not play animation for symbol', {
+                    symbolValue: this.symbolValue,
+                    error
+                });
+                resolve();
+            }
+        });
     }
 
     /**

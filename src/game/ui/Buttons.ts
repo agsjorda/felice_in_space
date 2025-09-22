@@ -138,8 +138,8 @@ export class Buttons {
 
         scene.load.image('hamburger', 'assets/Mobile/Hamburger.png');
         scene.load.image('buyFeature','assets/Mobile/BuyFeature.png');
-        scene.load.image('doubleFeature','assets/Mobile/DoubleFeature.png');
-        scene.load.image('marquee', 'assets/Mobile/Marquee.png');
+        scene.load.image('doubleFeature', `${prefix}/AmplifyBet.png`);
+        scene.load.image('marquee', 'assets/Mobile/Hamburger.png');
 
 
         // Preload Spine animation for the spin button idle effect
@@ -2506,6 +2506,7 @@ export class Buttons {
         container.setDepth(20);
 
         const marquee = scene.add.image(0, 0, 'marquee');
+        marquee.setAlpha(0);
         container.add(marquee);
 
         const youWonString = scene.gameData.totalWin.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -2533,10 +2534,11 @@ export class Buttons {
         Events.emitter.on(Events.SHOW_BOMB_WIN, () => { 
             this.bombMarqueeContainer.setVisible(this.isMobile? true : false);
             let multiplier = scene.gameData.totalBombWin;
-            let totalWin = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            let totalWin = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex].toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             const totalProduct = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex] * scene.gameData.totalBombWin;
+            const totalProductString = totalProduct.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             //youWonLabel.setText('WIN');
-            youWonAmount.setText(`${scene.gameData.currency} ${totalWin} x ${multiplier} = ${totalProduct.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+            youWonAmount.setText(`${scene.gameData.currency} ${totalWin} x ${multiplier} = ${totalProductString}`);
         });
         Events.emitter.on(Events.HIDE_BOMB_WIN, () => { 
             this.bombMarqueeContainer.setVisible(false);
@@ -2567,70 +2569,89 @@ export class Buttons {
 
         // Title
         const youWonString = scene.gameData.totalWin.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        const youWonLabel = scene.add.text(0, 0, 'YOU WON ', {
-            fontSize: '20px',
+        const youWonLabel = scene.add.text(0, 0, 'TOTAL WIN', {
+            fontSize: '14px',
             color: '#FFFFFF', 
-            fontFamily: 'Poppins'
+            fontFamily: 'Poppins',
+            align: 'center'
         });
-        const youWonAmount = scene.add.text(youWonLabel.width, -youWonLabel.height/3, scene.gameData.currency + ' ' + youWonString, {
-            fontSize: '32px',
+        youWonLabel.setOrigin(0.5, 1);
+        const youWonAmount = scene.add.text(0, 0, scene.gameData.currency + ' ' + youWonString, {
+            fontSize: '20px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            align: 'center'
         });
-        const youWonText = scene.add.container(-youWonLabel.width/2 - youWonAmount.width/2, -youWonLabel.height/3, [youWonLabel, youWonAmount]);
+        youWonAmount.setOrigin(0.5, 0);
+        const youWonText = scene.add.container(0, 0, [youWonLabel, youWonAmount]);
         container.add(youWonText);
         
         // Marquee incremental addition queue (per-tumble)
         let marqueeCurrentTotal = 0;
         let marqueeQueue: number[] = [];
         let isProcessingQueue = false;
-        let hideTimer: Phaser.Time.TimerEvent | null = null;
-
-        const scheduleHide = () => {
-            if (hideTimer) {
-                hideTimer.remove(false);
-                hideTimer = null;
-            }
-            
-            //hideTimer = scene.time.delayedCall(5000, () => {
-                //hideMarquee();
-            //});
-        };
+        let totalWinFinalTimer: Phaser.Time.TimerEvent | null = null;
 
         const processQueue = (isBomb?:boolean) => {
             if (isProcessingQueue) return;
             isProcessingQueue = true;
 
-            let reelSpeed = this.isMobile ? 220 : 1100;
+            let reelSpeed = 1000;
+
+            if(totalWinFinalTimer){
+                totalWinFinalTimer.remove(false);
+                totalWinFinalTimer = null;
+            }
 
             const step = () => {
                 if (marqueeQueue.length === 0) {
                     isProcessingQueue = false;
                     
-                    if(isBomb){
-                        //const idx = Math.max(0, Math.min(scene.gameData.apiFreeSpinsIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
-                        //const arr = scene.gameData.totalWinFreeSpin || [];
-                        //marqueeCurrentTotal = arr.slice(0, idx + 1).reduce((sum, v) => sum + (v || 0), 0);
-                        marqueeCurrentTotal = scene.gameData.totalWinFreeSpin[scene.gameData.apiFreeSpinsIndex];
+                    if (isBomb) {
+                        const idx = Math.max(0, Math.min(scene.gameData.apiFreeSpinsIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
+                        const arr = scene.gameData.totalWinFreeSpin || [];
+                        marqueeCurrentTotal = arr.slice(0, idx + 1).reduce((sum, v) => sum + (v || 0), 0);
+                    
+                        // End of a tumble (or after bombs): show TOTAL WIN with the final value
+                        youWonLabel.setText('TOTAL WIN');
+                        const finalDisplay = (marqueeCurrentTotal >= scene.gameData.totalBonusWin)
+                            ? scene.gameData.totalBonusWin
+                            : marqueeCurrentTotal;
+                        youWonAmount.setText(`${scene.gameData.currency} ${finalDisplay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                        return;
                     }
-                    
-                    const formatted = marqueeCurrentTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-                
-                    youWonAmount.setText(scene.gameData.currency + ' ' + formatted);    
-                    
-                    scheduleHide();
+
+                    if(scene.gameData.isBonusRound){
+                        youWonLabel.setText('WIN');
+                        youWonAmount.setText(`${scene.gameData.currency} ${marqueeCurrentTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                        return;
+                    }
+
+                    const capValue = scene.gameData.totalBonusWin || 0;
+                    const finalDisplay = (capValue > 0 && marqueeCurrentTotal >= capValue)
+                        ? capValue
+                        : marqueeCurrentTotal;
+                    totalWinFinalTimer = scene.time.delayedCall(250, ()=>{
+                        youWonLabel.setText('TOTAL WIN');
+                        if(!scene.gameData.isBonusRound){
+                            youWonLabel.setText('WIN');
+                        }
+                        youWonAmount.setText(`${scene.gameData.currency} ${finalDisplay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                        totalWinFinalTimer = null;
+                    });
                     return;
                 }
-                const increment = marqueeQueue.shift() as number;
-                marqueeCurrentTotal += increment || 0;
-                
-
-                const formatted = marqueeCurrentTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-                
-                youWonAmount.setText(scene.gameData.currency + ' ' + formatted);
-                
-                scene.time.delayedCall(reelSpeed, step);
+            const increment = marqueeQueue.shift() as number;
+            marqueeCurrentTotal += increment || 0;
+            
+            // During counting, base game shows TOTAL WIN, bonus shows WIN
+            youWonLabel.setText(scene.gameData.isBonusRound ? 'WIN' : 'TOTAL WIN');
+            if(!scene.gameData.isBonusRound){
+                youWonLabel.setText('WIN');
+            }
+            youWonAmount.setText(`${scene.gameData.currency} ${marqueeCurrentTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+            scene.time.delayedCall(reelSpeed, step);
             };
             step();
         };
@@ -2650,7 +2671,7 @@ export class Buttons {
             if(!this.isMobile) return;
             
             showMarquee();
-            console.error(increment);
+            // console.error(increment);
             // Queue per-tumble increment (fallback to using totalWin if payload missing)
             if (typeof increment === 'number' && !isNaN(increment)) {
                 marqueeQueue.push(increment);
@@ -2668,9 +2689,13 @@ export class Buttons {
 			marqueeCurrentTotal = 0;
 			marqueeQueue = [];
 			isProcessingQueue = false;
-			if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
-			youWonAmount.setText(scene.gameData.currency + ' ' + (0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
-			hideMarquee();
+            if (totalWinFinalTimer) {
+                scene.time.removeEvent(totalWinFinalTimer);
+                totalWinFinalTimer = null;
+            }
+			//if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
+			youWonAmount.setText(scene.gameData.currency + ' ' + (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+			//hideMarquee();
 		});
 
 		// Also clear marquee when current tumble sequence finishes
@@ -2679,14 +2704,22 @@ export class Buttons {
 			marqueeCurrentTotal = 0;
 			marqueeQueue = [];
 			isProcessingQueue = false;
-			if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
-			youWonAmount.setText(scene.gameData.currency + ' ' + (0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
-			hideMarquee();
+			//if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
+			//youWonAmount.setText(scene.gameData.currency + ' ' + (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+			//hideMarquee();
 		});
 
         Events.emitter.on(Events.UPDATE_CURRENCY, () => {
             if(!this.isMobile) return;
-            youWonAmount.setText(scene.gameData.currency + ' ' + youWonString);
+            //youWonAmount.setText(scene.gameData.currency + ' ' + youWonString);
+        });
+
+        Events.emitter.on(Events.FINAL_WIN_SHOW, () => {
+            youWonLabel.setText('TOTAL WIN');
+            youWonAmount.setText(`${scene.gameData.currency} ${scene.gameData.totalBonusWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        });
+        Events.emitter.on(Events.FREE_SPIN_TOTAL_WIN, ()=>{
+            youWonLabel.setText('TOTAL WIN');
         });
     }
 

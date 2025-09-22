@@ -58,47 +58,6 @@ export class Character {
         this.spineObject.setDepth(0);
         this.lastAnimationTime = Date.now();
         this.isAnimating = true;
-
-        // Set up win animation listener
-        Events.emitter.on(Events.WIN, () => {
-                if (this.spineObject) {
-                    this.spineObject.setY(this.animationY);
-                    this.lastAnimationTime = Date.now();
-                    this.isAnimating = true;
-                    
-                    this.currAnim.listener = {
-                        complete: () => {
-                            this.currAnim = this.spineObject?.animationState.setAnimation(0, 'idle', false);
-                            this.lastAnimationTime = Date.now();
-                            this.isAnimating = true;
-                            
-                            // this.currAnim.listener = {
-                            //     complete: () => {
-                            //         this.currWinAnim = this.spineObject?.animationState.setAnimation(0, 'win', false);
-                            //         this.lastAnimationTime = Date.now();
-                            //         this.isAnimating = true;
-                                    
-                            //         this.spineObject?.setY(this.animationY+25/5);
-                            //     }
-                            // };
-                        }
-                    };
-                    
-                    // When win animation completes, flip back and return to idle
-                    if(this.currWinAnim) {
-                    this.currWinAnim.listener = {
-                        complete: () => {
-                            if (this.spineObject) {
-                                this.spineObject.setY(this.animationY - 25/5);
-                                this.spineObject.animationState.setAnimation(0, 'idle', true);
-                                this.lastAnimationTime = Date.now();
-                                this.isAnimating = true;
-                            }
-                        }
-                    };
-                }
-            }
-        });
     }
 
     private checkAnimationState(): void {

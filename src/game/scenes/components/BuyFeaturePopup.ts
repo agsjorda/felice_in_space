@@ -50,7 +50,7 @@ export class BuyFeaturePopup {
         scene.load.image('greenLongBtn', 'assets/Buttons/greenLongBtn.png');
         scene.load.image('ekis', 'assets/Buttons/ekis.png');
         scene.load.image('ScatterLogo', 'assets/Logo/Scatter.png');
-        scene.load.image('ScatterBackground', 'assets/Mobile/Bonus_Background.png');
+        scene.load.image('ScatterBackground', 'assets/background/Bonus_BG.jpg');
         scene.load.image('plus', 'assets/Controllers/Plus.png');
         scene.load.image('minus', 'assets/Controllers/Minus.png');
     }
