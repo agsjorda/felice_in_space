@@ -1,10 +1,10 @@
 import { Scene, GameObjects, Tweens } from 'phaser';
 import { Geom } from 'phaser';
 import { GameData } from '../scenes/components/GameData';
+import { SymbolContainer } from '../scenes/components/SymbolContainer';
 import { AudioManager } from '../scenes/components/AudioManager';
 import { SlotMachine } from '../scenes/components/SlotMachine';
 import { Autoplay } from '../scenes/components/Autoplay';
-import { SymbolContainer } from '../scenes/components/SymbolContainer';
 
 interface ButtonBase {
     isButton: boolean;
@@ -33,9 +33,9 @@ export class Menu {
     private scene: GameScene;
     public settingsOnly: boolean = false;
 
-    private padding = 20;
-    private contentWidth = 1200;
-    private viewWidth = 1329;
+    private padding = 10;
+    private contentWidth = 488;
+    private viewWidth = 488;
     private yPosition = 0;
     private scrollView: GameObjects.Container;
     private contentContainer: GameObjects.Container;
@@ -76,7 +76,7 @@ export class Menu {
 
     constructor(settingsOnly: boolean = false) {
         this.isMobile = this.isMobileDevice();
-        this.settingsOnly = settingsOnly;
+        //this.settingsOnly = settingsOnly;
     }
 
     preload(scene: Scene){
@@ -100,6 +100,7 @@ export class Menu {
     }
 
     private isMobileDevice(): boolean {
+        return true;
         const urlParams = new URLSearchParams(window.location.search);
         if(urlParams.get('device') == 'mobile'){
             return true;
@@ -154,9 +155,8 @@ export class Menu {
         const smallTabScale = 0.5; // X tab will be half the width of normal tabs
 
         // Determine which tabs to show
-        const baseIcons: string[] = this.settingsOnly
-            ? ['settings']
-            : ['info', 'history', 'settings'];
+        const baseIcons: string[] = 
+            ['info', 'history', 'settings'];
 
         const getLabel = (icon: string) => {
             switch (icon) {
@@ -388,12 +388,27 @@ export class Menu {
         switch (tabKey) {
             case 'info':
                 this.rulesContent.setVisible(true);
+                // Enable scrolling only on rules tab
+                try {
+                    const interactiveHeight = Math.max(this.contentArea.height, this.yPosition);
+                    this.scrollView.setInteractive(new Phaser.Geom.Rectangle(
+                        0, 0,
+                        this.contentArea.width,
+                        interactiveHeight
+                    ), Phaser.Geom.Rectangle.Contains);
+                } catch (_e) {}
                 break;
             case 'history':
                 this.historyContent.setVisible(true);
+                // Disable scrolling and reset position for non-rules tabs
+                try { this.scrollView.disableInteractive(); } catch (_e) {}
+                this.contentContainer.y = 0;
                 break;
             case 'settings':
                 this.settingsContent.setVisible(true);
+                // Disable scrolling and reset position for non-rules tabs
+                try { this.scrollView.disableInteractive(); } catch (_e) {}
+                this.contentContainer.y = 0;
                 break;
             case 'close':
                 this.hideMenu(scene);
@@ -401,13 +416,14 @@ export class Menu {
         }
     }
 
+
+
     private async showHistoryContent(scene: GameScene, contentArea: GameObjects.Container, page: number, limit: number): Promise<void> {
         // Keep old rows until new data is ready; build containers on first run
         const historyHeaders : string[] = ['Spin', 'Currency', 'Bet', 'Win'];
+        // Recreate or reparent containers if needed (handles menu reopen)
         if (!this.historyHeaderContainer || !this.historyHeaderContainer.scene) {
             this.historyHeaderContainer = scene.add.container(0, 0);
-            contentArea.add(this.historyHeaderContainer);
-
             const historyText = scene.add.text(15, 15,'History', this.titleStyle) as ButtonText;
             historyText.setOrigin(0, 0);
             this.historyHeaderContainer.add(historyText);
@@ -467,6 +483,7 @@ export class Menu {
         // Display headers centered per column (only once)
         const columnCenters = this.getHistoryColumnCenters(scene);
         const headerContainer = this.historyHeaderContainer as GameObjects.Container;
+        // When reopening, header could have been destroyed; rebuild if empty or missing headers
         if (headerContainer.length <= 1) { // only title exists
             const headerY = 60;
             historyHeaders.forEach((header, idx) => {
@@ -625,7 +642,7 @@ export class Menu {
                             img.setAlpha(0.5);
                         }
                     });
-                    this.showHistoryContent(scene, contentArea, targetPage, limit);
+                    this.showHistoryContent(scene, this.historyContent, targetPage, limit);
                 });
             } else {
                 btn.setAlpha(0.5);
@@ -982,12 +999,7 @@ export class Menu {
     }
 
     public showMenu(scene: GameScene): void {        
-        if(this.isMobile){
-            this.settingsOnly = false;
-        }
-        else{
-            this.settingsOnly = true;
-        }
+        
         // Ensure only one instance exists by destroying any previous menu
         if (this.menuContainer) {
             this.destroyMenu(scene);
@@ -1103,13 +1115,10 @@ export class Menu {
                     scaledSymbolSize * 1.5
                 );
     
-                // Add symbol using SymbolContainer
                 const symbol = new SymbolContainer(scene, 0, 0, i + 1, scene.gameData);
                 symbol.setSymbolDisplaySize(scaledSymbolSize, scaledSymbolSize);
-                symbol.setScale(symbolScale);
-                symbol.getSymbolSprite().setOrigin(0, 0.7);
-                // Set animation state and pause with timeScale = 0
-                try { symbol.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
+                symbol.setScale(symbolScale * 1.5);
+                symbol.getSymbolSprite().setOrigin(-0.5, 0.5);
                 try { symbol.getSymbolSprite().animationState.timeScale = 0; } catch (_e) {}
                 symbolContainer.add(symbol);
                 if(i == 5){
@@ -1508,8 +1517,6 @@ export class Menu {
             });
         });
     }
-
-    
     private createHowToPlayEntry(scene: GameScene, x: number, y: number, container: GameObjects.Container, image: string, text: string, wordWrap: boolean = false, wordWrapWidth: number = 0): void {
         let imageElement = null;
         if(image!=''){

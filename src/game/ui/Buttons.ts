@@ -2767,12 +2767,12 @@ export class Buttons {
         }
 
         if (!this.menu){
-            if(this.isMobile){
+            // if(this.isMobile){
                 this.menu = new Menu(false);
-            }
-            else{
-                this.menu = new Menu();
-            }
+            // }
+            // else{
+            //     this.menu = new Menu();
+            // }
             this.menu.create(scene);
         }
         // Toggle menu on settings button click

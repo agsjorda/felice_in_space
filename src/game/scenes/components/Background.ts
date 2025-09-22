@@ -24,6 +24,16 @@ export class Background {
     private bonus_6: GameObjects.Image;
     private bonus_7: GameObjects.Image;
 
+
+    // Fullscreen button and handlers
+    private fsButton: Phaser.GameObjects.Image | null = null;
+    private onEnterFs?: () => void;
+    private onLeaveFs?: () => void;
+  
+    private onDomFsChange?: () => void;
+    private onResize?: () => void;
+    
+
     private floatingSpeedX: number = 0.001;
     private floatingSpeedY: number = 0.0012;
 
@@ -77,6 +87,81 @@ export class Background {
         
         scene.gameData.isBonusRound = false;
         this.toggleBackground(scene);
+
+        // Add fullscreen toggle button above backgrounds
+        this.createFullscreenToggle(scene);
+    }
+
+    private createFullscreenToggle(scene: Scene): void {
+        const width = scene.scale.width;
+        const height = scene.scale.height;
+        const padding = this.isMobile ? 10 : 12;
+
+        // Create button
+        const key = scene.scale.isFullscreen ? 'fs_min' : 'fs_max';
+        const btn = scene.add.image(width - padding, padding, key);
+        btn.setOrigin(1, 0);
+        const size = this.isMobile ? 28 : 32;
+        btn.setDisplaySize(size, size);
+        btn.setInteractive({ useHandCursor: true });
+        btn.setDepth(4); // Above backgrounds and version label
+        this.fsButton = btn;
+
+        // Toggle on click
+        btn.on('pointerup', () => {
+            if (scene.scale.isFullscreen) {
+                scene.scale.stopFullscreen();
+            } else {
+                scene.scale.startFullscreen();
+            }
+        });
+
+        // Update icon on fs change
+        const updateIcon = () => {
+            if (!this.fsButton) return;
+            this.fsButton.setTexture(scene.scale.isFullscreen ? 'fs_min' : 'fs_max');
+        };
+        this.onEnterFs = updateIcon;
+        this.onLeaveFs = updateIcon;
+        scene.scale.on('enterfullscreen', this.onEnterFs);
+        scene.scale.on('leavefullscreen', this.onLeaveFs);
+
+        // Also listen to DOM fullscreen changes for desktop browsers
+        this.onDomFsChange = updateIcon;
+        document.addEventListener('fullscreenchange', this.onDomFsChange);
+        // @ts-ignore - Safari prefix
+        document.addEventListener('webkitfullscreenchange', this.onDomFsChange);
+
+        // Reposition on resize (enter/exit fullscreen changes size)
+        const reposition = () => {
+            const w = scene.scale.width;
+            const p = padding;
+            if (this.fsButton) this.fsButton.setPosition(w - p, p);
+        };
+        this.onResize = reposition;
+        scene.scale.on('resize', this.onResize);
+
+        // Cleanup on shutdown
+        (scene as any).events?.once && (scene as any).events.once('shutdown', () => {
+            if (this.onEnterFs) scene.scale.off('enterfullscreen', this.onEnterFs);
+            if (this.onLeaveFs) scene.scale.off('leavefullscreen', this.onLeaveFs);
+          
+            if (this.onResize) scene.scale.off('resize', this.onResize);
+            if (this.onDomFsChange) {
+                document.removeEventListener('fullscreenchange', this.onDomFsChange);
+                // @ts-ignore
+                document.removeEventListener('webkitfullscreenchange', this.onDomFsChange);
+            }
+            this.onEnterFs = undefined;
+            this.onLeaveFs = undefined;
+            this.onResize = undefined;
+            this.onDomFsChange = undefined;
+          
+            if (this.fsButton) {
+                this.fsButton.destroy();
+                this.fsButton = null;
+            }
+        });
     }
 
     toggleBackground(_scene: Scene): void {

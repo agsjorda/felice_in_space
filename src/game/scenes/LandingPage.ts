@@ -9,6 +9,12 @@ export class LandingPage extends Scene {
     protected pressed: boolean = false;
     private isTransitioning: boolean = false;
     private isMobile: boolean = false;
+    private fsButton: Phaser.GameObjects.Image | null = null;
+    private onEnterFs?: () => void;
+    private onLeaveFs?: () => void;
+    
+    private onDomFsChange?: () => void;
+    private onResize?: () => void;
 
     constructor() {
         super('LandingPage');
@@ -16,9 +22,11 @@ export class LandingPage extends Scene {
 
     preload(): void {
         this.load.image('logostart', 'assets/Logo/Logo.png');
-        // this.load.image('background_desktop', 'assets/background/preloader_desktop.png');
         this.load.image('background_mobile', 'assets/background/preloader_mobile.png');
         this.load.image('spinButton', 'assets/Controllers/Spin.png');
+        // Fullscreen toggle icons
+        this.load.image('fs_max', 'assets/Controllers/Maximize.png');
+        this.load.image('fs_min', 'assets/Controllers/Minimize.png');
     }
 
     create(): void {
@@ -35,10 +43,59 @@ export class LandingPage extends Scene {
         this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, backgroundKey)
         .setOrigin(0.5);
         
+        // Fullscreen toggle button (above background)
+        const padding = this.isMobile ? 10 : 12;
+        const size = this.isMobile ? 28 : 32;
+        const fsKey = this.scale.isFullscreen ? 'fs_min' : 'fs_max';
+        const btn = this.add.image(this.cameras.main.width - padding, padding, fsKey);
+        btn.setOrigin(1, 0);
+        btn.setDisplaySize(size, size);
+        btn.setDepth(1000);
+        btn.setInteractive({ useHandCursor: true });
+        this.fsButton = btn;
+        btn.on('pointerup', () => {
+            if (this.scale.isFullscreen) {
+                this.scale.stopFullscreen();
+            } else {
+                this.scale.startFullscreen();
+            }
+        });
+        const updateIcon = () => {
+            const btn = this.fsButton;
+            if (!btn || !(btn as any).scene || !(btn as any).scene.sys) return;
+            const key = this.scale.isFullscreen ? 'fs_min' : 'fs_max';
+            // Ensure texture exists before swapping
+            if (this.textures && this.textures.exists(key)) {
+                btn.setTexture(key);
+            }
+        };
+        this.onEnterFs = updateIcon;
+        this.onLeaveFs = updateIcon;
+        this.scale.on('enterfullscreen', this.onEnterFs);
+        this.scale.on('leavefullscreen', this.onLeaveFs);
+
+        // Also listen to DOM fullscreen changes for desktop
+        this.onDomFsChange = updateIcon;
+        document.addEventListener('fullscreenchange', this.onDomFsChange);
+        // @ts-ignore - Safari prefix
+        document.addEventListener('webkitfullscreenchange', this.onDomFsChange);
+
+        // Reposition on resize
+        const reposition = () => {
+            const p = padding;
+            if (this.fsButton) this.fsButton.setPosition(this.cameras.main.width - p, p);
+        };
+        this.onResize = reposition;
+        this.scale.on('resize', this.onResize);
+        
+        // Cleanup on scene shutdown/remove
+        this.events.once('shutdown', () => this.cleanupFullscreenHandlers());
+        this.events.once('destroy', () => this.cleanupFullscreenHandlers());
+        
         // Adjust logo position and scale based on device
-        const logoScale = this.isMobile ? 0.8 : 0.4;
-        const logoX = this.isMobile ? this.cameras.main.width / 2 : 600;
-        const logoY = this.isMobile ? this.cameras.main.height * 0.15 : 150;
+        const logoScale = 0.75;
+        const logoX = this.cameras.main.width / 2;
+        const logoY = this.cameras.main.height * 0.1;
         
         this.add.image(logoX, logoY, 'logostart')
         .setScale(logoScale);
@@ -90,24 +147,29 @@ export class LandingPage extends Scene {
         this.spinButton.setInteractive({useHandCursor: true});
         this.spinButton.on('pointerdown', () => {
             if(this.spinButton.alpha == 1) {
-                this.scene.remove('LoadingPage');
+                //@ts-ignore
+                this.scene.get('LoadingPage').hideLoadingBar();
                 
                 if (this.isTransitioning) return;
                 this.isTransitioning = true;
 
                 // Fade out the current scene
-                this.cameras.main.fadeOut(250, 0, 0, 0);
+                this.cameras.main.fadeOut(500, 0, 0, 0);
 
                 // When fade out is complete, start the Game scene
                 this.cameras.main.once('camerafadeoutcomplete', () => {
                     this.scene.start('Game');
+                    this.scene.remove('LoadingPage');
                 });
             }
         });
 
         // Version label bottom-right
         const cfgVersion = (typeof window !== 'undefined' && window.APP_CONFIG) ? window.APP_CONFIG.version : undefined;
-        const versionText = `v${cfgVersion ?? (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev')}`;
+        let versionText = cfgVersion ?? (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev');
+        if (versionText && !versionText.startsWith('v')) {
+            versionText = `v${versionText}`;
+        }
         const versionLabel = this.add.text(this.cameras.main.width - 10, this.cameras.main.height - 10, versionText, {
             fontSize: this.isMobile ? '12px' : '14px',
             color: '#ffffff',
@@ -120,9 +182,35 @@ export class LandingPage extends Scene {
         this.scene.launch('LoadingPage');
     }
 
+    private cleanupFullscreenHandlers(): void {
+        if (this.onEnterFs) this.scale.off('enterfullscreen', this.onEnterFs);
+        if (this.onLeaveFs) this.scale.off('leavefullscreen', this.onLeaveFs);
+        if (this.onResize) this.scale.off('resize', this.onResize);
+        if (this.onDomFsChange) {
+            document.removeEventListener('fullscreenchange', this.onDomFsChange as any);
+            // @ts-ignore
+            document.removeEventListener('webkitfullscreenchange', this.onDomFsChange);
+        }
+        this.onEnterFs = undefined;
+        this.onLeaveFs = undefined;
+        this.onResize = undefined;
+        this.onDomFsChange = undefined;
+        if (this.fsButton) {
+            this.fsButton.destroy();
+            this.fsButton = null;
+        }
+    }
+
     // Function to detect if the device is mobile
     private isMobileDevice(): boolean {
         return true;
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('device') == 'mobile'){
+            return true;
+        }else if(urlParams.get('device') == 'desktop'){
+            return false;
+        }
+            
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.innerWidth <= 768;
     }
@@ -167,14 +255,13 @@ export class LandingPage extends Scene {
 
            tryLaunchGame();
 
-           // return;
-           // Fade out the current scene
-        //    this.cameras.main.fadeOut(250, 0, 0, 0);
+        // Fade out the current scene
+        this.cameras.main.fadeOut(250, 0, 0, 0);
 
-        //    this.scene.remove('LoadingPage');
-        //    // When fade out is complete, start the Game scene
-        //    this.cameras.main.once('camerafadeoutcomplete', () => {
-        //         this.scene.start('Game');
-        //     });
+        // When fade out is complete, start the Game scene
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.start('Game');
+            this.scene.remove('LoadingPage');
+        });
     }
-}
+}                                                                                           

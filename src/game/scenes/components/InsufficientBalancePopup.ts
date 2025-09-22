@@ -12,6 +12,12 @@ export class InsufficientBalancePopup {
 
     private isMobileDevice(): boolean {
         return true;
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('device') == 'mobile'){
+            return true;
+        }else if(urlParams.get('device') == 'desktop'){
+            return false;
+        }
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.innerWidth <= 768;
     }
@@ -47,7 +53,7 @@ export class InsufficientBalancePopup {
         panel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
         this.container.add(panel);
 
-        const title = scene.add.text(width / 2, panelY + panelHeight * 0.33, 'INSUFFICIENT BALANCE', {
+        const title = scene.add.text(width / 2, panelY + panelHeight * 0.33, 'Out of Balance', {
             fontSize: this.isMobile ? '24px' : '32px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
@@ -57,7 +63,7 @@ export class InsufficientBalancePopup {
         title.setOrigin(0.5, 0.5);
         this.container.add(title);
 
-        const message = scene.add.text(width / 2, panelY + panelHeight * 0.53, 'Your balance is not enough for this bet.', {
+        const message = scene.add.text(width / 2, panelY + panelHeight * 0.53, 'Insufficient Funds', {
             fontSize: this.isMobile ? '16px' : '20px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
@@ -79,7 +85,7 @@ export class InsufficientBalancePopup {
         button.strokeRoundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 8);
         this.container.add(button);
 
-        const buttonLabel = scene.add.text(width / 2, buttonY + buttonHeight / 2, 'OK', {
+        const buttonLabel = scene.add.text(width / 2, buttonY + buttonHeight / 2, 'CLOSE', {
             fontSize: this.isMobile ? '18px' : '22px',
             color: '#000000',
             fontFamily: 'Poppins',
