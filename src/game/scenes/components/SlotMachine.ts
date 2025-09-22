@@ -171,7 +171,7 @@ export class SlotMachine {
     private createSymbolCountWinDisplay(scene: GameScene): void {
         // Position the container below the symbol grid
         const x = scene.scale.width * 0.5;
-        const y = this.isMobile ? scene.scale.height * 0.65 : this.slotY + this.totalGridHeight;
+        const y = scene.scale.height * 0.64;
         
         this.symbolCountWinContainer = scene.add.container(x, y);
         this.symbolCountWinContainer.setDepth(5);
@@ -1828,7 +1828,7 @@ export class SlotMachine {
 
                 // Ensure bombs render above other symbols
                 if (newSymbol && symbolValue >= 10 && symbolValue <= 22) {
-                    newSymbol.setDepth(1000);
+                    newSymbol.setDepth(10);
                 }
 
                 this.container.add(newSymbol);

@@ -54,6 +54,112 @@ const StartGame = (parent: string): Game => {
     const config = mobileConfig;
     //setupAspectRatioReload();
     const game = new Game({ ...config, parent });
+    // Enforce a portrait-first UX at 428x926 regardless of device rotation
+    try {
+        const appElement = document.getElementById('app');
+        const container = document.getElementById(parent) || appElement;
+        // Helpers to compute and apply full-viewport sizing and trigger Phaser refreshes
+        const getViewportSize = () => {
+            const vv = (window as any).visualViewport;
+            const width = vv && vv.width ? Math.round(vv.width) : window.innerWidth;
+            const height = vv && vv.height ? Math.round(vv.height) : window.innerHeight;
+            return { width, height };
+        };
+        const applyContainerSize = () => {
+            const { height } = getViewportSize();
+            if (appElement) {
+                appElement.style.width = '100vw';
+                appElement.style.height = `${height}px`;
+            }
+            if (container) {
+                (container as HTMLElement).style.width = '100vw';
+                (container as HTMLElement).style.height = `${height}px`;
+            }
+        };
+        const scheduleScaleRefresh = () => {
+            try { game.scale.refresh(); } catch (_e) { /* no-op */ }
+            // Multi-pass to catch mobile UI bar hide/show settling
+            [60, 180, 360, 720].forEach((ms) => {
+                window.setTimeout(() => {
+                    applyContainerSize();
+                    try { game.scale.refresh(); } catch (_e) { /* no-op */ }
+                }, ms);
+            });
+        };
+        applyContainerSize();
+        if (appElement) {
+            // Keep the outer app centered with a portrait aspect box
+            (appElement.style as any).display = appElement.style.display || 'flex';
+            (appElement.style as any).justifyContent = appElement.style.justifyContent || 'center';
+            (appElement.style as any).alignItems = appElement.style.alignItems || 'center';
+        }
+        if (container) {
+            // Ensure container grows to available viewport; Phaser FIT preserves 428x926 aspect
+            (container.style as any).aspectRatio = '';
+            container.style.maxWidth = '100vw';
+            container.style.maxHeight = '100vh';
+        }
+
+        // Build a lightweight rotate-to-portrait overlay
+        const overlayId = 'rotate-portrait-overlay';
+        let overlay = document.getElementById(overlayId) as HTMLDivElement | null;
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = overlayId;
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = '#000';
+            overlay.style.color = '#fff';
+            overlay.style.display = 'none';
+            overlay.style.zIndex = '2147483647';
+            overlay.style.fontFamily = 'Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.textAlign = 'center';
+            overlay.style.padding = '24px';
+            overlay.style.lineHeight = '1.4';
+            overlay.style.userSelect = 'none';
+            overlay.style.touchAction = 'none';
+            overlay.innerHTML = '<div style="max-width: 480px; margin: 0 auto;">\
+                <div style="font-size: 18px; opacity: 0.9;">Please rotate your device</div>\
+                <div style="font-size: 14px; opacity: 0.75; margin-top: 8px;">This game is best experienced in portrait mode.</div>\
+            </div>';
+            (document.body || document.documentElement).appendChild(overlay);
+        }
+
+        const isPortrait = () => getViewportSize().height >= getViewportSize().width;
+        const updateOverlay = () => {
+            const show = !isPortrait();
+            if (overlay) overlay.style.display = show ? 'flex' : 'none';
+            // When returning to portrait, aggressively reflow and refresh scale
+            if (!show) {
+                applyContainerSize();
+                scheduleScaleRefresh();
+            }
+        };
+        // Initialize and react to changes
+        updateOverlay();
+        window.addEventListener('resize', () => { applyContainerSize(); updateOverlay(); });
+        window.addEventListener('orientationchange', () => { applyContainerSize(); updateOverlay(); });
+        // Track visual viewport changes (iOS/Android address bars)
+        const vv = (window as any).visualViewport;
+        if (vv && vv.addEventListener) {
+            vv.addEventListener('resize', () => { applyContainerSize(); updateOverlay(); });
+        }
+
+        // Best-effort: lock orientation when entering fullscreen (supported browsers only)
+        const lockPortraitIfPossible = async () => {
+            try {
+                // @ts-ignore - not universally typed
+                if (screen && screen.orientation && screen.orientation.lock) {
+                    // @ts-ignore
+                    await screen.orientation.lock('portrait');
+                }
+            } catch (_e) { /* no-op */ }
+        };
+        game.scale.on('enterfullscreen', lockPortraitIfPossible);
+        game.scale.on('resize', () => { applyContainerSize(); });
+    } catch (_err) { /* no-op */ }
     // Harden input reliability on mobile Safari/Chrome by setting runtime styles
     try {
         const appElement = document.getElementById('app');

@@ -191,7 +191,7 @@ export class WinOverlayContainer {
             if (winType === 'Congrats') {
                 this.winText.setPosition(this.isMobile ? 0 : -60, -60);
                 this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-                this.winText.setScale(this.isMobile ? 0.75 : 1);
+                this.winText.setScale(0.75);
                 this.freeSpinsText.visible = false;
                 this.freeSpinsText.setText(`${this.scene.gameData.totalFreeSpins.toFixed(0)}`);
             } else if (winType === 'FreeSpin') {
@@ -258,11 +258,12 @@ export class WinOverlayContainer {
             this.playWinSound(totalWin);
             if(this.winAnim){
                 this.winAnimation.playWinAnimation(this.winAnim, totalWin, 'FreeSpin');
-                this.winAnim.setPosition(this.isMobile ? 0 : 0, this.isMobile ? 0 : 0);
-                this.buttonText.setPosition(this.buttonText.x, this.buttonText.y + 150);
+                this.winAnim.setPosition(-this.scene.scale.width * 0.1, -this.scene.scale.height * 0.05);
+                this.buttonText.setPosition(this.buttonText.x, this.buttonText.y);
+                this.winAnim.setScale(0.6);
             }
         } else if (winType === 'Congrats') {
-            this.winText.setPosition(0, -60);
+            this.winText.setPosition(40, 300);
             this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             this.freeSpinsText.visible = true;
             this.freeSpinsText.setText(`${this.scene.gameData.totalFreeSpins.toFixed(0)}`);
@@ -270,8 +271,10 @@ export class WinOverlayContainer {
             this.playWinSound(totalWin);
             if(this.winAnim){
                 this.winAnimation.playWinAnimation(this.winAnim, totalWin, 'Congrats');
-                this.winAnim.setPosition(this.winAnim.x, this.winAnim.y + 150);
-                this.buttonText.setPosition(this.buttonText.x, this.buttonText.y + 150);
+                this.winAnim.setPosition(this.winAnim.x, this.winAnim.y);
+                this.buttonText.setPosition(this.buttonText.x, this.buttonText.y);
+                this.winAnim.setScale(0.6);
+                this.winAnim.setOrigin(0, 0.5);
             }
             
         } else {

@@ -5,6 +5,7 @@ import { SymbolContainer } from '../scenes/components/SymbolContainer';
 import { AudioManager } from '../scenes/components/AudioManager';
 import { SlotMachine } from '../scenes/components/SlotMachine';
 import { Autoplay } from '../scenes/components/Autoplay';
+import { SetupPoseBoundsProvider } from '@esotericsoftware/spine-phaser-v3';
 
 interface ButtonBase {
     isButton: boolean;
@@ -1169,7 +1170,7 @@ export class Menu {
                 const symbol = new SymbolContainer(scene, 0, 0, i + 1, scene.gameData);
                 symbol.setSymbolDisplaySize(scaledSymbolSize, scaledSymbolSize);
                 symbol.setScale(symbolScale * 1.5);
-                symbol.getSymbolSprite().setOrigin(-0.5, 0.5);
+                symbol.getSymbolSprite().setOrigin(-0.5, 0.75);
                 try { symbol.getSymbolSprite().animationState.timeScale = 0; } catch (_e) {}
                 symbolContainer.add(symbol);
                 if(i == 5){
@@ -1210,7 +1211,7 @@ export class Menu {
     
                 // Add symbol
                 const symbol = scene.add.sprite(0, 0, 'ScatterLabel');
-                symbol.setScale(0.2);
+                symbol.setScale(0.75);
                 symbol.setOrigin(0.3, 0.4);
                 symbolContainer.add(symbol);
                 symbol.setPosition(scene.scale.width * 0.4, this.padding);
@@ -1218,7 +1219,7 @@ export class Menu {
                 // Add payout table next to symbol
                 this.createPayoutTable(scene, 
                     symbol.x / 3,  // Position table right of symbol
-                    symbol.height * 3 / 10,                      // Center vertically with symbol
+                    symbol.height,                      // Center vertically with symbol
                     symbolContainer,
                     0       
                 );
@@ -1574,13 +1575,17 @@ export class Menu {
             imageElement = scene.add.image(x, y, image);
         }
         if(imageElement != null){
-            if(image == 'tumbleGame' || image == 'scatterGame' || image == 'multiplierGame'){
-                imageElement.setScale(0.63);
+            //if(image == 'tumbleGame' || image == 'scatterGame' || image == 'multiplierGame'){
+            if(image == 'scatterGame'){
+                imageElement.setScale(189/1144, 337/1546);
             }
-            imageElement.setOrigin(0, 0.5);
-            if(image == 'scatterGame') {
-                imageElement.setOrigin(0, 0.33);
+            else if(image == 'tumbleGame'){
+                imageElement.setScale(204/1144, 367/1543);
             }
+            else if(image == 'multiplierGame'){
+                imageElement.setScale(190/1144, 337/1543);
+            }
+            imageElement.setOrigin(-0.5, 0.5);
         }
         if(image == 'BuyFeatMobile'){
             imageElement?.setPosition(x - imageElement.displayWidth/5, y);

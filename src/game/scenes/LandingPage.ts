@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { GameAPI } from './backend/GameAPI';
 import { getFontFamily, logFontStatus } from '../utils/fonts';
+import { WakeLockManager } from '../utils/wakeLock';
 
 export class LandingPage extends Scene {
     private spinButton!: Phaser.GameObjects.Image;
@@ -145,13 +146,16 @@ export class LandingPage extends Scene {
         this.startIdleRotation();
 
         this.spinButton.setInteractive({useHandCursor: true});
-        this.spinButton.on('pointerdown', () => {
+        this.spinButton.on('pointerdown', async () => {
             if(this.spinButton.alpha == 1) {
                 //@ts-ignore
                 this.scene.get('LoadingPage').hideLoadingBar();
                 
                 if (this.isTransitioning) return;
                 this.isTransitioning = true;
+
+                // Request wake lock on user gesture
+                try { await WakeLockManager.request(); } catch (_e) {}
 
                 // Fade out the current scene
                 this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -255,7 +259,7 @@ export class LandingPage extends Scene {
 
            tryLaunchGame();
 
-        // Fade out the current scene
+        // Fade out the current scene UNCOMMENT FOR TESTING
         this.cameras.main.fadeOut(250, 0, 0, 0);
 
         // When fade out is complete, start the Game scene

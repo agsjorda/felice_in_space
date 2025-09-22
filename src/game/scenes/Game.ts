@@ -8,11 +8,11 @@ import { Character } from '../ui/Character';
 import { Buttons } from '../ui/Buttons';
 import { AudioManager } from './components/AudioManager';    
 import { Autoplay } from './components/Autoplay';
-import { HelpScreen } from './components/HelpScreen';
 import { GameAPI } from './backend/GameAPI';
 import { BuyFeaturePopup } from './components/BuyFeaturePopup';
 import { SessionTimeoutPopup } from './components/SessionTimeoutPopup';
 import { InsufficientBalancePopup } from './components/InsufficientBalancePopup';
+import { WakeLockManager } from '../utils/wakeLock';
 
 
 
@@ -33,7 +33,6 @@ export class Game extends Scene {
     public buttons: Buttons;
     public audioManager: AudioManager;
     public autoplay: Autoplay;
-    public helpScreen: HelpScreen;
     public gameAPI: GameAPI;
     public buyFeaturePopup: BuyFeaturePopup;
     public sessionTimeoutPopup: SessionTimeoutPopup;
@@ -59,7 +58,6 @@ export class Game extends Scene {
         this.buttons = new Buttons();
         this.audioManager = new AudioManager();
         this.autoplay = new Autoplay();
-        this.helpScreen = new HelpScreen();
         this.buyFeaturePopup = new BuyFeaturePopup();
         this.sessionTimeoutPopup = new SessionTimeoutPopup();
         this.insufficientBalancePopup = new InsufficientBalancePopup();
@@ -74,7 +72,6 @@ export class Game extends Scene {
             this.buttons,
             this.audioManager,
             this.autoplay,
-            this.helpScreen,
             this.buyFeaturePopup,
             this.sessionTimeoutPopup,
             this.insufficientBalancePopup,
@@ -97,6 +94,9 @@ export class Game extends Scene {
     
     create(): void {
         try {
+            // Try to acquire wake lock when gameplay scene starts
+            void WakeLockManager.request();
+
             // Set initial state
             this.stateMachine.setState(new StartState(), this);
 
@@ -165,6 +165,8 @@ export class Game extends Scene {
 
     shutdown(): void {
         try {
+            // Release wake lock when leaving gameplay scene
+            void WakeLockManager.release();
             // Clean up all components
             for (const component of this.components) {
                 if (component.destroy) {
@@ -183,13 +185,5 @@ export class Game extends Scene {
             console.error('Error during shutdown:', error);
             // Handle shutdown error appropriately
         }
-    }
-
-    showHelpScreen(): void {
-        this.helpScreen.show(this);
-    }
-
-    hideHelpScreen(): void {
-        this.helpScreen.hide(this);
     }
 } 
