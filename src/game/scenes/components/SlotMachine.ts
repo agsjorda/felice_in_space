@@ -342,6 +342,7 @@ export class SlotMachine {
         
         console.log("result", result);
         console.log("slotArea", result.slot.area);
+        console.log("Tumbles", result.slot.tumbles);
         if(result.slot.freeSpin?.length > 0){
             console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
         }

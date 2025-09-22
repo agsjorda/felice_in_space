@@ -24,6 +24,9 @@ export class SymbolContainer extends GameObjects.Container {
         //const frameKey = `Symbol${symbolValue}_FIS-00000.png`;
         this.symbolSprite = scene.add.spine(0, 0, symbolKey, symbolKey) as SpineGameObject;
         this.symbolSprite.setVisible(true);
+        // Ensure newly created symbols are paused by default
+        try { this.symbolSprite.animationState.setAnimation(0, `animation`, false); } catch (_e) {}
+        try { this.symbolSprite.animationState.timeScale = 0; } catch (_e) {}
         
         // Add the sprite to the container
         this.add(this.symbolSprite);

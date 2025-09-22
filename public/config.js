@@ -1,6 +1,6 @@
 // Plain-ASCII config to avoid unexpected token issues
 window.APP_CONFIG = {
   "game-url": "https://game-launcher.torrospins.com",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "demo": false
 };
