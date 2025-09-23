@@ -75,17 +75,17 @@ export class BuyFeaturePopup {
         scene.load.image('greenLongBtn', 'assets/Buttons/greenLongBtn.png');
         scene.load.image('ekis', 'assets/Buttons/ekis.png');
         scene.load.image('ScatterLogo', 'assets/Logo/Scatter.png');
-        scene.load.image('ScatterBackground', 'assets/background/Bonus_BG.jpg');
+        scene.load.image('ScatterBackground', 'assets/background/scatter_BG.png');
         scene.load.image('plus', 'assets/Controllers/Plus.png');
         scene.load.image('minus', 'assets/Controllers/Minus.png');
     }
 
     create(scene: GameScene): void {
         // Create the popup container
-        const popupWidth = this.isMobile ? scene.scale.width : 573;
-        const popupHeight = this.isMobile ? scene.scale.height * 0.8 : 369;
-        const popupX = this.isMobile ? scene.scale.width / 2 - popupWidth / 2 : scene.scale.width / 2 - popupWidth / 2;
-        const popupY = this.isMobile ? scene.scale.height / 2 - popupHeight / 2 : scene.scale.height / 2 - popupHeight / 2;
+        const popupWidth = scene.scale.width;
+        const popupHeight = 736;
+        const popupX = scene.scale.width / 2 - popupWidth / 2;
+        const popupY = scene.scale.height - popupHeight;
         // console.log(popupX, popupY, popupWidth, popupHeight);
 
         this.popupContainer = scene.add.container(popupX, popupY) as ButtonContainer;
@@ -279,7 +279,7 @@ export class BuyFeaturePopup {
 
     private updateBetDisplay(scene: GameScene, betValueText: ButtonText, buyText: ButtonText): void {
         // Update bet value display
-        const betValue = scene.gameData.bet.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const betValue = scene.gameData.currency + " " + scene.gameData.bet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         betValueText.setText(betValue);
         
         // Update buy feature price

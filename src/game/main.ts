@@ -38,12 +38,6 @@ const mobileConfig: Types.Core.GameConfig = {
     }
 };
 
-// Function to detect if the device is mobile
-const isMobile = (): boolean => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           window.innerWidth <= 768;
-};
-
 declare global {
     interface Window {
         phaserGame?: Game;
@@ -99,52 +93,18 @@ const StartGame = (parent: string): Game => {
             container.style.maxWidth = '100vw';
             container.style.maxHeight = '100vh';
         }
-
-        // Build a lightweight rotate-to-portrait overlay
-        const overlayId = 'rotate-portrait-overlay';
-        let overlay = document.getElementById(overlayId) as HTMLDivElement | null;
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = overlayId;
-            overlay.style.position = 'fixed';
-            overlay.style.inset = '0';
-            overlay.style.background = '#000';
-            overlay.style.color = '#fff';
-            overlay.style.display = 'none';
-            overlay.style.zIndex = '2147483647';
-            overlay.style.fontFamily = 'Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.textAlign = 'center';
-            overlay.style.padding = '24px';
-            overlay.style.lineHeight = '1.4';
-            overlay.style.userSelect = 'none';
-            overlay.style.touchAction = 'none';
-            overlay.innerHTML = '<div style="max-width: 480px; margin: 0 auto;">\
-                <div style="font-size: 18px; opacity: 0.9;">Please rotate your device</div>\
-                <div style="font-size: 14px; opacity: 0.75; margin-top: 8px;">This game is best experienced in portrait mode.</div>\
-            </div>';
-            (document.body || document.documentElement).appendChild(overlay);
-        }
-
-        const isPortrait = () => getViewportSize().height >= getViewportSize().width;
-        const updateOverlay = () => {
-            const show = !isPortrait();
-            if (overlay) overlay.style.display = show ? 'flex' : 'none';
-            // When returning to portrait, aggressively reflow and refresh scale
-            if (!show) {
-                applyContainerSize();
-                scheduleScaleRefresh();
-            }
+        // React to viewport/orientation changes by resizing and refreshing scale (no overlay)
+        const onViewportChange = () => {
+            applyContainerSize();
+            scheduleScaleRefresh();
         };
-        // Initialize and react to changes
-        updateOverlay();
-        window.addEventListener('resize', () => { applyContainerSize(); updateOverlay(); });
-        window.addEventListener('orientationchange', () => { applyContainerSize(); updateOverlay(); });
+        onViewportChange();
+        window.addEventListener('resize', onViewportChange);
+        window.addEventListener('orientationchange', onViewportChange as any);
         // Track visual viewport changes (iOS/Android address bars)
         const vv = (window as any).visualViewport;
         if (vv && vv.addEventListener) {
-            vv.addEventListener('resize', () => { applyContainerSize(); updateOverlay(); });
+            vv.addEventListener('resize', onViewportChange);
         }
 
         // Best-effort: lock orientation when entering fullscreen (supported browsers only)

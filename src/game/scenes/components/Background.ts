@@ -110,7 +110,7 @@ export class Background {
                 strokeThickness: 2,
             }
         );
-        versionLabel.setOrigin(1, 1).setAlpha(0.2);
+        versionLabel.setOrigin(1, 1).setAlpha(0.8);
         // Ensure above background/foreground but below UI; backgrounds use depths 0-2
         versionLabel.setDepth(3);
 

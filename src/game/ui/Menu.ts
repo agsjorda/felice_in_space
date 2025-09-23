@@ -1134,6 +1134,11 @@ export class Menu {
             this.padding = 10;
             this.contentWidth = this.isMobile ? scene.scale.width - this.padding * 6 : this.viewWidth - this.padding * 12;
             this.yPosition = this.padding;
+
+            this.addContent(scene, 'UNDER CONSTRUCTION', 'title');
+
+            contentArea.add(this.contentContainer);
+            return;
     
             this.addContent(scene, 'Game Rules', 'title');
     
@@ -1576,16 +1581,7 @@ export class Menu {
         }
         if(imageElement != null){
             //if(image == 'tumbleGame' || image == 'scatterGame' || image == 'multiplierGame'){
-            if(image == 'scatterGame'){
-                imageElement.setScale(189/1144, 337/1546);
-            }
-            else if(image == 'tumbleGame'){
-                imageElement.setScale(204/1144, 367/1543);
-            }
-            else if(image == 'multiplierGame'){
-                imageElement.setScale(190/1144, 337/1543);
-            }
-            imageElement.setOrigin(-0.5, 0.5);
+            imageElement.setOrigin(0.25, 0.5);
         }
         if(image == 'BuyFeatMobile'){
             imageElement?.setPosition(x - imageElement.displayWidth/5, y);

@@ -43,7 +43,6 @@ export class Buttons {
     private isVisuallyDisabled: boolean = false; // Separate visual state for immediate feedback
     private buyFeaturePriceText: ButtonText;
     private amplifyBetButton : ButtonImage;
-    private doubleFeaturePriceText: ButtonText;
     private buyFeatureButton: GameObjects.Image | GameObjects.Graphics | null = null;
     private buyFeatureButtonText: ButtonText | null = null;
     private buyFeatureStarLeft: GameObjects.Image | null = null;
@@ -137,7 +136,7 @@ export class Buttons {
         scene.load.image('hamburger', 'assets/Mobile/Hamburger.png');
         scene.load.image('buyFeature','assets/Mobile/BuyFeature.png');
         scene.load.image('doubleFeature', `${prefix}/AmplifyBet.png`);
-        scene.load.image('marquee', 'assets/Mobile/Hamburger.png');
+        scene.load.image('marquee', 'assets/Reels/Marquee.png');
 
 
         // Preload Spine animation for the spin button idle effect
@@ -190,11 +189,6 @@ export class Buttons {
         }
         //this.createSettingsButton(scene);
         
-        // Initialize buy feature popup
-        if (!scene.buyFeaturePopup) {
-            scene.buyFeaturePopup = new BuyFeaturePopup();
-            scene.buyFeaturePopup.create(scene);
-        }
         this.createSettings(scene);
         
         this.setupKeyboardInput(scene);
@@ -292,9 +286,7 @@ export class Buttons {
             wordWrap: { width: scene.scale.width * 0.5, useAdvancedWrap: true }
         };
         this.remainingFsLabel = scene.add.text(x, y, labelText, style);
-
-        this.remainingFsLabel.setOrigin(0.5, 0.5);
-
+        this.remainingFsLabel.setOrigin(0, 0);
         this.remainingFsLabel.setDepth(1000);
         this.remainingFsLabel.setVisible(false);
         
@@ -1380,10 +1372,10 @@ export class Buttons {
 				this.autoplayButton.setInteractive();
 			}
 		}
-		
+		 
 		// Update buy feature button (visual and interactive state)
 		if (this.buyFeatureButton) {
-			this.buyFeatureButton.setAlpha(buyFeatureShouldDisable ? 0.5 : 1);
+			this.buyFeatureButton.setAlpha(buyFeatureShouldDisable ? 0.8 : 1);
 			if (buyFeatureShouldDisable) {
 				(this.buyFeatureButton as any).disableInteractive?.();
 			} else {
@@ -1809,7 +1801,7 @@ export class Buttons {
 
         // Add bet value text under BET
         const betValueText = scene.add.text(width * 0.5, Buttons.PANEL_HEIGHT * 0.65, scene.gameData.currency + " " 
-            + (scene.gameData.bet).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }), {
+            + (scene.gameData.bet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), {
             fontSize: '32px',
             color: '#FFFFFF',
             align: 'center',
@@ -1835,7 +1827,7 @@ export class Buttons {
 
         // plus button
         const plusBtn = scene.add.image(0, 0, 'plus') as ButtonImage;
-        plusBtn.setPosition(this.isMobile ? betValueText.x + 80 : width - 50, this.isMobile ? betValueText.y - 5 : Buttons.PANEL_HEIGHT * 0.65);
+        plusBtn.setPosition(betValueText.x + 90, betValueText.y - 5);
         //plusBtn.setScale(this.isMobile ? 0.25 : 0.3);
         
         plusBtn.setInteractive().isButton = true;
@@ -1843,7 +1835,7 @@ export class Buttons {
 
         // minus button
         const minusBtn = scene.add.image(0, 0, 'minus') as ButtonImage;
-        minusBtn.setPosition(this.isMobile ? betValueText.x - 80 : 50, this.isMobile ? plusBtn.y : Buttons.PANEL_HEIGHT * 0.65);
+        minusBtn.setPosition(betValueText.x - 90, plusBtn.y);
         //minusBtn.setScale(this.isMobile ? 0.25 : 0.3);
 
         minusBtn.setInteractive().isButton = true;
@@ -1927,17 +1919,17 @@ export class Buttons {
 
         // Update bet value when it changes
         Events.emitter.on(Events.CHANGE_BET, () => {
-            const totalBet = (scene.gameData.bet).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-            betValueText.setText(/*scene.gameData.currency +*/ totalBet);
+            const totalBet = (scene.gameData.bet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            betValueText.setText(scene.gameData.currency + " " + totalBet);
             localStorage.setItem('bet', scene.gameData.bet.toString());
             updateBetButtonsState();
         });
 
         Events.emitter.on(Events.ENHANCE_BET_TOGGLE, (isBuy?:boolean) => {
             if(scene.gameData.doubleChanceEnabled) {
-                betValueText.setText(scene.gameData.currency + (scene.gameData.bet * 1.25).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+                betValueText.setText(scene.gameData.currency + (scene.gameData.bet * 1.25).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
             } else {
-                betValueText.setText(scene.gameData.currency + (scene.gameData.bet).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+                betValueText.setText(scene.gameData.currency + (scene.gameData.bet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
             }
         });
 
@@ -2360,49 +2352,36 @@ export class Buttons {
         const x = this.isMobile ? this.width * 0.505 : this.width * 0.15;
         const y = this.isMobile ? this.height * 0.75 : this.height * 0.13;
 
-        const ellipseWidth = 277;
-        const ellipseHeight = 114;
         const container = scene.add.container(x, y) as ButtonContainer;
 
         // Button background
-        if(this.isMobile){
             this.buyFeatureButton = scene.add.image(0, 0, 'buyFeature') as ButtonImage;
-            this.buyFeatureButton.setScale(120/182, 54/72);
+            this.buyFeatureButton.preFX!.addShadow(0.5, 0.5, 0.1, 2, 10000536, 6, 1);
+            this.buyFeatureButton.setScale(115/182, 52/72);
           
             this.buyFeatureButton.setInteractive(new Geom.Rectangle(
-                this.buyFeatureButton.width/4,
-                this.buyFeatureButton.height/4,
-                this.buyFeatureButton.width * 0.6,
-                this.buyFeatureButton.height/2),
-                Geom.Rectangle.Contains);
+                0,
+                0,
+                this.buyFeatureButton.width,
+                this.buyFeatureButton.height
+            ), Geom.Rectangle.Contains);
             (this.buyFeatureButton as any).isButton = true;
             container.add(this.buyFeatureButton);
-        } else {
-            this.buyFeatureButton = scene.add.graphics();
-            this.buyFeatureButton.fillStyle(0x181818, 0.95);
-            this.buyFeatureButton.lineStyle(2, 0x66D449, 1);
-            this.buyFeatureButton.setInteractive(new Geom.Rectangle(-ellipseWidth/2, -ellipseHeight/2, ellipseWidth, ellipseHeight), Geom.Rectangle.Contains);
-            this.buyFeatureButton.strokeRoundedRect(-ellipseWidth/2, -ellipseHeight/2, ellipseWidth, ellipseHeight, ellipseHeight/2);
-            this.buyFeatureButton.fillRoundedRect(-ellipseWidth/2, -ellipseHeight/2, ellipseWidth, ellipseHeight, ellipseHeight/2);
-            //this.buyFeatureButton.setInteractive(new Geom.Rectangle(-ellipseWidth/2, -ellipseHeight/2, ellipseWidth, ellipseHeight), Geom.Rectangle.Contains);
-            (this.buyFeatureButton as any).isButton = true;
-            container.add(this.buyFeatureButton);
-        }
+        
 
-        // Stars
-        if(!this.isMobile){
-            this.buyFeatureStarLeft = scene.add.image(-ellipseWidth/2 + 32, -24, 'star') as ButtonImage;
-            container.add(this.buyFeatureStarLeft);
-            this.buyFeatureStarRight = scene.add.image(ellipseWidth/2 - 32, -24, 'star') as ButtonImage;
-            container.add(this.buyFeatureStarRight);
-        }
+        // // Stars
+        // if(!this.isMobile){
+        //     this.buyFeatureStarLeft = scene.add.image(-ellipseWidth/2 + 32, -24, 'star') as ButtonImage;
+        //     container.add(this.buyFeatureStarLeft);
+        //     this.buyFeatureStarRight = scene.add.image(ellipseWidth/2 - 32, -24, 'star') as ButtonImage;
+        //     container.add(this.buyFeatureStarRight);
+        // }
         
         // BUY FEATURE text
         
         this.buyFeatureButtonText = scene.add.text(0, -24, 'BUY FEATURE', {
         }) as ButtonText;
         this.buyFeatureButtonText.setOrigin(0.5, 0.5);
-        if(this.isMobile){
             this.buyFeatureButtonText.setScale(0.5);
             this.buyFeatureButtonText.setPosition(0, -12);
             this.buyFeatureButtonText.setStyle({
@@ -2412,25 +2391,12 @@ export class Buttons {
                 fontStyle: 'bold',
                 align: 'center',
             });
-        }
-        else{
-            this.buyFeatureButtonText.setStyle({
-                fontSize: '24px',
-                color: '#FFFFFF',
-                fontFamily: 'Poppins',
-                fontStyle: 'bold',
-                align: 'center',
-                letterSpacing: 1.5,
-                stroke: '#181818',
-                strokeThickness: 2,
-                shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 4, fill: true }
-            })  
-        }
+        
         container.add(this.buyFeatureButtonText);
 
         // Price text (large, green)
         const price = scene.gameData.getBuyFeaturePrice();
-        const priceText = scene.gameData.currency + ' ' + price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const priceText = scene.gameData.currency + ' ' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         this.buyFeaturePriceText = scene.add.text(0, 24,  priceText, {
             fontSize: '42px',
             color: '#3FFF0D',
@@ -2439,11 +2405,11 @@ export class Buttons {
             fontStyle: 'bold'
         }) as ButtonText;
         this.buyFeaturePriceText.setOrigin(0.5, 0.5);
-        if(this.isMobile){
+        
             this.buyFeaturePriceText.setScale(0.4);
             this.buyFeaturePriceText.setPosition(0, 8);
             this.buyFeaturePriceText.setColor('#FFFFFF');
-        }
+            
         container.add(this.buyFeaturePriceText);
 
         container.name = 'buyFeatureContainer';
@@ -2485,7 +2451,7 @@ export class Buttons {
         };
 
         // Add click handlers
-        this.buyFeatureButton.on('pointerdown', showBuyFeaturePopup);
+        this.buyFeatureButton?.on('pointerdown', showBuyFeaturePopup);
         
         // Close button is now handled by BuyFeaturePopup component
 
@@ -2502,21 +2468,21 @@ export class Buttons {
 
     updateBuyFeaturePrice(scene: GameScene, newPrice: number) {
 		if (this.buyFeaturePriceText) {
-			this.buyFeaturePriceText.setText(scene.gameData.currency + ' ' + newPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+			this.buyFeaturePriceText.setText(scene.gameData.currency + ' ' + newPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 		}
 	}
 
 
     private createDoubleFeature(scene: GameScene): void {
-        const x = this.isMobile ? this.width * 0.73 : this.width * 0.8;
-        const y = this.isMobile ? this.mobile_buttons_y  : this.height * 0.82;
+        const x = this.width * 0.73;
+        const y = this.mobile_buttons_y;
 
-        const width = this.isMobile ? 240 : 254;
-        const height = this.isMobile ? 108 : 131;
+        const width = 240;
+        const height = 108;
 
         const container = scene.add.container(x, y) as ButtonContainer;
 
-        if(this.isMobile){
+        
             // elliptical button
             const bg = scene.add.image(0, 0, 'amplifyBet') as ButtonImage;
             bg.setOrigin(0.5, 0.5);
@@ -2529,15 +2495,7 @@ export class Buttons {
                 scene.audioManager.UtilityButtonSFX.play();
             });
             container.add(bg);
-        }
-        else{
-            // rectangular button
-            const bg = scene.add.image(width / 2, height / 2, 'greenRectBtn') as ButtonImage;
-            bg.displayWidth = width;
-            bg.displayHeight = height;
-            bg.setOrigin(0.5, 0.5);
-            container.add(bg);
-        }
+        
 
             // Bet box (left)
             const betBox = scene.add.graphics();
@@ -2556,38 +2514,6 @@ export class Buttons {
             betLabel.setOrigin(0.5, 0.5);
             betLabel.setVisible(this.isMobile ? false : true);
             container.add(betLabel);
-
-            // Create auto-sized double feature price text
-            this.doubleFeaturePriceText = scene.add.text(
-                this.isMobile ? width * 0.7 : 60, 
-                this.isMobile ? height * 0.725 : 90, scene.gameData.getDoubleFeaturePrice().toString(), {
-                fontSize: '36px',
-                fontFamily: 'Poppins',
-                fontStyle: 'bold',
-                align: 'center',
-            }) as ButtonText;
-            this.doubleFeaturePriceText.setOrigin(0.5, 0.75);
-            this.doubleFeaturePriceText.setColor(this.isMobile ? '#FFFFFF' : '#3FFF0D');
-            if(!this.isMobile){
-                this.doubleFeaturePriceText.setWordWrapWidth(80);
-            }
-            container.add(this.doubleFeaturePriceText);
-        
-        // Function to update text size based on content
-        const updateTextSize = () => {
-            this.doubleFeaturePriceText.setStyle({ fontSize: `${this.isMobile ? '0px' : '36px'}` });
-        };
-
-        // Initial size update
-        updateTextSize();
-
-        // Update text size when the price changes
-        Events.emitter.on(Events.CHANGE_BET, () => {
-            if (this.doubleFeaturePriceText) {
-                this.doubleFeaturePriceText.setText(scene.gameData.getDoubleFeaturePrice().toString());
-                updateTextSize();
-            }
-        });
 
         // Enhanced Bet label (right, top)
         const enhancedLabel = scene.add.text(this.isMobile ? width * 0.15 : width - 140, this.isMobile ? height * 0.15 : 10, 'ENHANCED BET', {
@@ -2636,7 +2562,6 @@ export class Buttons {
                 betBox.fillRoundedRect(15, 20, 90, 90, 16);
 
                 betLabel.setColor('#FFFFFF');
-                this.doubleFeaturePriceText.setColor(this.isMobile ? '#FFFFFF' : '#3FFF0D');
 
                 scene.gameData.doubleChanceEnabled = true;
                 Events.emitter.emit(Events.ENHANCE_BET_TOGGLE, {});                
@@ -2653,8 +2578,7 @@ export class Buttons {
                 betBox.clear();
                 betBox.fillStyle(0x181818, 0.5);
                 betBox.fillRoundedRect(15, 20, 90, 90, 16);
-                betLabel.setColor(this.isMobile ? '#FFFFFF' : '#888888'); 
-                this.doubleFeaturePriceText.setColor(this.isMobile ? '#FFFFFF' : '#888888');
+                betLabel.setColor('#FFFFFF'); 
 
                 scene.gameData.doubleChanceEnabled = false;
                 Events.emitter.emit(Events.ENHANCE_BET_TOGGLE, {});
@@ -2668,7 +2592,7 @@ export class Buttons {
                 drawToggle();
         });
 
-        toggleCircle.setVisible(this.isMobile ? false : true);
+        toggleCircle.setVisible(false);
         container.add(toggleCircle);
 
         // Toggle logic
@@ -2797,7 +2721,7 @@ export class Buttons {
         container.setDepth(20);
 
         const marquee = scene.add.image(0, 0, 'marquee');
-        marquee.setAlpha(0);
+        marquee.setScale(0.49);
         container.add(marquee);
 
         const youWonString = scene.gameData.totalWin.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -2823,12 +2747,13 @@ export class Buttons {
         this.bombMarqueeContainer.setVisible(false);
         
         Events.emitter.on(Events.SHOW_BOMB_WIN, () => { 
-            this.bombMarqueeContainer.setVisible(this.isMobile? true : false);
+            this.bombMarqueeContainer.setVisible(true);
             let multiplier = scene.gameData.totalBombWin;
             let totalWin = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex].toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             const totalProduct = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex] * scene.gameData.totalBombWin;
             const totalProductString = totalProduct.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             //youWonLabel.setText('WIN');
+            if(multiplier > 1)
             youWonAmount.setText(`${scene.gameData.currency} ${totalWin} x ${multiplier} = ${totalProductString}`);
         });
         Events.emitter.on(Events.HIDE_BOMB_WIN, () => { 
@@ -2848,14 +2773,14 @@ export class Buttons {
     }
 
     private createMarquee(scene: GameScene): void {
-        if(!this.isMobile) return;
+        //if(!this.isMobile) return;
         const x = this.width * 0.5;
         const y = this.height * 0.19;
         const container = scene.add.container(x, y);
         container.setDepth(20);
         
         const marquee = scene.add.image(0, 0, 'marquee');
-        marquee.setAlpha(0);
+        marquee.setScale(0.49);
         container.add(marquee);
 
         // Title
@@ -2959,7 +2884,7 @@ export class Buttons {
 
         hideMarquee();
         Events.emitter.on(Events.UPDATE_TOTAL_WIN, (increment?: number, isBomb?: boolean) => {
-            if(!this.isMobile) return;
+            //if(!this.isMobile) return;
             
             showMarquee();
             // console.error(increment);
@@ -2985,7 +2910,8 @@ export class Buttons {
                 totalWinFinalTimer = null;
             }
 			//if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
-			youWonAmount.setText(scene.gameData.currency + ' ' + (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+			youWonAmount.setText(scene.gameData.currency + ' '
+                + (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 			//hideMarquee();
 		});
 

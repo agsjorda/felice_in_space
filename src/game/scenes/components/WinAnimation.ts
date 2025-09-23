@@ -15,14 +15,14 @@ export class WinAnimation {
         this.scene.load.spineAtlas('myWinAnim2', 'assets/Win/Default FOR WIN ANIMATION spine.atlas');
         this.scene.load.spineJson('myWinAnim2', 'assets/Win/Default FOR WIN ANIMATION spine.json');
 
-        this.scene.load.spineAtlas('Symbol10_SW', 'assets/Symbols/Bomb/Symbol_0002.atlas');
-        this.scene.load.spineJson('Symbol10_SW', 'assets/Symbols/Bomb/Symbol_0002.json');
+        this.scene.load.spineAtlas('Symbol10_FIS', 'assets/Symbols/Bomb/Bomb_0/multiplier.atlas');
+        this.scene.load.spineJson('Symbol10_FIS', 'assets/Symbols/Bomb/Bomb_0/multiplier.json');
 
-        // this.scene.load.spineAtlas('Symbol11_SW', 'assets/Symbols/Bomb/Symbol_0002.atlas');
-        // this.scene.load.spineJson('Symbol11_SW', 'assets/Symbols/Bomb/Symbol_0002.json');
+        this.scene.load.spineAtlas('Symbol11_FIS', 'assets/Symbols/Bomb/Bomb_1/BLUE ROCK.atlas');
+        this.scene.load.spineJson('Symbol11_FIS', 'assets/Symbols/Bomb/Bomb_1/BLUE ROCK.json');
 
-        // this.scene.load.spineAtlas('Symbol12_SW', 'assets/Symbols/Bomb/Symbol_0002.atlas');
-        // this.scene.load.spineJson('Symbol12_SW', 'assets/Symbols/Bomb/Symbol_0002.json');
+        this.scene.load.spineAtlas('Symbol12_FIS', 'assets/Symbols/Bomb/Bomb_2/Green rock.atlas');
+        this.scene.load.spineJson('Symbol12_FIS', 'assets/Symbols/Bomb/Bomb_2/Green rock.json');
 
     }
 
@@ -32,9 +32,17 @@ export class WinAnimation {
         spineObject2.setPosition(0, 0);
         spineObject2.setAlpha(0);
 
-        let bombSymbol10 = this.scene.add.spine(0, 0, 'Symbol10_SW', 'Symbol10_SW') as SpineGameObject;
+        let bombSymbol10 = this.scene.add.spine(0, 0, 'Symbol10_FIS', 'Symbol10_FIS') as SpineGameObject;
         bombSymbol10.setPosition(0, 0);
         bombSymbol10.setAlpha(0);
+
+        let bombSymbol11 = this.scene.add.spine(0, 0, 'Symbol11_FIS', 'Symbol11_FIS') as SpineGameObject;
+        bombSymbol11.setPosition(0, 0);
+        bombSymbol11.setAlpha(0);
+
+        let bombSymbol12 = this.scene.add.spine(0, 0, 'Symbol12_FIS', 'Symbol12_FIS') as SpineGameObject;
+        bombSymbol12.setPosition(0, 0);
+        bombSymbol12.setAlpha(0);
         
     }
 
@@ -74,6 +82,9 @@ export class WinAnimation {
                     runningWin += intervalWin;
                 }
                 
+                if(winType === 'FreeSpin'){
+                    runningWin = totalwin;
+                }
                 Events.emitter.emit(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN,
                      runningWin,
                      winType

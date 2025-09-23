@@ -36,17 +36,17 @@ export class BombContainer extends GameObjects.Container {
 
         // Set the animation based on the bomb type
         // Create the bomb sprite
-        let bombKey = 'Symbols10_SW';
+        let bombKey = 'Symbol10_FIS';
         if(this.bombType == 'medium'){
-            bombKey = 'Symbols11_SW';
+            bombKey = 'Symbol11_FIS';
         }
         else if(this.bombType == 'high'){
-            bombKey = 'Symbols12_SW';
-        }
-        this.bombSprite = scene.add.spine(0, 0, 'Symbol10_SW','Symbol10_SW');
+            bombKey = 'Symbol12_FIS';
+        }1
+        this.bombSprite = scene.add.spine(0, 0, bombKey, bombKey);
         this.bombSprite.setVisible(true);
         this.bombSprite.setDepth(1);
-        this.bombSprite.animationState.setAnimation(0, bombKey, false);
+        this.bombSprite.animationState.setAnimation(0, 'animation', false);
         // Pause the animation at frame 1 (i.e., after the first frame)
         this.bombSprite.animationState.timeScale = 1;
 
@@ -65,24 +65,46 @@ export class BombContainer extends GameObjects.Container {
             });
         }
 
-        // Keep internal sprite above its container contents
-        
+        scene.gameData.totalBombWin = 0;
         // Set the animation time scale to 1
         this.bombSprite.animationState.timeScale = 0;
+        const colorIndex = this.multiplier >= 50 ? 0 : this.multiplier >= 12 ? 1 : 2;
+        const gradientColor: string[][] = [
+            // 🟡 Gold Bombs → Purple text
+            ['#FF8C42', '#FFD700'],
+            // 🟢 Green Bombs → Magenta/Pink text
+            ['#FF4D94', '#FFB6C1'],  
+            // 🔵 Blue Bombs → Orange/Yellow text
+            ['#FF8C42', '#FFD700']   
+        ];
         
+        
+        const shadowColor: string[] = [
+            '#8B3A00',   // Burnt orange for blue bombs  
+            '#8B004B',  // Dark magenta for green bombs
+            '#8B3A00'   // Burnt orange for blue bombs
+        ];
+        
+        const blur: number[] = [
+            0.7, // Gold bomb shadow opacity
+            0.6, // Green bomb shadow opacity
+            0.6  // Blue bomb shadow opacity
+        ];
+        
+        let _gradientColor = gradientColor[colorIndex];
         // Create the text overlay
         this.textOverlay = scene.add.text(0, 0, `${this.multiplier}X`, {
             fontSize: '32px',
-            color: '#FFD700',
+            color: _gradientColor[0],
             fontFamily: 'Poppins',
             fontStyle: 'bold',
             align: 'center',
-            stroke: '#FF0000',
+            stroke: shadowColor[colorIndex],
             strokeThickness: 4,
             shadow: {
                 offsetX: 0,
                 offsetY: 0,
-                color: '#FFFFFF',
+                color: 'rgba(0, 0, 0, ' + blur[colorIndex] + ')',
                 blur: 10,
                 stroke: true,
                 fill: false
@@ -91,14 +113,6 @@ export class BombContainer extends GameObjects.Container {
         this.textOverlay.setOrigin(0.5, 0.5);
         this.textOverlay.setDepth(2);
         
-        // Apply gradient to text
-        const gradient = this.textOverlay.context.createLinearGradient(0, 0, 0, this.textOverlay.height);
-        gradient.addColorStop(0, '#FFF15A');
-        gradient.addColorStop(0.5, '#FFD000');
-        gradient.addColorStop(1, '#FFB400');
-        this.textOverlay.setFill(gradient);
-        
-    
         // Add both elements to the container
         this.add([this.bombSprite, this.textOverlay]);
         // Ensure the container itself renders above standard symbols
@@ -107,19 +121,21 @@ export class BombContainer extends GameObjects.Container {
         // Create a floating text that will always render above everything else
         this.floatingText = scene.add.text(0, 0, `X ${this.multiplier}`, {
             fontSize: '28px',
-            color: '#FFFFFF',
+            color: _gradientColor[0],
             fontFamily: 'Poppins',
             fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 4
+            stroke: shadowColor[colorIndex],
+            strokeThickness: 4,
+            shadow: {
+                offsetX: 0,
+                offsetY: 0,
+                color: 'rgba(0, 0, 0, ' + blur[colorIndex] + ')',
+                blur: 10,
+                stroke: true,
+                fill: false
+            }
         });
         
-        const gradient2 = this.floatingText.context.createLinearGradient(0, 0, 0, this.floatingText.height);
-        gradient2.addColorStop(0, '#FFF15A');
-        gradient2.addColorStop(0.5, '#FFD000');
-        gradient2.addColorStop(1, '#FFB400');
-        this.floatingText.setFill(gradient2);
-
         this.floatingText.setOrigin(0.5, 0.5);
         // Place this floating text at an extrzemely high depth so it's above all overlays
         this.floatingText.setDepth(1000000);
@@ -190,7 +206,8 @@ export class BombContainer extends GameObjects.Container {
             const scaleX = width / currentWidth;
             const scaleY = height / currentHeight;
             const scale = Math.min(scaleX, scaleY);
-            this.bombSprite.setScale(scale);
+
+            this.bombSprite.setScale(scale * 1.15);
             // Place at the center of the container; children are positioned relative to container center
             this.bombSprite.setPosition(10, 0);
         } catch (_e) {
@@ -204,7 +221,7 @@ export class BombContainer extends GameObjects.Container {
         this.textOverlay.setPosition(width * 0.1, 0);
 
         // Adjust text size to be readable and centered inside the bomb
-        const baseTextSize = Math.floor(Math.min(width/2, height/2) * 0.28);
+        const baseTextSize = Math.floor(Math.min(width/2, height/2) * 0.28) * 3;
         this.textOverlay.setFontSize(baseTextSize);
 
         // Update container size so tweens and layout treat it like a symbol cell
@@ -301,17 +318,20 @@ export class BombContainer extends GameObjects.Container {
         this.gameData.debugLog('Showing bomb explosion');
         
         // Use an overlay bomb so the animation sits above other symbols
-        try { this.scene.audioManager.TExplosion.play(); } catch (_e) {}
+        try {
+            this.scene.audioManager.TExplosion.play();
+            this.scene.audioManager.BonusBG.resume();
+            } catch (_e) {}
         // Pause at the 22nd frame (assuming 30 FPS)
         switch(this.bombType){
             case 'low':
-                this.spawnOverlayBombAnimation('Symbols10_SW', 1500, 31, 30);
+                this.spawnOverlayBombAnimation('Symbols10_FIS', 1500, 31, 30);
                 break;
             case 'medium':
-                this.spawnOverlayBombAnimation('Symbols11_SW', 1500, 31, 30);
+                this.spawnOverlayBombAnimation('Symbols11_FIS', 1500, 31, 30);
                 break;
             case 'high':
-                this.spawnOverlayBombAnimation('Symbols12_SW', 1500, 31, 30);
+                this.spawnOverlayBombAnimation('Symbols12_FIS', 1500, 31, 30);
                 break;
         }
         // During explosion, lower other symbols (regular/scatter) so bomb visually dominates
@@ -480,11 +500,11 @@ export class BombContainer extends GameObjects.Container {
         }
         
         if (this.bombSprite) {  
-            console.error('destroying bomb sprite', this.bombSprite);
+            // console.error('destroying bomb sprite', this.bombSprite);
             this.bombSprite.animationState.timeScale = 1;
             this.bombSprite.animationState.addListener({
                 complete: () => {
-                    console.error('destroying bomb sprite complete');
+                    //console.error('destroying bomb sprite complete');
                 this.bombSprite.destroy();
             }});
         }
@@ -561,6 +581,9 @@ export class BombContainer extends GameObjects.Container {
                     setTimeout(() => {
                         this.floatingText?.destroy();
                         // event call to update the total win text, multiply by the bomb multiplier amount
+                        this.scene.gameData.totalBombWin += this.getMultiplier();
+                        Events.emitter.emit(Events.SHOW_BOMB_WIN);
+                        // console.log(this.scene.gameData.totalWinFreeSpinPerTumble[this.scene.gameData.apiFreeSpinsIndex]);
                         Events.emitter.emit(Events.UPDATE_TOTAL_WIN, 0, true);
                     }, 50);
                  } catch (_e) {}

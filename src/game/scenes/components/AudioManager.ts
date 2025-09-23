@@ -311,8 +311,7 @@ export class AudioManager {
 
     stopWinSFX(_scene: Scene): void {   
         this.BGChecker.play();
-        // this.setMusicVolume(this.getMusicVolume() / 0.01);
-        console.log(this.getMusicVolume());
+        
         if(this.getMusicVolume() > 1) {
             this.setMusicVolume(1);
         }
@@ -343,7 +342,6 @@ export class AudioManager {
         this.musicVolume = vol;
         if (this.MainBG) this.MainBG.setVolume(this.musicVolume);
         if (this.BonusBG) this.BonusBG.setVolume(this.musicVolume);
-        console.log(chalk.blueBright.bold("setMusicVolume" + this.musicVolume));
     }
 
     getMusicVolume(): number {
