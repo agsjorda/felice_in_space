@@ -280,53 +280,90 @@ export class Buttons {
     }
 
     private createRemainingFreeSpinsLabel(scene: GameScene): void {
-        const labelText = 'Remaining Free Spins: 0';
-        const x = this.isMobile ? scene.scale.width * 0.5 : scene.scale.width * 0.88;
-        const y = this.isMobile ? scene.scale.height * 0.92 : scene.scale.height * 0.61;
+        const labelText = 'Remaining Free Spins:';
+        const x = this.isMobile ? scene.scale.width * 0.2 : scene.scale.width * 0.88;
+        const y = this.isMobile ? scene.scale.height * 0.815 : scene.scale.height * 0.39;
         const style = {
-            fontSize: this.isMobile ? '28px' : '20px',
+            fontSize: this.isMobile ? '32px' : '28px',
+            color: this.isMobile ? '#09FF5C' : '#FFFFFF',
+            fontFamily: 'Poppins',
+            fontStyle: 'bold',
+            align: 'left' as const,
+            wordWrap: { width: scene.scale.width * 0.5, useAdvancedWrap: true }
+        };
+        this.remainingFsLabel = scene.add.text(x, y, labelText, style);
+
+        this.remainingFsLabel.setOrigin(0.5, 0.5);
+
+        this.remainingFsLabel.setDepth(1000);
+        this.remainingFsLabel.setVisible(false);
+        
+        const x_count = this.isMobile ? scene.scale.width * 0.65 : scene.scale.width * 0.88;
+        const y_count = this.isMobile ? scene.scale.height * 0.81 : scene.scale.height * 0.39;
+        const style2 = {
+            fontSize: this.isMobile ? '84px' : '128px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
             fontStyle: 'bold',
-            align: 'center' as const
+            align: 'left' as const,
         };
-        this.remainingFsLabel = scene.add.text(x, y, labelText, style);
-        this.remainingFsLabel.setOrigin(0.5, 0.5);
-        // Keep label above most UI; same depth on both
-        this.remainingFsLabel.setDepth(1000);
-        this.remainingFsLabel.setVisible(false);
+// remaining free spin label (mobile, desktop)
+        this.remainingFsLabel_Count = scene.add.text(x_count, y_count, '0', style2);
+        this.remainingFsLabel_Count.setOrigin(this.isMobile ? 0 : 0.5, this.isMobile ? 0 : 0);
+        this.remainingFsLabel_Count.setDepth(1000);
+        this.remainingFsLabel_Count.setVisible(false);
+
+
 
         const updateLabelVisibility = () => {
-            if (!this.remainingFsLabel) return;
+            if (!this.remainingFsLabel || !this.remainingFsLabel_Count) return;
             // Reposition in case of resize/orientation or platform switch
-            const newX = this.isMobile ? scene.scale.width * 0.5 : scene.scale.width * 0.88;
-            const newY = this.isMobile ? scene.scale.height * 0.92 : scene.scale.height * 0.61;
-            this.remainingFsLabel.setPosition(newX, newY);
-            this.remainingFsLabel.setFontSize(this.isMobile ? '28px' : '20px');
+
+            //const newX = this.isMobile ? scene.scale.width * 0.275 : scene.scale.width * 0.88;
+            //const newX_count = this.isMobile ? scene.scale.width * 0.7 : scene.scale.width * 0.88;
+            //const newY = this.isMobile ? scene.scale.height * 0.92 : scene.scale.height * 0.61;
+            //
+            //this.remainingFsLabel.setPosition(newX, newY);
+            //this.remainingFsLabel_Count.setPosition(newX_count, newY);
+            
+            this.remainingFsLabel.setFontSize(this.isMobile ? '32px' : '20px');
             const shouldShow = !!scene.gameData.isBonusRound && (scene.gameData.freeSpins ?? 0) > 0;
-            const count = scene.gameData.freeSpins ?? 0;
+            const count = this.forceSpinsLeftOverlay ? 10 : (scene.gameData.freeSpins ?? 0);
             if(this.isMobile){
-                this.remainingFsLabel.setText(`Remaining Free Spins: ${count}`);
+                this.remainingFsLabel.setText(`Remaining Free Spins:`);
+                this.remainingFsLabel_Count.setText(`${count}`);
             }
             else {
-                this.remainingFsLabel.setText(``);
+                this.remainingFsLabel.setText(`Spins Left:`);
+                this.remainingFsLabel_Count.setText(`${this.forceSpinsLeftOverlay ? count : (count - 1)}`);
             }
             this.remainingFsLabel.setVisible(shouldShow);
+            this.remainingFsLabel_Count.setVisible(shouldShow);
+
+            // Sync freeSpinBtn with the Spins Left label visibility or active/paused autoplay
+            try { this.freeSpinBtn.visible = shouldShow || !!this.autoplay?.isAutoPlaying || !!scene.gameData.autoplayWasPaused; } catch (_e) {}
+            // Avoid overlap: hide autoplay indicator while Spins Left is shown
+            // Only show autoplay indicator when autoplay is actively running
+            try { this.autoplayIndicator.visible = shouldShow ? false : (!!this.autoplay?.isAutoPlaying || !!scene.gameData.autoplayWasPaused); } catch (_e) {}
+			// Enforcement: only during active bonus ensure freeSpinBtn stays visible
+			try { if (scene.gameData.isBonusRound && this.autoplayIndicator?.visible) { this.freeSpinBtn.visible = true; } } catch (_e) {}
+            // Ensure spin button alpha follows autoplay indicator visibility
+            try { this.updateButtonStates(scene); } catch (_e) {}
 
             // Toggle bottom controls visibility and Y-axis positions based on free spins state
             // Desktop: keep controls visible; Mobile: hide while in bonus
             if (this.isMobile) {
-                if (shouldShow) {
-                    this.hideBottomControlsForBonus(scene, true);
-                } else {
-                    this.hideBottomControlsForBonus(scene, false);
-                }
+                    this.hideBottomControlsForBonus(scene, shouldShow);
+
+                    this.remainingFsLabel.setText(`Remaining Free Spins:`);
+                    this.remainingFsLabel_Count.setText(`${count - 1}`);
+                
             } else {
                 // On desktop, keep controls visible and show/hide spins using the spin-button HUD like autoplay
                 if (shouldShow && this.autoplay?.ensureRemainingSpinsDisplay) {
                     this.autoplay.ensureRemainingSpinsDisplay(scene);
-                } else if (!shouldShow && this.autoplay?.hideRemainingSpinsDisplay) {
-                    this.autoplay.hideRemainingSpinsDisplay();
+                // } else if (!shouldShow && this.autoplay?.hideRemainingSpinsDisplay) {
+                //     this.autoplay.hideRemainingSpinsDisplay();
                 }
             }
         };
@@ -339,43 +376,82 @@ export class Buttons {
         Events.emitter.on(Events.AUTOPLAY_START, updateLabelVisibility);
         Events.emitter.on(Events.AUTOPLAY_STOP, updateLabelVisibility);
 
+        // Show immediate label when FreeSpin overlay appears
+        Events.emitter.on(Events.FREE_SPIN_OVERLAY_SHOW, () => {
+            this.forceSpinsLeftOverlay = true;
+            if (!this.remainingFsLabel || !this.remainingFsLabel_Count) return;
+            this.remainingFsLabel.setText(this.isMobile ? `Remaining Free Spins:` : `Spins Left:`);
+            this.remainingFsLabel_Count.setText(`10`);
+            this.remainingFsLabel.setVisible(true);
+            this.remainingFsLabel_Count.setVisible(true);
+            // On entering FS overlay: ensure FS button is shown, spin hidden, and autoplay indicator hidden
+            try { this.freeSpinBtn.visible = true; this.freeSpinBtn.setAlpha(1); } catch (_e) {}
+            try { this.spinButton.setAlpha(0); } catch (_e) {}
+            try { this.autoplayIndicator.visible = false; } catch (_e) {}
+            try { this.updateButtonStates(scene); } catch (_e) {}
+        });
+        // Re-sync to actual state when overlay hides
+        Events.emitter.on(Events.WIN_OVERLAY_HIDE, () => {
+            this.forceSpinsLeftOverlay = false;
+            try { updateLabelVisibility(); } catch (_e) {}
+        });
+
         // Initial evaluation
         updateLabelVisibility();
     }
 
     public showRemainingFreeSpinsLabel(scene: GameScene): void {
-        if (!this.remainingFsLabel) return;
+        if (!this.remainingFsLabel || !this.remainingFsLabel_Count) return;
         const count = scene.gameData.freeSpins ?? 0;
         if(this.isMobile){
-            this.remainingFsLabel.setText(`Remaining Free Spins: ${count}`);
+            this.remainingFsLabel.setText(`Remaining Free Spins:`);
+            this.remainingFsLabel_Count.setText(`${count - 1}`);
         }
         else{
-            this.remainingFsLabel.setText(``);
+            this.remainingFsLabel.setText(`Spins Left:`);
+            this.remainingFsLabel_Count.setText(`${count}`);
         }
         // Mobile: show text label; Desktop: use autoplay HUD near spin button
-        this.remainingFsLabel.setVisible(this.isMobile);
+        //this.remainingFsLabel.setVisible(this.isMobile);
+        //this.remainingFsLabel_Count.setVisible(this.isMobile);
         if (!this.isMobile && this.autoplay?.ensureRemainingSpinsDisplay) {
             this.autoplay.ensureRemainingSpinsDisplay(scene);
         }
+        // Ensure button syncs when label is requested to show
+        try { this.freeSpinBtn.visible = true; } catch (_e) {}
+        try { this.autoplayIndicator.visible = false; } catch (_e) {}
     }
 
     public updateRemainingFreeSpinsCount(scene: GameScene): void {
-        if (!this.remainingFsLabel) return;
+        if (!this.remainingFsLabel || !this.remainingFsLabel_Count) return;
         const count = scene.gameData.freeSpins ?? 0;
         if(this.isMobile){
-            this.remainingFsLabel.setText(`Remaining Free Spins: ${count}`);
+            this.remainingFsLabel.setText(`Remaining Free Spins:`);
+            this.remainingFsLabel_Count.setText(`${count}`);
         }
         else{
-            this.remainingFsLabel.setText(``);
+            this.remainingFsLabel.setText(`Spins Left:`);
+            this.remainingFsLabel_Count.setText(`${count}`);
         }
+        //this.remainingFsLabel_Count.setVisible(this.isMobile);
         if (!this.isMobile && this.autoplay?.ensureRemainingSpinsDisplay) {
             this.autoplay.ensureRemainingSpinsDisplay(scene);
         }
     }
 
-    public hideRemainingFreeSpinsLabel(): void {
-        if (!this.remainingFsLabel) return;
+    public hideRemainingFreeSpinsLabel(scene?: GameScene): void {
+        if (!this.remainingFsLabel || !this.remainingFsLabel_Count) return;
         this.remainingFsLabel.setVisible(false);
+        this.remainingFsLabel_Count.setVisible(false);
+        this.remainingFsLabel_Count.setText(``);
+        this.remainingFsLabel_Count.setVisible(false);
+        // Hide the button when the label is hidden, unless autoplay indicator is visible or autoplay is running/paused for bonus
+        try {
+            const paused = scene ? !!(scene as any).gameData?.autoplayWasPaused : false;
+            if (!this.autoplayIndicator?.visible && !this.autoplay?.isAutoPlaying && !paused) {
+                this.freeSpinBtn.visible = false;
+            }
+        } catch (_e) {}
     }
 
     public hideBottomControlsForBonus(scene: GameScene, hidden: boolean): void {
@@ -393,7 +469,7 @@ export class Buttons {
         setVisibleByName('doubleFeatureContainer', !hidden);
         setVisibleByName('autoplayContainer', !hidden);
         // Mobile: keep volume/settings visible even when hiding; Desktop: follow hidden flag
-        setVisibleByName('settingsContainer', this.isMobile && hidden ? true : !hidden);
+        setVisibleByName('settingsContainer', this.isMobile && hidden ? !hidden : true);
         // Desktop: also hide info button when hiding
         if (!this.isMobile) {
             setVisibleByName('infoContainer', !hidden);
@@ -583,7 +659,7 @@ export class Buttons {
         const width = this.isMobile ? this.spinButton.width / 3.25 : this.spinButton.width * 0.75;
         const height = this.isMobile ? this.spinButton.height / 3.25 : this.spinButton.height * 0.75;
 
-        this.freeSpinBtn = scene.add.image(x, y, 'greenCircBtn') as ButtonImage;
+        this.freeSpinBtn = scene.add.image(0, 0, 'greenCircBtn') as ButtonImage;
         this.autoplayIndicator = scene.add.image(0, 0, 'autoplayIndicator') as ButtonImage;
 
         const widthgcb = this.isMobile ? this.freeSpinBtn.width / 2.5 : this.freeSpinBtn.width * 0.9;
@@ -605,12 +681,13 @@ export class Buttons {
         this.freeSpinBtn.displayWidth = widthgcb;
         this.freeSpinBtn.displayHeight = heightgcb;
         this.freeSpinBtn.setInteractive().isButton = true;
+
         this.autoplayIndicator.displayWidth = widthgcb;
         this.autoplayIndicator.displayHeight = heightgcb;
         this.autoplayIndicator.setInteractive().isButton = true;
         this.autoplayIndicator.setScale(0.95, 0.95);
         if(this.isMobile) {
-            this.autoplayIndicator.setScale(0.3, 0.3);
+            this.autoplayIndicator.setScale(0.4, 0.4);
         }
         
         container.add(this.freeSpinBtn);
@@ -683,7 +760,15 @@ export class Buttons {
 
         const spinAction = () => {
             // Don't allow spin if currently spinning or win overlay is active or local flag is set
-            if (this.spinInProgress || scene.gameData.isSpinning || scene.slotMachine.activeWinOverlay || this.isVisuallyDisabled) {
+            const now = Date.now();
+            const lockActive = now < ((scene as any).gameData?.freeSpinLockUntilMs || 0);
+            if (lockActive) {
+                try {
+                    this.spinButton.setAlpha(0.5);
+                    this.spinButton.disableInteractive();
+                } catch (_e) {}
+            }
+            if (lockActive || this.spinInProgress || scene.gameData.isSpinning || scene.slotMachine.activeWinOverlay || this.isVisuallyDisabled) {
                 return;
             }
             // Guard again right before spin is emitted (keyboard path already checked too)
@@ -705,7 +790,7 @@ export class Buttons {
 
             // Reset total win for new spin
             scene.gameData.totalWin = 0;
-            Events.emitter.emit(Events.WIN, {});
+            Events.emitter.emit(Events.RESET_WIN, {});
 
             // Trigger spin (will be handled by the sequential system)
             Events.emitter.emit(Events.SPIN, {
@@ -731,6 +816,12 @@ export class Buttons {
         this.freeSpinBtn.on('pointerdown', ()=>{});
         this.freeSpinBtn.visible=false;
         this.autoplayIndicator.visible=false;
+        // Make autoplayIndicator act as a stop button during autoplay
+        this.autoplayIndicator.on('pointerdown', () => {
+            if (!this.autoplay || !this.autoplay.isAutoPlaying) return;
+            scene.audioManager.UtilityButtonSFX.play();
+            Events.emitter.emit(Events.AUTOPLAY_STOP);
+        });
 
         Events.emitter.on(Events.SPIN_ANIMATION_START, () => {
             stopIdleRotation();
@@ -759,6 +850,9 @@ export class Buttons {
 
         // Initial state
         updateSpinButtonState();
+        // Ensure initial alpha pairing: spin shown, FS hidden
+        try { this.spinButton.setAlpha(1); } catch (_e) {}
+        try { this.freeSpinBtn.setAlpha(0); } catch (_e) {}
         if (canIdleRotate()) {
             startIdleRotation();
         }
@@ -766,12 +860,19 @@ export class Buttons {
         // Listen for spin state changes to re-enable the button
         const resetSpinButton = () => {
             this.spinInProgress = false;
+            const transitioningToFreeSpins = !!((scene as any)?.slotMachine?.bonusTriggeredThisSpin) && !scene.gameData.isBonusRound;
+            // Re-enable other controls, but keep spin visually disabled during FS transition window
             this.enableButtonsVisually(scene);
+            if (transitioningToFreeSpins) {
+                try {
+                    this.spinButton.setAlpha(0.5);
+                    this.spinButton.disableInteractive();
+                } catch (_e) {}
+            }
         };
         // Only re-enable after the entire spin (including tumbles) is done
         Events.emitter.on(Events.MATCHES_DONE, resetSpinButton);
     }
-
     private autoPlay_Y : number = 0;
     private createAutoplay(scene: GameScene): void {
         const x = this.isMobile ? this.width * 0.28 : this.width * 0.88;
@@ -823,13 +924,13 @@ export class Buttons {
 
         // --- AUTOPLAY SETTINGS POPUP ---
         const popupWidth = this.isMobile ? scene.scale.width : 466 ;
-        const popupHeight = 547;
+        const popupHeight = 722;
         const popup = scene.add.container(
-            this.isMobile ? 0 : scene.scale.width / 2 - popupWidth / 2,
-            this.isMobile ? scene.scale.height / 2 - popupHeight * 0.42: scene.scale.height / 2 - popupHeight / 2);
+            this.isMobile ? 0  : scene.scale.width / 2 - popupWidth / 2,
+            this.isMobile ? scene.scale.height / 2 - popupHeight * (1 - popupHeight/scene.scale.height * .75): scene.scale.height / 2 - popupHeight / 2);
         popup.setDepth(1000);
         popup.setVisible(false);
-        popup.setScale(this.isMobile ? 0.99 : 1);
+        popup.setScale(this.isMobile ? 1 : 1);
 
         // Store popup reference for external access
         this.autoplayPopup = popup;
@@ -839,8 +940,8 @@ export class Buttons {
         const bg = scene.add.graphics();
         bg.fillStyle(0x000000, 0.8);
         bg.lineStyle(0, 0x66D449, 1);
-        bg.strokeRoundedRect(0, 0, popupWidth, popupHeight, 16);
-        bg.fillRoundedRect(0, 0, popupWidth, popupHeight, 16);
+        bg.strokeRoundedRect(0, 0, popupWidth, this.isMobile ? popupHeight * 2 : popupHeight, 16);
+        bg.fillRoundedRect(0, 0, popupWidth, this.isMobile ? popupHeight * 2 : popupHeight, 16);
         popup.add(bg);
         
         // Add blur effect if available
@@ -866,26 +967,38 @@ export class Buttons {
         (closeBtn as any as ButtonText).setInteractive().isButton = true;
         popup.add(closeBtn);
 
-        // Balance section
-        const balanceLabel = scene.add.text(padding, padding * 2 + textPadding, 'Balance', {
+        // Balance section (enclosed in a rectangular box)
+        const balanceBoxY = padding * 2;
+        const balanceBoxHeight = 60;
+        const balanceBoxWidth = popupWidth - padding * 2;
+        const balanceBox = scene.add.graphics();
+        balanceBox.fillStyle(0x000000, 0.5);
+        balanceBox.lineStyle(1, 0x66D449, 0);
+        balanceBox.fillRoundedRect(padding, balanceBoxY + balanceBoxHeight / 6, balanceBoxWidth, balanceBoxHeight, 10);
+        balanceBox.strokeRoundedRect(padding, balanceBoxY + balanceBoxHeight / 6, balanceBoxWidth, balanceBoxHeight, 10);
+        popup.add(balanceBox);
+
+        const balanceLabel = scene.add.text(padding + 16, balanceBoxY + balanceBoxHeight * 2/3, 'Balance', {
             fontSize: '24px',
             color: '#FFFFFF',
             fontFamily: 'Poppins'
         });
+        balanceLabel.setOrigin(0, 0.5);
         popup.add(balanceLabel);
 
-        const balanceValue = 
-        scene.add.text(balanceLabel.x + balanceLabel.width + textPadding + padding / 2,
-             balanceLabel.y, scene.gameData.currency + scene.gameData.balance.toLocaleString(), {
+        const balanceValue = scene.add.text(padding + balanceBoxWidth - 16, balanceBoxY + balanceBoxHeight * 2/3,
+            scene.gameData.currency + scene.gameData.balance.toLocaleString(), {
             fontSize: '24px',
-            color: '#FFFFFF',
+            color: '#66D449',
             fontFamily: 'Poppins',
-            align: 'right'
-        }); 
+            align: 'center'
+        });
+        (balanceValue as any).setOrigin?.(1, 0.5);
         popup.add(balanceValue);
 
         // Number of autospins section
-        const spinsLabel = scene.add.text(padding, balanceLabel.y + balanceLabel.height + textPadding * 4, 'Number of autospins', {
+        const spinsLabelY = balanceBoxY + balanceBoxHeight + textPadding * 10;
+        const spinsLabel = scene.add.text(padding, spinsLabelY, 'Number of autospins', {
             fontSize: '24px',
             color: '#FFFFFF',
             fontFamily: 'Poppins'
@@ -896,7 +1009,7 @@ export class Buttons {
         const spinOptions = [10, 30, 50, 75, 100, 150, 500, 1000];
         const buttonWidth = 88.5 * 0.9;
         const buttonHeight = 60;
-        const spacing = 16;
+        const spacing = this.isMobile ? 16 : 28;
         let selectedSpins = spinOptions[0]; // Set default to first option
         let selectedButton: GameObjects.Container | null = null;
 
@@ -959,22 +1072,31 @@ export class Buttons {
         selectedButton = buttons[0];
 
         // Total bet section
-        const betLabel = scene.add.text(padding, popupHeight / 2 + padding , 'Total Bet', {
+        const betLabel = scene.add.text(padding, popupHeight / 2 + padding, 'BET', {
             fontSize: '24px',
             color: '#FFFFFF',
             fontFamily: 'Poppins'
         });
         popup.add(betLabel);
 
-        const betValueY = betLabel.y + betLabel.height + padding*1.5;
+        // Bet controls box
+        const betBoxY = betLabel.y + betLabel.height + padding / 3;
+        const betBoxHeight = 74;
+        const betBoxWidth = popupWidth - padding * 2;
+        const betBox = scene.add.graphics();
+        betBox.fillStyle(0x333333, 0.8);
+        betBox.lineStyle(1, 0x66D449, 1);
+        betBox.fillRoundedRect(padding, betBoxY, betBoxWidth, betBoxHeight, 10);
+        betBox.strokeRoundedRect(padding, betBoxY, betBoxWidth, betBoxHeight, 10);
+        popup.add(betBox);
+
+        const betValueY = betBoxY + betBoxHeight / 2;
         // Bet controls
-        const minusBtn = scene.add.image(padding * 2, betValueY, 'minus');
-        //minusBtn.setScale(0.35);   
+        const minusBtn = scene.add.image(padding + 36, betValueY, 'minus');
         (minusBtn as any as ButtonImage).setInteractive().isButton = true;
         popup.add(minusBtn);
 
-
-        let bet = scene.gameData.bet * selectedSpins; // Initialize bet with selected spins
+        let bet = scene.gameData.bet
         const betValue = scene.add.text(popupWidth / 2, betValueY, scene.gameData.currency + bet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), {
             fontSize: '32px',
             color: '#FFFFFF',
@@ -984,84 +1106,82 @@ export class Buttons {
         betValue.setOrigin(0.5, 0.5);
         popup.add(betValue);
 
-        const plusBtn = scene.add.image(popupWidth - padding * 2, betValueY, 'plus');
-        // plusBtn.setScale(0.4);
+        const plusBtn = scene.add.image(padding + betBoxWidth - 36, betValueY, 'plus');
         (plusBtn as any as ButtonImage).setInteractive().isButton = true;
         popup.add(plusBtn);
 
+        // Use same bet options as main bet controls
+        const betOptionsPopup = [0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 5, 6, 8, 10, 14, 18, 24, 32 ,40, 60, 80, 100, 110 ,120, 130, 140, 150];
+        let selectedBetIndexPopup = betOptionsPopup.indexOf(scene.gameData.bet);
+        if (selectedBetIndexPopup === -1) {
+            selectedBetIndexPopup = 0;
+        }
+        const EPS_POP = 1e-6;
+        const findPopupBetIndexByValue = (val: number) => betOptionsPopup.findIndex(v => Math.abs(v - val) < EPS_POP);
+        const popupAtMin = (val: number) => (val <= betOptionsPopup[0] + EPS_POP);
+        const popupAtMax = (val: number) => (val >= betOptionsPopup[betOptionsPopup.length - 1] - EPS_POP);
+
+        // helper to update +/- state at min/max
+        const updatePopupBetButtonsState = () => {
+            // derive from actual value
+            const atMin = popupAtMin(scene.gameData.bet);
+            const atMax = popupAtMax(scene.gameData.bet);
+            if (atMin) {
+                (minusBtn as any).setAlpha?.(0.3);
+                (minusBtn as any).disableInteractive?.();
+            } else {
+                (minusBtn as any).setAlpha?.(0.8);
+                (minusBtn as any).setInteractive?.();
+            }
+            if (atMax) {
+                (plusBtn as any).setAlpha?.(0.3);
+                (plusBtn as any).disableInteractive?.();
+            } else {
+                (plusBtn as any).setAlpha?.(0.8);
+                (plusBtn as any).setInteractive?.();
+            }
+        };
+
         plusBtn.on('pointerdown', () => {
-            scene.audioManager.UtilityButtonSFX.play();
-            
-            // Find the next higher spin option
-            const nextSpinOption = spinOptions.find(spins => spins > selectedSpins);
-            if (nextSpinOption) {
-                // Update selected spins and bet immediately
-                selectedSpins = nextSpinOption;
-                bet = scene.gameData.bet * selectedSpins;
-                
-                // Update button appearance
-                if (selectedButton) {
-                    const prevBg = selectedButton.list[0] as GameObjects.Graphics;
-                    prevBg.clear();
-                    prevBg.fillStyle(0x181818, 1);
-                    prevBg.fillRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-                }
-                
-                // Select the next button
-                const nextButton = buttons[spinOptions.indexOf(nextSpinOption)];
-                const nextBg = nextButton.list[0] as GameObjects.Graphics;
-                nextBg.clear();
-                nextBg.fillStyle(0x66D449, 1);
-                nextBg.fillRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-                selectedButton = nextButton;
-                
-                // Update display
+            const idx = findPopupBetIndexByValue(scene.gameData.bet);
+            if (idx >= 0 && idx < betOptionsPopup.length - 1) {
+                scene.audioManager.UtilityButtonSFX.play();
+                selectedBetIndexPopup = idx + 1;
+                scene.gameData.bet = betOptionsPopup[selectedBetIndexPopup];
                 updateBetDisplay();
+                updatePopupBetButtonsState();
+                Events.emitter.emit(Events.CHANGE_BET, {});
+                Events.emitter.emit(Events.ENHANCE_BET_TOGGLE, {});
             }
         });
 
         minusBtn.on('pointerdown', () => {
-            scene.audioManager.UtilityButtonSFX.play();
-            
-            // Find the next lower spin option
-            const prevSpinOption = [...spinOptions].reverse().find(spins => spins < selectedSpins);
-            if (prevSpinOption) {
-                // Update selected spins and bet immediately
-                selectedSpins = prevSpinOption;
-                bet = scene.gameData.bet * selectedSpins;
-                
-                // Update button appearance
-                if (selectedButton) {
-                    const prevBg = selectedButton.list[0] as GameObjects.Graphics;
-                    prevBg.clear();
-                    prevBg.fillStyle(0x181818, 1);
-                    prevBg.fillRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-                }
-                
-                // Select the previous button
-                const prevButton = buttons[spinOptions.indexOf(prevSpinOption)];
-                const prevBg = prevButton.list[0] as GameObjects.Graphics;
-                prevBg.clear();
-                prevBg.fillStyle(0x66D449, 1);
-                prevBg.fillRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-                selectedButton = prevButton;
-                
-                // Update display
+            const idx = findPopupBetIndexByValue(scene.gameData.bet);
+            if (idx > 0) {
+                scene.audioManager.UtilityButtonSFX.play();
+                selectedBetIndexPopup = idx - 1;
+                scene.gameData.bet = betOptionsPopup[selectedBetIndexPopup];
                 updateBetDisplay();
+                updatePopupBetButtonsState();
+                Events.emitter.emit(Events.CHANGE_BET, {});
+                Events.emitter.emit(Events.ENHANCE_BET_TOGGLE, {});
             }
         });
 
         function updateBetDisplay() {
-            const autoplayCost = scene.gameData.bet * selectedSpins;
+            const autoplayCost = scene.gameData.bet// * selectedSpins;
             betValue.setText(scene.gameData.currency + " " + autoplayCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         }
         updateBetDisplay();
+        updatePopupBetButtonsState();
 
         // Start Autoplay button - moved down to avoid overlap
         const startBtnBg = scene.add.image(popupWidth / 2, 0, 'greenLongBtn');
         startBtnBg.displayWidth = 402;
         startBtnBg.displayHeight = 62;
-        startBtnBg.setPosition(popupWidth / 2, popupHeight - padding - startBtnBg.displayHeight/2);
+        // Add additional spacing below the bet box
+        const startBtnYOffset = 24; // extra space below content
+        startBtnBg.setPosition(popupWidth / 2, popupHeight - padding *3 - startBtnBg.displayHeight/2 - startBtnYOffset);
         startBtnBg.setOrigin(0.5, 0.5);
         popup.add(startBtnBg);
 
@@ -1077,6 +1197,7 @@ export class Buttons {
         (startBtnBg as any as ButtonImage).setInteractive().isButton = true;
         startBtnBg.on('pointerdown', () => {
             if (selectedSpins > 0) {
+                this.autoplayIndicator.setAlpha(1);
                 scene.audioManager.UtilityButtonSFX.play();
 
                 this.autoplayButton.visible = false;
@@ -1097,7 +1218,7 @@ export class Buttons {
                     }
                 });
                 
-                console.log("autoplay.isAutoPlaying", this.autoplay.isAutoPlaying);
+                scene.gameData.debugLog("autoplay.isAutoPlaying", this.autoplay.isAutoPlaying);
                 // Start autoplay 
                 Events.emitter.emit(Events.AUTOPLAY_START, selectedSpins);
 
@@ -1144,6 +1265,7 @@ export class Buttons {
             updateBalance();
             bet = scene.gameData.bet * selectedSpins;
             updateBetDisplay();
+            try { (updatePopupBetButtonsState as any)(); } catch (_e) {}
             
             const mask = scene.add.graphics();
             mask.name = 'betMask';
@@ -1189,6 +1311,10 @@ export class Buttons {
         });
 
         this.autoplayOnButton.on('pointerdown', () => {
+            // If bonus is triggered and autoplay is paused for bonus, ignore stop clicks
+            if ((scene as any).gameData?.autoplayWasPaused) {
+                return;
+            }
             scene.audioManager.UtilityButtonSFX.play();
             Events.emitter.emit(Events.AUTOPLAY_STOP);
         });
@@ -1214,11 +1340,13 @@ export class Buttons {
         }
         //this.buttonContainer.add(popup);
     }
+    
     public resetAutoplayButtons(): void {
         this.autoplayButton.visible = true;
         this.autoplayOnButton.visible = false;
         this.freeSpinBtn.visible = false;
         this.autoplayIndicator.visible = false;
+        if (this.spinButton) { this.spinButton.setAlpha(1); }
     }
 
     // Centralized method to immediately update button states
@@ -1473,12 +1601,12 @@ export class Buttons {
                 scene.gameAPI.getBalance().then((data) => {
                     const balance = data.data.balance;
                         text2.setText(scene.gameData.currency + " " + balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); 
-                    console.log("update balance " + balance);
+                    // console.log("update balance " + balance);
 
                     scene.gameData.balance = parseFloat(balance);
                 });
             } catch(error) {
-                console.log("error updating balance " + error);
+                // console.log("error updating balance " + error);
                 text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
             }
         });
@@ -2240,7 +2368,7 @@ export class Buttons {
         if(this.isMobile){
             this.buyFeatureButton = scene.add.image(0, 0, 'buyFeature') as ButtonImage;
             this.buyFeatureButton.setScale(120/182, 54/72);
-            console.log(this.buyFeatureButton.width, this.buyFeatureButton.height);
+          
             this.buyFeatureButton.setInteractive(new Geom.Rectangle(
                 this.buyFeatureButton.width/4,
                 this.buyFeatureButton.height/4,
@@ -2907,6 +3035,7 @@ export class Buttons {
         }
         container.add(volumeIcon);
 
+        container.name = 'settingsContainer';
         this.buttonContainer.add(container);
 
         // Make container interactive

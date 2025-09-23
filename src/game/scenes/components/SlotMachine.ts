@@ -180,8 +180,7 @@ export class SlotMachine {
 
     private showSymbolCountWinDisplay(scene: GameScene, symbols: DisplaySymbol[]): void {
         if (!this.symbolCountWinContainer || symbols.length === 0) return;
-        
-        console.log("Showing SymbolCountWin display with symbols:", symbols);
+
         
         // Clear previous texts
         this.clearSymbolCountWinTexts();
@@ -194,7 +193,6 @@ export class SlotMachine {
             return;
         }
         
-        console.log("Valid symbols for display:", validSymbols);
         
         // Create display for each valid symbol
         let xOffset = 0;
@@ -218,7 +216,6 @@ export class SlotMachine {
                 // Animation disabled for symbol count win display
                 // try { (symbolSprite as SymbolContainer).getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
                 (symbolSprite as SymbolContainer).setSymbolDisplaySize(40, 40);
-                console.log(`Created symbol container for symbol ${symbol.symbol}`);
             }
 
             // Create win text (bottom)
@@ -255,7 +252,6 @@ export class SlotMachine {
         else{
             this.symbolCountWinContainer.setVisible(false);
         }
-        console.log("SymbolCountWin display is now visible");
     }
 
     private hideSymbolCountWinDisplay(): void {
@@ -917,7 +913,6 @@ export class SlotMachine {
         try {
             while (continueMatching) {
                 const result = await this.checkMatchAsync(symbolGrid, scene, SymbolsIn[this.currentIndex]);
-                console.log("Match result:", result);
                 lastResult = result;
                 // During API-driven Free Spins, emit per-tumble total-win update like reference
                 try {
@@ -941,7 +936,7 @@ export class SlotMachine {
                 // If result is "continue match", the loop will continue
             }
         } catch (error) {
-            scene.gameData.debugError("Error in match processing: " + error);
+            console.error("Error in match processing: " + error);
         } finally {
             // Only handle deferred scatter at the end of all matches
             console.log(chalk.green.bold('totalWin: ' + scene.gameData.totalWin.toFixed(2)));
@@ -1383,13 +1378,13 @@ export class SlotMachine {
             // --- SCATTER CHECK (deferred to end of match-8s flow) ---
             if (!scene.gameData.useApiFreeSpins) {
                 const scatterCount = symbolCount[0] || 0;
-                console.log(chalk.yellow(`[SCATTER] No matches. scatterCount = ${scatterCount}, isBonus = ${scene.gameData.isBonusRound}, threshold = ${scene.gameData.isBonusRound ? 3 : 4}`));
+                // console.log(chalk.yellow(`[SCATTER] No matches. scatterCount = ${scatterCount}, isBonus = ${scene.gameData.isBonusRound}, threshold = ${scene.gameData.isBonusRound ? 3 : 4}`));
                 if (scatterCount >= 4 || (scene.gameData.isBonusRound && scatterCount >= 3)) {
                     // Defer scatter handling until after all match-8s/bomb animations
                     this.deferredScatterCount = scatterCount;
-                    console.log(chalk.blueBright.bold('[SCATTER] Threshold met, deferring scatter handling until end of tumble sequence'));
+                    // console.log(chalk.blueBright.bold('[SCATTER] Threshold met, deferring scatter handling until end of tumble sequence'));
                 } else {
-                    console.log(chalk.white.bold('[SCATTER] Threshold not met, continuing normal flow'));
+                    // console.log(chalk.white.bold('[SCATTER] Threshold not met, continuing normal flow'));
                 }
             }
 
@@ -1730,7 +1725,7 @@ export class SlotMachine {
     }
 
     private async dropAndRefillAsync(symbolGrid: number[][], toRemove: boolean[][], scene: GameScene, SymbolsIn : Tumble): Promise<void> {
-        console.log("processing drop and refill");
+        
 
         const rows = symbolGrid.length;
         const cols = symbolGrid[0].length;

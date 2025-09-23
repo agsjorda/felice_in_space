@@ -1,5 +1,6 @@
 import { Scene, GameObjects } from 'phaser';
 import { Events } from './Events';
+import { getFontFamily } from '../../utils/fonts';
 
 export class Background {
     private initialLayerX: number = 0;
@@ -87,6 +88,31 @@ export class Background {
         
         scene.gameData.isBonusRound = false;
         this.toggleBackground(scene);
+
+        // Version label bottom-right
+        const cfgVersion = (typeof window !== 'undefined' && (window as any).APP_CONFIG) ? (window as any).APP_CONFIG.version : undefined;
+        let versionText = cfgVersion ?? (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev');
+        if (versionText && !versionText.startsWith('v')) {
+            versionText = `v${versionText}`;
+        }
+        const width = scene.scale.width;
+        const height = scene.scale.height;
+        const isMobileish = width <= 500;
+        const versionLabel = scene.add.text(
+            width - 10,
+            height - 10,
+            versionText,
+            {
+                fontSize: isMobileish ? '12px' : '14px',
+                color: '#ffffff',
+                fontFamily: getFontFamily(),
+                stroke: '#000000',
+                strokeThickness: 2,
+            }
+        );
+        versionLabel.setOrigin(1, 1).setAlpha(0.2);
+        // Ensure above background/foreground but below UI; backgrounds use depths 0-2
+        versionLabel.setDepth(3);
 
         // Add fullscreen toggle button above backgrounds
         this.createFullscreenToggle(scene);
@@ -226,7 +252,7 @@ export class Background {
             // Set depth for mobile
             this.main_1.setDepth(0);
             this.bonus_1.setDepth(0);
-            this.main_2.setDepth(0);
+            this.main_2.setDepth(0 );
             
             // Initialize other properties to avoid errors
             this.main_3 = null as any;
@@ -313,7 +339,7 @@ export class Background {
                 if(this.prevOffsetX < floatingOffsetX){
                     this.main_2.setAlpha(1);
                 } else {
-                    this.main_2.setAlpha(0);
+                    this.main_2.setAlpha(1);
                 }
 
                 const planeX = floatingOffsetX * this.cloudParallaxSpeed * 15;  
