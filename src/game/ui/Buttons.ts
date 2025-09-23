@@ -2356,7 +2356,7 @@ export class Buttons {
 
         // Button background
             this.buyFeatureButton = scene.add.image(0, 0, 'buyFeature') as ButtonImage;
-            this.buyFeatureButton.preFX!.addShadow(0.5, 0.5, 0.1, 2, 10000536, 6, 1);
+            // this.buyFeatureButton.preFX!.addShadow(0.5, 0.5, 0.1, 2, 10000536, 6, 1);
             this.buyFeatureButton.setScale(115/182, 52/72);
           
             this.buyFeatureButton.setInteractive(new Geom.Rectangle(

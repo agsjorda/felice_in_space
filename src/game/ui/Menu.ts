@@ -1135,10 +1135,10 @@ export class Menu {
             this.contentWidth = this.isMobile ? scene.scale.width - this.padding * 6 : this.viewWidth - this.padding * 12;
             this.yPosition = this.padding;
 
-            this.addContent(scene, 'UNDER CONSTRUCTION', 'title');
+            // this.addContent(scene, 'UNDER CONSTRUCTION', 'title');
 
-            contentArea.add(this.contentContainer);
-            return;
+            // contentArea.add(this.contentContainer);
+            // return;
     
             this.addContent(scene, 'Game Rules', 'title');
     
@@ -1242,14 +1242,14 @@ export class Menu {
                 this.padding, 
                 0, 
                 this.contentWidth + this.padding * 3, 
-                scaledSymbolSize * 8.75 
+                scaledSymbolSize * 14
             );
             this.contentContainer.add(tumbleWinContainer);
-            this.createHowToPlayEntry(scene, 20, 170, tumbleWinContainer, 'tumbleGame', 
+            this.createHowToPlayEntry(scene, 20, 380, tumbleWinContainer, 'tumbleGame', 
                 'After each spin, winning symbols are paid and then removed from the screen. Remaining symbols drop down, and new ones fall from above to fill the empty spaces.\n\n' +
                 'Tumbles continue as long as new winning combinations appear — there\'s no limit to the number of tumbles per spin.\n\n' +
                 'All wins are credited to the player\'s balance after all tumbles from a base spin are completed.',
-            true, this.contentWidth - this.padding * 2);
+            true, this.contentWidth - this.padding);
     
     
             const tumbleSymbolImage = scene.add.image(0, 0, 'tumbleSymbol');
@@ -1265,26 +1265,25 @@ export class Menu {
             tumbleWinImage.setPosition(tumbleSymbolImage.x - tumbleSymbolImage.displayWidth/2 + this.padding * 2, tumbleSymbolImage.y - tumbleWinImage.height/3);
             tumbleWinContainer.add(tumbleWinImage);
             
-            this.yPosition -= scaledSymbolSize * 10;
+            this.yPosition -= scaledSymbolSize * 20.5;
             this.addContent(scene, 'Free Spins Rules', 'title');
-            this.yPosition += scaledSymbolSize  * 3.5;
+            this.yPosition += scaledSymbolSize  * 9.5;
             this.addContent(scene, 'Bonus Trigger', 'title');
-            this.yPosition -= scaledSymbolSize  * 3.5;
+            this.yPosition -= scaledSymbolSize  * 9.5;
     
             const freeSpinContainer = scene.add.container(-this.padding * 1.5, this.yPosition-scaledSymbolSize * 0.5);
             this.yPosition += this.createBorder(scene, freeSpinContainer, 
                 this.padding, 
                 0, 
                 this.contentWidth + this.padding * 3, 
-                scaledSymbolSize * 7
-                
+                scaledSymbolSize * 13.5
             );
             this.contentContainer.add(freeSpinContainer);
             this.contentContainer.sendToBack(freeSpinContainer);
 
-            this.yPosition -= scaledSymbolSize * 0.25;
+            this.yPosition -= scaledSymbolSize * 6.75;
             
-            this.createHowToPlayEntry(scene, 20, 120, freeSpinContainer, 'scatterGame', 
+            this.createHowToPlayEntry(scene, 20, 380, freeSpinContainer, 'scatterGame', 
                 'Land 4 or more         SCATTER \nsymbols anywhere on the screen to trigger the free spins feature.\n\n' +
                 'You\'ll start with 10 free spins.\n\n' +
                 'During the bonus round, hitting 3 or more scatter symbols awards 5 extra free spins', 
@@ -1293,49 +1292,49 @@ export class Menu {
             const scatterSymbolImage2 = scene.add.image(0, 0, 'scatterIcon');
             scatterSymbolImage2.setScale(0.25);
             scatterSymbolImage2.setOrigin(0.5, 0.5);
-            scatterSymbolImage2.setPosition(195, 320);
+            scatterSymbolImage2.setPosition(195, 790);
             freeSpinContainer.add(scatterSymbolImage2);
     
             const scatterSymbolImage = scene.add.image(0, 0, 'scatterIcon');
             scatterSymbolImage.setScale(0.5);
             scatterSymbolImage.setOrigin(0.5, 0.5);
-            scatterSymbolImage.setPosition(100, 75);
+            scatterSymbolImage.setPosition(100, 55);
             freeSpinContainer.add(scatterSymbolImage);
             
             const scatterWinImage = scene.add.image(0, 0, 'scatterWin');
             scatterWinImage.setScale(0.5);
             scatterWinImage.setOrigin(0.5, 0.5);
-            scatterWinImage.setPosition(scatterSymbolImage.x - scatterSymbolImage.displayWidth/2 + this.padding * 2, scatterSymbolImage.y * 3/4 - scatterWinImage.height/ 4);
+            scatterWinImage.setPosition(scatterSymbolImage.x - scatterSymbolImage.displayWidth/2 + this.padding * 2, scatterSymbolImage.y * 0.75 - scatterWinImage.height/2 + 20);
             freeSpinContainer.add(scatterWinImage);
             
-            this.yPosition -= scaledSymbolSize * 4.75;
+            this.yPosition -= scaledSymbolSize * 12.75;
             // this.addDivider(scene, 0x379557);
             
 
             //this.yPosition += scaledSymbolSize  * 4;
             this.addContent(scene, 'Multiplier', 'title');
-            this.yPosition -= scaledSymbolSize  * 4.25;
+            //this.yPosition += scaledSymbolSize  * 0.75;
             
             const multiplierContainer = scene.add.container(-this.padding * 1.5, this.yPosition);
             this.yPosition += this.createBorder(scene, multiplierContainer, 
                 this.padding, 
                 0, 
                 this.contentWidth + this.padding * 3, 
-                scaledSymbolSize * 10
+                scaledSymbolSize * 15
             );
             this.yPosition += scaledSymbolSize * 6.5;
             this.contentContainer.add(multiplierContainer);
             this.contentContainer.sendToBack(multiplierContainer);
             
     
-            this.createHowToPlayEntry(scene, 20, 170, multiplierContainer, 'multiplierGame', 
+            this.createHowToPlayEntry(scene, 20, 380, multiplierContainer, 'multiplierGame', 
                 '\nThe         Multiplier symbol only appears during the FREE SPINS round and remains on the screen until the tumbling sequence ends.\n\n' +
                 'Each time a         symbol lands, it randomly takes a multiplier value: 2x, 3x, 4x, 5x, 6x, 8x, 10x, 12x, 15x, 20x, 25x, 50x, or even 100x!\n\n' +
                 'Once all tumbles are finished, the total of all           multipliers is added and applied to the total win of the that sequence.\n\n' +
                 'Special reels are used during the FREE SPINS round.',
             true, this.contentWidth + this.padding * 3);
     
-            let multiplier_y = 50;
+            let multiplier_y = 470;
                 const multiplierIcon4 = scene.add.image(0, 0, 'multiplierIcon');
                 multiplierIcon4.setScale(0.15);
                 multiplierIcon4.setOrigin(0.5, 0.5);
@@ -1345,14 +1344,14 @@ export class Menu {
                 const multiplierIcon3 = scene.add.image(0, 0, 'multiplierIcon');
                 multiplierIcon3.setScale(0.15);
                 multiplierIcon3.setOrigin(0.5, 0.5);
-                multiplierIcon3.setPosition(163, 405 + multiplier_y);
+                multiplierIcon3.setPosition(163, 395 + multiplier_y);
                 multiplierContainer.add(multiplierIcon3);
                 
             
                 const multiplierIcon2 = scene.add.image(0, 0, 'multiplierIcon');
                 multiplierIcon2.setScale(0.15);
                 multiplierIcon2.setOrigin(0.5, 0.5);
-                multiplierIcon2.setPosition(100, 550 + multiplier_y);
+                multiplierIcon2.setPosition(100, 530 + multiplier_y);
                 multiplierContainer.add(multiplierIcon2);
             
             const multiplierIcon = scene.add.image(0, 0, 'multiplierIcon');
@@ -1362,7 +1361,7 @@ export class Menu {
             multiplierContainer.add(multiplierIcon);
             this.contentContainer.bringToTop(multiplierIcon);
             
-            this.yPosition -= scaledSymbolSize * 17.75;
+            this.yPosition -= scaledSymbolSize * 28.0;
             this.addContent(scene, 'Game Settings', 'title');
     
             const gamesettingsContainer = scene.add.container(-this.padding * 1.5, this.yPosition);
@@ -1389,11 +1388,11 @@ export class Menu {
             this.createHowToPlayEntry(scene, 20, scaledSymbolSize * 7.5, gamesettingsContainer, '', 'When multiple symbol wins occur, all values are combined into the total win.', true, this.contentWidth + this.padding * 3);
             this.createHowToPlayEntry(scene, 20, scaledSymbolSize * 8.75, gamesettingsContainer, '', 'Free spins rewards are granted after the round ends.', true, this.contentWidth + this.padding * 3);
     
-            this.yPosition -= scaledSymbolSize * 3.5;
+            this.yPosition -= scaledSymbolSize * 3.0;
     
             this.commonRules(scene, this.contentWidth, 153);
     
-            this.yPosition -= scaledSymbolSize * 45;
+            this.yPosition -= scaledSymbolSize * 43;
             contentArea.add(this.contentContainer);
     }
     
@@ -1580,8 +1579,12 @@ export class Menu {
             imageElement = scene.add.image(x, y, image);
         }
         if(imageElement != null){
-            //if(image == 'tumbleGame' || image == 'scatterGame' || image == 'multiplierGame'){
-            imageElement.setOrigin(0.25, 0.5);
+            if(image == 'tumbleGame' || image == 'scatterGame' || image == 'multiplierGame'){
+                imageElement.setOrigin(-0.133, 0.5);
+            }
+            else{
+                imageElement.setOrigin(0, 0.5);
+            }
         }
         if(image == 'BuyFeatMobile'){
             imageElement?.setPosition(x - imageElement.displayWidth/5, y);
