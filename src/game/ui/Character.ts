@@ -53,55 +53,16 @@ export class Character {
             );
 
         this.animationY = this.spineObject.y;
-
         this.currAnim = this.spineObject.animationState.setAnimation(0, 'idle', true);
+
         this.spineObject.setDepth(0);
         this.lastAnimationTime = Date.now();
         this.isAnimating = true;
     }
-
-    private checkAnimationState(): void {
-        if (!this.spineObject || !this.scene) return;
-
-        const currentTime = Date.now();
-        
-        // Check if animation has been running for too long without completion
-        if (this.isAnimating && (currentTime - this.lastAnimationTime) > this.ANIMATION_TIMEOUT) {
-            //console.log('Character animation appears stuck, recreating...');
-            this.recreateCharacter();
-            return;
-        }
-
-        // Check if the spine object is still valid and animating
-        try {
-            const currentAnimation = this.spineObject.animationState.getCurrent(0);
-            if (!currentAnimation || !currentAnimation.animation) {
-                //console.log('Character has no active animation, recreating...');
-                this.recreateCharacter();
-                return;
-            }
-        } catch (error) {
-            //console.log('Error checking character animation state, recreating...', error);
-            this.recreateCharacter();
-            return;
-        }
-    }
-
-    private recreateCharacter(): void {
-        //this.scene?.gameData.debugLog('Recreating character...');
-        this.destroyCharacter();
-        this.createCharacter();
-    }
+    
 
     create(scene: Scene): void {
         this.scene = scene;
         this.createCharacter();
-
-        // Set up periodic animation checking
-        scene.time.addEvent({
-            delay: this.ANIMATION_CHECK_INTERVAL,
-            callback: () => this.checkAnimationState(),
-            loop: true
-        });
     }
 }

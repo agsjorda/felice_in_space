@@ -1589,6 +1589,9 @@ export class Menu {
         if(image == 'BuyFeatMobile'){
             imageElement?.setPosition(x - imageElement.displayWidth/5, y);
         }
+        if(image == 'howToPlay11Mobile'){
+            imageElement?.setScale(0.910, 1);
+        }
         if(imageElement != null){
             container.add(imageElement);
         }

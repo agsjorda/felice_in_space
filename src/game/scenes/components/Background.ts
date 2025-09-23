@@ -223,6 +223,7 @@ export class Background {
 
         if(this.isMobile){
             if (this.main_1) this.main_1.alpha = main_status;
+            if(this.main_2) this.main_2.alpha = 1;
         }
 
         Events.emitter.emit(Events.TOGGLE_BACKGROUND, main_status, bonus_status);
@@ -252,7 +253,7 @@ export class Background {
             // Set depth for mobile
             this.main_1.setDepth(0);
             this.bonus_1.setDepth(0);
-            this.main_2.setDepth(0 );
+            this.main_2.setDepth(0);
             
             // Initialize other properties to avoid errors
             this.main_3 = null as any;
