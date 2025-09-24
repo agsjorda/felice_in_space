@@ -259,13 +259,13 @@ export class LandingPage extends Scene {
 
            tryLaunchGame();
 
-        // Fade out the current scene UNCOMMENT FOR TESTING
-        this.cameras.main.fadeOut(250, 0, 0, 0);
+        // // Fade out the current scene UNCOMMENT FOR TESTING
+        // this.cameras.main.fadeOut(250, 0, 0, 0);
 
-        // When fade out is complete, start the Game scene
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('Game');
-            this.scene.remove('LoadingPage');
-        });
+        // // When fade out is complete, start the Game scene
+        // this.cameras.main.once('camerafadeoutcomplete', () => {
+        //     this.scene.start('Game');
+        //     this.scene.remove('LoadingPage');
+        // });
     }
 }                                                                                           

@@ -180,30 +180,31 @@ export class SlotMachine {
     }
 
     private showSymbolCountWinDisplay(scene: GameScene, symbols: DisplaySymbol[]): void {
-		if (!this.symbolCountWinContainer || symbols.length === 0) return;
-
-		// Clear previous texts/children
-		this.clearSymbolCountWinTexts();
-
+        if (!this.symbolCountWinContainer || symbols.length === 0) return;
+        
+        // Clear previous texts
+        this.clearSymbolCountWinTexts();
+        
 		// Filter symbols with count >= 8
 		const validSymbols = symbols.filter((symbol) => symbol.count >= 8);
 		if (validSymbols.length === 0) {
 			console.log("No valid symbols with count >= 8");
 			return;
 		}
+        
+        // Build up to 3 entry containers and lay them out in a row
+        const entryContainers: Phaser.GameObjects.Container[] = [];
+        
+        validSymbols.slice(0, 3).forEach((symbol) => {
+            const entry = scene.add.container(0, 0);
 
-		// Build per-symbol item containers: [count] [symbol] [= win]
-		const itemContainers: Phaser.GameObjects.Container[] = [];
-		validSymbols.forEach((symbol) => {
-			const item = scene.add.container(0, 0);
-
-			// Count
-			const countText = scene.add.text(0, 0, `${symbol.count}`, {
-				fontSize: '20px',
-				color: '#FFFFFF',
-				fontFamily: 'Poppins',
-			});
-			countText.setOrigin(0.5, 0.5);
+            // Count text
+            const countText = scene.add.text(0, 0, `${symbol.count}  `, {
+                fontSize: '20px',
+                color: '#FFFFFF',
+                fontFamily: 'Poppins',
+            });
+            countText.setOrigin(0.5, 0.5);
 
 			// Symbol sprite
 			let symbolSprite: (GameObjects.Sprite | SpineGameObject | SymbolContainer) | null = null;
@@ -212,60 +213,73 @@ export class SlotMachine {
 				(symbolSprite as SymbolContainer).setSymbolDisplaySize(40, 40);
 			}
 
-			// Win text
-			const winToText = symbol.win.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-			const winText = scene.add.text(0, 0, `= ${scene.gameData.currency}${winToText}`, {
-				fontSize: '20px',
-				color: '#FFFFFF',
-				fontFamily: 'Poppins',
-			});
-			winText.setOrigin(0.5, 0.5);
+            // Win text
+            const winToText = symbol.win.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2});
+            const winText = scene.add.text(0, 0, `   = ${scene.gameData.currency}${winToText}`, {
+                fontSize: '20px',
+                color: '#FFFFFF',
+                fontFamily: 'Poppins',
+            });
+            winText.setOrigin(0.5, 0.5);
 
-			// Position children horizontally within item
-			// Arrange: count | symbol | win, with small gaps
-			const innerGap = 12;
-			let cursorX = 0;
-			countText.setPosition(cursorX + countText.width / 2, 0);
-			cursorX += countText.width + innerGap;
-			if (symbolSprite) {
-				const symW = 40; // display width set above
-				(symbolSprite as SymbolContainer).setPosition(cursorX + symW / 2, 0);
-				cursorX += symW + innerGap;
-			}
-			winText.setPosition(cursorX + winText.width / 2, 0);
+            // Add to entry container before measuring
+            entry.add(countText);
+            if (symbolSprite) entry.add(symbolSprite);
+            entry.add(winText);
 
-			// Center item around its content by shifting children left half total width
-			const totalWidth = cursorX + winText.width;
-			[countText, winText].forEach((child) => child.setX(child.x - totalWidth / 2));
-			if (symbolSprite) (symbolSprite as SymbolContainer).setX((symbolSprite as SymbolContainer).x - totalWidth / 2);
+            // Inline layout inside the entry: [count] [icon] [= $win]
+            const innerGap = 4;
+            const countW = countText.getBounds().width * 2;
+            const iconW = symbolSprite ? symbolSprite.getBounds().width : 0;
+            const winW = winText.getBounds().width;
+            const totalW = countW + (symbolSprite ? innerGap + iconW : 0) + innerGap + winW;
+            let left = -totalW / 2;
+            countText.setPosition(left + countW / 2, 0);
+            left += countW;
+            if (symbolSprite) {
+                left += innerGap;
+                symbolSprite.setPosition(left + iconW / 2, 0);
+                left += iconW ;
+            }
+            left += innerGap;
+            winText.setPosition(left + winW / 2, 0);
 
-			// Add to item and parent container
-			item.add(countText);
-			if (symbolSprite) item.add(symbolSprite as any);
-			item.add(winText);
-			this.symbolCountWinContainer!.add(item);
-			itemContainers.push(item);
+            // Add entry to parent container
+            this.symbolCountWinContainer!.add(entry);
+            entryContainers.push(entry);
 
-			// Track texts to destroy later
-			this.symbolCountWinTexts.push(countText, winText);
-			if (symbolSprite) this.symbolCountWinTexts.push(symbolSprite as any);
-		});
+            if(validSymbols.length === 3){
+                entry.setScale(2);
+            }
+            else if(validSymbols.length === 2){
+                entry.setScale(1.33);
+            }
+            else{
+                entry.setScale(0.8);
+            }
 
-		// Lay out up to 3 items in a row within the parent container
-		layoutContainersRow(scene as unknown as Phaser.Scene, itemContainers, {
-			x: 0,
-			y: 0,
-			maxWidth: scene.scale.width * 0.9,
-			gap: 24,
-			align: 'center',
-		});
+            // Track for cleanup
+            this.symbolCountWinTexts.push(countText, winText);
+            if (symbolSprite) this.symbolCountWinTexts.push(symbolSprite as any);
+        });
 
-		// Visibility: only mobile shows inline; desktop uses popups elsewhere
-		if (this.isMobile) {
-			this.symbolCountWinContainer.setVisible(true);
-		} else {
-			this.symbolCountWinContainer.setVisible(false);
-		}
+        // Lay out the entries within available width
+        const maxWidth = scene.scale.width * 0.8;
+        layoutContainersRow(scene, entryContainers, {
+            x: 0,
+            y: 0,
+            maxWidth,
+            gap: 18,
+            align: 'center'
+        });
+        
+        if(this.isMobile){
+            this.symbolCountWinContainer.setVisible(true);
+        }
+        else{
+            this.symbolCountWinContainer.setVisible(false);
+        }
+        scene.gameData.debugLog("SymbolCountWin display is now visible");
     }
 
     private hideSymbolCountWinDisplay(): void {
