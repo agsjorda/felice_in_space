@@ -29,6 +29,7 @@ export class WinOverlayContainer {
     private freeSpinsText: GameObjects.Text;
     private buttonText: GameObjects.Text;
     private winAnim: SpineGameObject;
+    private winAnim_y: number = 0;
     private isActive: boolean = false;
     private isAnimating: boolean = false;
     private multiplier: number = 0;
@@ -455,6 +456,7 @@ export class WinOverlayContainer {
 		this.currentAnimationPhase = 'bigwin_idle';
 
 		this.winAnim.animationState.setAnimation(0, 'bigwin_idle_fis', true);
+        this.winAnim_y = this.winAnim.y;
 		let incrementTo = this.finalBetTotal;
 		if(this.finalBetTotal - 0.01 > this.scene.gameData.bet * this.scene.gameData.winRank[1]){
 			incrementTo = this.scene.gameData.bet * this.scene.gameData.winRank[1];
@@ -528,7 +530,9 @@ export class WinOverlayContainer {
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'epicwin_intro';
 		this.winAnim.animationState.setAnimation(0, 'epicwin_intro_fis', false);
-		this.winText.setPosition(this.winText_x, this.winText_y + 75);
+        this.winAnim.setPosition(this.winAnim.x, this.winAnim_y);
+        this.winAnim.setPosition(this.winAnim.x, this.winAnim.y + 75);
+		this.winText.setPosition(this.winText_x, this.winText_y + 150);
 		this.winTextFadeIn();
 
 		// Queue the appropriate sounds
@@ -579,6 +583,8 @@ export class WinOverlayContainer {
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'superwin_intro';
 		this.winAnim.animationState.setAnimation(0, 'superwin_intro_fis', false);
+        this.winAnim.setPosition(this.winAnim.x, this.winAnim_y);
+        //this.winAnim.setPosition(this.winAnim.x, this.winAnim.y);
 		this.winText.setPosition(this.winText_x, this.winText_y + 150);
 		this.winTextFadeIn();
 

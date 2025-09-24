@@ -87,7 +87,7 @@ export class AudioManager {
 
         scene.load.audio('FreeSpinWon', `${prefixAudio}/superw_fis${fileType}`); // wala pa nito
         scene.load.audio('WinSkip', `${prefixAudio}/bigwskip_fis${fileType}`);
-        scene.load.audio('Congrats', `${prefixAudio}/superw_fis${fileType}`);
+        scene.load.audio('Congrats', `${prefixAudio}/congrats_FIS${fileType}`);
         scene.load.audio('FreeSpin', `${prefixAudio}/superw_fis${fileType}`);
         
     }
@@ -103,6 +103,7 @@ export class AudioManager {
         this.TExplosion = scene.sound.add('TExplosion', { volume: this.sfxVolume }) as Sound.WebAudioSound;
         this.FreeSpinWon = scene.sound.add('FreeSpinWon', { volume: this.sfxVolume }) as Sound.WebAudioSound;
         this.WinSkip = scene.sound.add('WinSkip', { volume: this.sfxVolume }) as Sound.WebAudioSound;
+        this.CongratsW = scene.sound.add('Congrats', { volume: this.sfxVolume }) as Sound.WebAudioSound;
 
         this.TWin1 = scene.sound.add('TWin1', { volume: this.sfxVolume }) as Sound.WebAudioSound;
         this.TWin2 = scene.sound.add('TWin2', { volume: this.sfxVolume }) as Sound.WebAudioSound;
@@ -122,7 +123,6 @@ export class AudioManager {
         this.SuperWinSkip = scene.sound.add('SuperWinSkip', { volume: this.sfxVolume }) as Sound.WebAudioSound;
 
         //this.BonusW = scene.sound.add('BonusW', { volume: this.sfxVolume }) as Sound.WebAudioSound; // wala pa nito
-        this.CongratsW = scene.sound.add('Congrats', { volume: 0 }) as Sound.WebAudioSound;
         this.FreeSpinW = scene.sound.add('FreeSpin', { volume: 0}) as Sound.WebAudioSound;
 
         this.BonusBG = scene.sound.add('BonusBG', { 
