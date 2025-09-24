@@ -71,8 +71,8 @@ export class WinOverlayContainer {
 
         // Create container for content
         const contentContainer = this.scene.add.container(
-            this.isMobile ? this.scene.scale.width : this.scene.scale.width * 0.55,
-            this.isMobile ? this.scene.scale.height : this.scene.scale.height * 0.55);
+            this.isMobile ? this.scene.scale.width * 0.91 : this.scene.scale.width * 0.55,
+            this.isMobile ? this.scene.scale.height * 0.91 : this.scene.scale.height * 0.55);
         this.container.add(contentContainer);
 
         // Add win animation
@@ -287,7 +287,8 @@ export class WinOverlayContainer {
 
         if(this.winAnim){
             this.winAnim.setScale(0.6);
-            this.buttonText.setPosition(this.buttonText.x, this.buttonText.y + 200);
+            this.buttonText.setPosition(0, this.buttonText.y + 200);
+            this.buttonText.setScale(1.0989);
         }
 
         // Emit show event

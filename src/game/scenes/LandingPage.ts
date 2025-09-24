@@ -123,7 +123,7 @@ export class LandingPage extends Scene {
         }).setOrigin(0.5);
 
         // Adjust notification text position and size
-        const notifX = this.isMobile ? this.cameras.main.width *  0.25: this.cameras.main.width * 0.72;
+        const notifX = this.isMobile ? this.cameras.main.width * 0.5: this.cameras.main.width * 0.72;
         const notifY = this.isMobile ? this.cameras.main.height * 0.88 : this.cameras.main.height * 0.6;
         const notifSize = this.isMobile ? '18px' : '24px';
         
@@ -133,7 +133,7 @@ export class LandingPage extends Scene {
             fontStyle: 'bold',
             fontFamily: getFontFamily(),
             stroke: '#379557',
-        }).setAlpha(0);
+        }).setAlpha(0).setOrigin(0.5,0);
 
         // Adjust spin button position and scale
         const buttonX = this.isMobile ? this.cameras.main.width / 2 : this.cameras.main.width * 0.8;

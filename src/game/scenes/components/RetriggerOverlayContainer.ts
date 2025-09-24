@@ -51,7 +51,7 @@ export class RetriggerOverlayContainer {
 		if ((this.scene.sys.game.renderer as any).pipelines) {
 			bg.setPipeline('BlurPostFX');
 		}
-		const text = this.scene.add.text(0, 0, `You won\n\n\nmore free spins`, {
+		const text = this.scene.add.text(0, 0, `You won \n${addFreeSpins}\n more free spins`, {
 			fontSize: '48px',
 			color: '#FFFFFF',
 			fontFamily: 'Poppins',
@@ -60,24 +60,9 @@ export class RetriggerOverlayContainer {
 		});
 		text.setOrigin(0.5, 0.5);
 
-		const freeSpinsCount = this.scene.add.text(0, 0, `${addFreeSpins}`, {
-			fontSize: '88px',
-			color: '#FFFFFF',
-			fontFamily: 'Poppins',
-			fontStyle: 'bold',
-			align: 'center'
-		});
-		freeSpinsCount.setOrigin(0.5, 0.5);
-		const gradient = freeSpinsCount.context.createLinearGradient(0, 0, 0, freeSpinsCount.height);
-		gradient.addColorStop(0, '#FFF15A');
-		gradient.addColorStop(0.5, '#FFD000');
-		gradient.addColorStop(1, '#FFB400');
-		freeSpinsCount.setFill(gradient);
-
 		// Add to container (centered under buttonZone)
 		this.contentContainer.add(bg);
 		this.contentContainer.add(text);
-		this.contentContainer.add(freeSpinsCount);
 
 		// Brief pause before allowing skip
 		this.inputLocked = true;
@@ -97,7 +82,7 @@ export class RetriggerOverlayContainer {
 		// Auto-close in autoplay/API-driven scenarios after a short pause
 		const shouldAutoClose = (this.scene as any).buttons?.autoplay?.isAutoPlaying || (this.scene as any).gameData?.useApiFreeSpins;
 		if (shouldAutoClose) {
-			this.scene.time.delayedCall(400, () => this.tryClose(onClose));
+			this.scene.time.delayedCall(750, () => this.tryClose(onClose));
 		}
 
 		// Notify overlay shown and block win overlay queue in slotMachine
@@ -118,7 +103,7 @@ export class RetriggerOverlayContainer {
 		this.scene.tweens.add({
 			targets: this.container,
 			alpha: 0,
-			duration: 333,
+			duration: 666,
 			ease: 'Power2',
 			onComplete: () => {
 				cb();

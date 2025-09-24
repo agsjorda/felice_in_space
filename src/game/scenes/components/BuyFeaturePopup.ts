@@ -69,7 +69,7 @@ export class BuyFeaturePopup {
         // dimensions not stored; computed per-show
 
         // Load assets needed for the popup
-        scene.load.image('buyFeatBG', 'assets/Reels/BuyFeatureBG.png');
+        scene.load.image('buyFeatBG', 'assets/background/scatter_BG.png');
         scene.load.image('freeSpinDisplay', 'assets/Controllers/FreeSpinDisplay.png');
         scene.load.image('greenBtn', 'assets/Buttons/greenBtn.png');
         scene.load.image('greenLongBtn', 'assets/Buttons/greenLongBtn.png');

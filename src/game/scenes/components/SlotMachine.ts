@@ -602,14 +602,13 @@ export class SlotMachine {
             const scatterCount = newValues.flat().filter(v => v === 0).length;
             const threshold = scene.gameData.isBonusRound ? 3 : 4;
             if (scatterCount >= threshold) {
-                const scatterSprites: Phaser.GameObjects.Sprite[] = [];
+                const scatterSprites: (Phaser.GameObjects.Sprite | SpineGameObject | SymbolContainer)[] = [];
                 for (let row = 0; row < newValues.length; row++) {
                     for (let col = 0; col < newValues[row].length; col++) {
                         if (newValues[row][col] === 0 && this.symbolGrid[row][col]) {
-                            const spr = this.symbolGrid[row][col];
-                            if (spr instanceof Phaser.GameObjects.Sprite) {
-                                scatterSprites.push(spr);
-                            }
+                            const obj = this.symbolGrid[row][col];
+                            // Accept SymbolContainer, Sprite, or SpineGameObject
+                            scatterSprites.push(obj as any);
                         }
                     }
                 }
@@ -1597,10 +1596,7 @@ export class SlotMachine {
 		if (scene.gameData.isBonusRound) {
             // During bonus round, add spins for 3+ scatters
             let addFreeSpins = 0;
-            if (scatterCount === 3) addFreeSpins = 5;
-            else if (scatterCount === 4) addFreeSpins = 5;
-            else if (scatterCount === 5) addFreeSpins = 5;
-            else if (scatterCount === 6) addFreeSpins = 5;
+            if (scatterCount >= 3) addFreeSpins = 5;
 
             //scene.gameData.totalFreeSpins += addFreeSpins;
             scene.gameData.freeSpins += addFreeSpins;
