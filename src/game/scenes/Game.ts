@@ -11,7 +11,6 @@ import { Autoplay } from './components/Autoplay';
 import { GameAPI } from './backend/GameAPI';
 import { BuyFeaturePopup } from './components/BuyFeaturePopup';
 import { SessionTimeoutPopup } from './components/SessionTimeoutPopup';
-import { WinAnimation } from './components/WinAnimation';
 import { InsufficientBalancePopup } from './components/InsufficientBalancePopup';
 import { WakeLockManager } from '../utils/wakeLock';
 
@@ -38,7 +37,6 @@ export class Game extends Scene {
     public buyFeaturePopup: BuyFeaturePopup;
     public sessionTimeoutPopup: SessionTimeoutPopup;
     public insufficientBalancePopup: InsufficientBalancePopup;
-    public winAnimation: WinAnimation;
 
     private components: GameComponent[];
 
@@ -63,7 +61,6 @@ export class Game extends Scene {
         this.buyFeaturePopup = new BuyFeaturePopup();
         this.sessionTimeoutPopup = new SessionTimeoutPopup();
         this.insufficientBalancePopup = new InsufficientBalancePopup();
-        this.winAnimation = new WinAnimation(this);
         
         // Inject the single autoplay instance into buttons
         this.buttons.autoplay = this.autoplay;
@@ -83,9 +80,6 @@ export class Game extends Scene {
 
     preload(): void {
         try {
-            // Preload WinAnimation assets here to avoid duplicate loads elsewhere
-            try { this.winAnimation.preload(); } catch (_e) {}
-
             // Preload all components
             for (const component of this.components) {
                 if (component.preload) {
