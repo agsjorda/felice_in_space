@@ -47,7 +47,6 @@ export class LoadingPage extends Scene {
             this.slotMachine,
             this.character,
             this.buttons,
-            this.audioManager,
             this.autoplay,
             this.menu,
         ];

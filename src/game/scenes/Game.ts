@@ -107,6 +107,14 @@ export class Game extends Scene {
                 }
             }
 
+            // Immediately place the proper background music after assets are ready
+            // Base game starts with MainBG; if already in bonus, switch accordingly
+            if (this.gameData.isBonusRound) {
+                this.audioManager.changeBackgroundMusic(this);
+            } else {
+                try { this.audioManager.MainBG.play(); } catch (_e) {}
+            }
+
             // Initialize fade-in
             this.initFadeIn();
 

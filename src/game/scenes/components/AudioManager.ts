@@ -2,7 +2,7 @@ import { Scene, Sound } from 'phaser';
 import chalk from 'chalk';
 
 export class AudioManager {
-    private musicVolume: number = 1.0; // Default music volume (0.0 - 1.0)
+    private musicVolume: number = 0.2; // Default music volume (0.0 - 1.0)
     private sfxVolume: number = 1.0;   // Default SFX volume (0.0 - 1.0)
     public winIsPlaying: boolean = false;
     private winSFXQueue: string[] = []; // Queue for win SFX
@@ -137,7 +137,6 @@ export class AudioManager {
             loop: true,
             volume: 0
         }) as Sound.WebAudioSound;
-        this.MainBG.play();
         this.BGChecker.play();
 
         scene.input.on('pointerdown', (_pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
