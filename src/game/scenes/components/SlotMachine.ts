@@ -789,29 +789,45 @@ export class SlotMachine {
 
                 // Modify the symbol creation part
                 const symbolValue = newValues[row][col];
+                
                 let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer | null = null;
+                let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
                 const startY = symbolY - height * (numRows + 1);
-                if (symbolValue >= 10 && symbolValue <= 22) {
+                if (symbolValue >= 0 && symbolValue <= 9) {
+                    // Create SymbolContainer for symbols 0-9 (including scatter)
+                    newSymbol = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    if (symbolValue === 0) {
+                        // Scatter symbol (Symbol 0)
+                        newSymbol.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
+                        // newSymbol.setScale(0.33);
+                        // console.log('Created SymbolContainer for scatter symbol', { symbolValue, position: { x: symbolX, y: startY } });
+                    } else {
+                        // Regular symbols 1-9 with specific adjustments for symbols 2 and 4
+                        if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
+                            // Adjust ratio for symbols 2 and 4 to match other symbols
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
+                            // console.log('Created SymbolContainer for symbol with adjusted ratio', { symbolValue, position: { x: symbolX, y: startY } });
+                        } else {
+                            // Regular symbols 1-9
+                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                            // console.log('Created SymbolContainer for symbol', { symbolValue, position: { x: symbolX, y: startY } });
+                        }
+                    }
+                }
+                if (symbolValue >= 1 && symbolValue <= 9) {
+                    symbolKey = `Symbol${symbolValue}_FIS`;
+                    const sc = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    sc.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                    try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
+                    try { sc.getSymbolSprite().animationState.timeScale = 0; } catch (_e) {}
+                    newSymbol = sc;
+                } else if (symbolValue >= 10 && symbolValue <= 22) {
                     // Create BombContainer for bomb
                     newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
                     // Size bombs similar to regular symbols so they visually align with the grid
                     newSymbol.setBombDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                } else if (symbolValue >= 1 && symbolValue <= 9) {
-                    // Regular symbols 1-9 with specific adjustments for symbols 2, 4, and 6
-                    const sc = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
-                    if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
-                        sc.setSymbolDisplaySize(
-                            width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT),
-                            height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT)
-                        );
-                    } else {
-                        sc.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                    }
-                    try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
-                    try { sc.getSymbolSprite().animationState.timeScale = 0; } catch (_e) {}
-                    newSymbol = sc;
+                    // console.log('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
                 } else {
-                    // Scatter (0)
                     const sc = new SymbolContainer(scene, symbolX, startY, 0, scene.gameData);
                     sc.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
                     try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
@@ -879,10 +895,12 @@ export class SlotMachine {
                         onUpdate: () => {
                             // Update trail positions and fade
                             if(scene.gameData.turbo == false) {
-                                trails.forEach((trail, index) => {
-                                    trail.y = symbol.y - (trailSpacing * (index + 1));
-                                    trail.alpha = symbol.alpha * (0.7 - (index * 0.15));
-                                });
+                                setTimeout(() => {
+                                    trails.forEach((trail, index) => {
+                                        trail.y = symbol.y - (trailSpacing * (index + 1));
+                                        trail.alpha = symbol.alpha * (0.7 - (index * 0.15));
+                                    });
+                                }, 100);
                             }
                         },
                         onComplete: () => {
@@ -904,7 +922,7 @@ export class SlotMachine {
                             onComplete: () => {
                                 if(row === 4){
                                     if(!scene.gameData.turbo){
-                                        scene.audioManager.ReelDrop.play('hit',{delay:0.01});
+                                        scene.audioManager.ReelDrop.play();
                                     }
                                 }
                                 resolve();
@@ -918,6 +936,7 @@ export class SlotMachine {
                 }
             }
         }
+
 
         this.symbolGrid = newSymbolGrid;
         
