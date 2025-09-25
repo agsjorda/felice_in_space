@@ -113,9 +113,6 @@ export class SlotMachine {
         this.animation = new Animation(scene);
         this.animation.preload();
 
-        this.winAnimation = new WinAnimation(scene);
-        this.winAnimation.preload();
-
         this.initVariables(scene as GameScene);
         this.isMobile = this.isMobileDevice();
     }
@@ -141,7 +138,6 @@ export class SlotMachine {
         
         // Initialize animations
         this.animation.create();
-        this.winAnimation.create();
         
         // Process queued overlays whenever one closes
         this.onOverlayHide = () => this.tryShowNextOverlay(scene as GameScene);
