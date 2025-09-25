@@ -367,6 +367,13 @@ export class SlotMachine {
         console.log("slotArea", result.slot.area);
         console.log("Tumbles", result.slot.tumbles);
 
+        let fakeBetReduce = result.bet;
+        if (isBuyFeature) {
+            fakeBetReduce *= 100;
+        } else if (isEnhancedBet) {
+            fakeBetReduce *= 1.25;
+        }
+
         Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, result.bet, 0);
         if(result.slot.freeSpin?.length > 0){
             console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
@@ -717,6 +724,7 @@ export class SlotMachine {
 
         Events.emitter.emit(Events.FINAL_WIN_SHOW, {});
 
+        Events.emitter.emit(Events.WIN, {}); // show balance
         
         scene.background.toggleBackground(scene);
         scene.audioManager.changeBackgroundMusic(scene);
