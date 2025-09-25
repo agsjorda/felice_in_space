@@ -37,6 +37,7 @@ export class WinOverlayContainer {
     private buttonZone: GameObjects.Zone;
     private skipOnce :boolean[] = [false, false, false, false, false];
     private onSpaceDown?: (event: KeyboardEvent) => void;
+    private onUpdateTotalWin?: (totalWin: number, winType: string) => void;
     private inputLocked: boolean = false; // Prevent skipping for a minimum display time
     private currentWinType?: string;
     private delaySkipMS: number = 100;
@@ -182,7 +183,7 @@ export class WinOverlayContainer {
     }
 
     private setupEventListeners(): void {
-        Events.emitter.on(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN, (totalWin: number, winType: string) => {
+        this.onUpdateTotalWin = (totalWin: number, winType: string) => {
             if (this.currentWinType === 'FreeSpin') {
                 this.winText.setPosition(50, 50);
                 this.winText.setText(`${totalWin.toFixed(0)}`);
@@ -206,7 +207,8 @@ export class WinOverlayContainer {
                 this.freeSpinsText.visible = false;
             }
             
-        });
+        };
+        Events.emitter.on(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN, this.onUpdateTotalWin);
     
 
         this.buttonZone.on('pointerdown', () => {
@@ -332,7 +334,10 @@ export class WinOverlayContainer {
 
             this.scene.slotMachine.activeWinOverlay = false;
             this.winAnimation.exitAnimation();
-            Events.emitter.off(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN);
+            if (this.onUpdateTotalWin) {
+                Events.emitter.off(Events.WIN_OVERLAY_UPDATE_TOTAL_WIN, this.onUpdateTotalWin);
+                this.onUpdateTotalWin = undefined;
+            }
             
             // Clean up any active timers
             if (this.countInterval) {

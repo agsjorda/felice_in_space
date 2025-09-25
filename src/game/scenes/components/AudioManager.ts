@@ -137,6 +137,7 @@ export class AudioManager {
             loop: true,
             volume: 0
         }) as Sound.WebAudioSound;
+        this.MainBG.play();
         this.BGChecker.play();
 
         scene.input.on('pointerdown', (_pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {

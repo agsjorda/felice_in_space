@@ -81,6 +81,8 @@ export class SlotMachine {
     private bombPopupContainer: GameObjects.Container | null = null;
     private winOverlayQueue: { totalWin: number; overlayType: string }[] = [];
     private onOverlayHide?: () => void;
+    private onSpinListener?: (data: SpinData) => Promise<void>;
+    private onStartListener?: (data: SpinData) => void;
 
     private animation: Animation;
     private winAnimation: WinAnimation;
@@ -363,14 +365,8 @@ export class SlotMachine {
         console.log("slotArea", result.slot.area);
         console.log("Tumbles", result.slot.tumbles);
 
-        let fakeBetReduce = result.bet;
-        if (isBuyFeature) {
-            fakeBetReduce *= 100;
-        } else if (isEnhancedBet) {
-            fakeBetReduce *= 1.25;
-        }
-
         Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, result.bet, 0);
+        
         if(result.slot.freeSpin?.length > 0){
             console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
         }
@@ -503,7 +499,7 @@ export class SlotMachine {
             await this.processMatchesSequentially(scene, newValues, result.slot.tumbles);
         } else {
             // No tumbles; emit end events and reset spin state so autoplay won't advance early
-            // Events.emitter.emit(Events.WIN, {});
+            Events.emitter.emit(Events.WIN, {});
             Events.emitter.emit(Events.SPIN_ANIMATION_END, {
                 symbols: newValues,
                 currentRow: 0
@@ -586,7 +582,7 @@ export class SlotMachine {
             await this.processMatchesSequentially(scene, newValues, tumbles);
         } else {
             // No tumbles; still emit end events to keep flow consistent
-            // Events.emitter.emit(Events.WIN, {});
+            Events.emitter.emit(Events.WIN, {});
             Events.emitter.emit(Events.SPIN_ANIMATION_END, {
                 symbols: newValues,
                 currentRow: 0
@@ -720,7 +716,6 @@ export class SlotMachine {
 
         Events.emitter.emit(Events.FINAL_WIN_SHOW, {});
 
-        Events.emitter.emit(Events.WIN, {}); // show balance
         
         scene.background.toggleBackground(scene);
         scene.audioManager.changeBackgroundMusic(scene);
@@ -790,45 +785,29 @@ export class SlotMachine {
 
                 // Modify the symbol creation part
                 const symbolValue = newValues[row][col];
-                
                 let newSymbol: GameObjects.Sprite | SpineGameObject | BombContainer | SymbolContainer | null = null;
-                let symbolKey = 'Symbol0_FIS'; // Default to scatter symbol
                 const startY = symbolY - height * (numRows + 1);
-                if (symbolValue >= 0 && symbolValue <= 9) {
-                    // Create SymbolContainer for symbols 0-9 (including scatter)
-                    newSymbol = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
-                    if (symbolValue === 0) {
-                        // Scatter symbol (Symbol 0)
-                        newSymbol.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
-                        // newSymbol.setScale(0.33);
-                        // console.log('Created SymbolContainer for scatter symbol', { symbolValue, position: { x: symbolX, y: startY } });
-                    } else {
-                        // Regular symbols 1-9 with specific adjustments for symbols 2 and 4
-                        if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
-                            // Adjust ratio for symbols 2 and 4 to match other symbols
-                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT), height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT));
-                            // console.log('Created SymbolContainer for symbol with adjusted ratio', { symbolValue, position: { x: symbolX, y: startY } });
-                        } else {
-                            // Regular symbols 1-9
-                            newSymbol.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                            // console.log('Created SymbolContainer for symbol', { symbolValue, position: { x: symbolX, y: startY } });
-                        }
-                    }
-                }
-                if (symbolValue >= 1 && symbolValue <= 9) {
-                    symbolKey = `Symbol${symbolValue}_FIS`;
-                    const sc = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
-                    sc.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                    try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
-                    try { sc.getSymbolSprite().animationState.timeScale = 0; } catch (_e) {}
-                    newSymbol = sc;
-                } else if (symbolValue >= 10 && symbolValue <= 22) {
+                if (symbolValue >= 10 && symbolValue <= 22) {
                     // Create BombContainer for bomb
                     newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
                     // Size bombs similar to regular symbols so they visually align with the grid
                     newSymbol.setBombDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
-                    // console.log('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
+                } else if (symbolValue >= 1 && symbolValue <= 9) {
+                    // Regular symbols 1-9 with specific adjustments for symbols 2, 4, and 6
+                    const sc = new SymbolContainer(scene, symbolX, startY, symbolValue, scene.gameData);
+                    if (symbolValue === 2 || symbolValue === 4 || symbolValue === 6) {
+                        sc.setSymbolDisplaySize(
+                            width * Slot.SYMBOL_SIZE * (1 + Slot.SYMBOL_SIZE_ADJUSTMENT),
+                            height * Slot.SYMBOL_SIZE * (1 - Slot.SYMBOL_SIZE_ADJUSTMENT)
+                        );
+                    } else {
+                        sc.setSymbolDisplaySize(width * Slot.SYMBOL_SIZE, height * Slot.SYMBOL_SIZE);
+                    }
+                    try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
+                    try { sc.getSymbolSprite().animationState.timeScale = 0; } catch (_e) {}
+                    newSymbol = sc;
                 } else {
+                    // Scatter (0)
                     const sc = new SymbolContainer(scene, symbolX, startY, 0, scene.gameData);
                     sc.setSymbolDisplaySize(width * Slot.SCATTER_SIZE, height * Slot.SCATTER_SIZE);
                     try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}
@@ -896,12 +875,10 @@ export class SlotMachine {
                         onUpdate: () => {
                             // Update trail positions and fade
                             if(scene.gameData.turbo == false) {
-                                setTimeout(() => {
-                                    trails.forEach((trail, index) => {
-                                        trail.y = symbol.y - (trailSpacing * (index + 1));
-                                        trail.alpha = symbol.alpha * (0.7 - (index * 0.15));
-                                    });
-                                }, 100);
+                                trails.forEach((trail, index) => {
+                                    trail.y = symbol.y - (trailSpacing * (index + 1));
+                                    trail.alpha = symbol.alpha * (0.7 - (index * 0.15));
+                                });
                             }
                         },
                         onComplete: () => {
@@ -923,7 +900,7 @@ export class SlotMachine {
                             onComplete: () => {
                                 if(row === 4){
                                     if(!scene.gameData.turbo){
-                                        scene.audioManager.ReelDrop.play();
+                                        scene.audioManager.ReelDrop.play('hit',{delay:0.01});
                                     }
                                 }
                                 resolve();
@@ -1049,7 +1026,7 @@ export class SlotMachine {
     }
 
     private eventListeners(scene: GameScene): void {
-        Events.emitter.on(Events.SPIN, async (data: SpinData) => {
+        this.onSpinListener = async (data: SpinData) => {
             const currentTime = Date.now();
             // Enforce manual spin lockout after free spin trigger
             if (currentTime < (((scene as any).gameData.freeSpinLockUntilMs) || 0)) {
@@ -1090,7 +1067,7 @@ export class SlotMachine {
                     scene.gameData.demoMode = true;
                 }
 
-                scene.audioManager.ReelDrop.play();
+                scene.audioManager.ReelDrop.play('hit',{delay:0.01});
                 // Fire spin start event so UI (e.g., total win text) can reset immediately
                 try { Events.emitter.emit(Events.SPIN_ANIMATION_START, { currentRow: scene.gameData.currentRow }); } catch (_e) {}
                 if (scene.gameData.demoMode) {
@@ -1117,10 +1094,13 @@ export class SlotMachine {
                     scene.buttons.enableButtonsVisually(scene);
                 }
             }
-        });
-        Events.emitter.on(Events.START, (data: SpinData) => {
+        };
+        Events.emitter.on(Events.SPIN, this.onSpinListener);
+
+        this.onStartListener = (data: SpinData) => {
             this.createSampleSymbols(scene, data.symbols);
-        });
+        };
+        Events.emitter.on(Events.START, this.onStartListener);
     }
 
     private createSampleSymbols(scene: GameScene, symbols: number[][]): void {
@@ -1480,7 +1460,7 @@ export class SlotMachine {
             // In API-driven mode, SymbolsIn.win already represents the tumble win.
             // Avoid multiplying it by number of matched symbols. Sum once per tumble.
                 totalWinAmount += SymbolsIn.symbols.out.find(s => s.symbol === symbol)?.win || 0;
-                //Events.emitter.emit(Events.WIN, {win: totalWinAmount});
+                Events.emitter.emit(Events.WIN, {win: totalWinAmount});
 
             // Add to display symbols
             displaySymbols.push({
@@ -1493,7 +1473,7 @@ export class SlotMachine {
         if (scene.gameData.isBonusRound && !scene.gameData.useApiFreeSpins) {
             //scene.gameData.totalBonusWin += totalWinAmount;
         }
-        // Events.emitter.emit(Events.WIN, {});
+        Events.emitter.emit(Events.WIN, {});
 
         // 5. Show SymbolCountWin display
         this.showSymbolCountWinDisplay(scene, displaySymbols);
@@ -2035,6 +2015,14 @@ export class SlotMachine {
         if (this.onOverlayHide) {
             Events.emitter.off(Events.WIN_OVERLAY_HIDE, this.onOverlayHide);
             this.onOverlayHide = undefined;
+        }
+        if (this.onSpinListener) {
+            Events.emitter.off(Events.SPIN, this.onSpinListener);
+            this.onSpinListener = undefined;
+        }
+        if (this.onStartListener) {
+            Events.emitter.off(Events.START, this.onStartListener);
+            this.onStartListener = undefined;
         }
     }
 
