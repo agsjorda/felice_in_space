@@ -1581,14 +1581,16 @@ export class Buttons {
         container.add(demoLabel);
 
         Events.emitter.on(Events.SPIN_ANIMATION_START, () => {
-            Events.emitter.emit(Events.UPDATE_BALANCE);            
+            //Events.emitter.emit(Events.UPDATE_BALANCE);            
         });
 
-        Events.emitter.on(Events.WIN, () => {
-            Events.emitter.emit(Events.UPDATE_BALANCE);     
+        Events.emitter.on(Events.WIN, (data: any) => {
+            if(!data)
+                Events.emitter.emit(Events.UPDATE_BALANCE);
         });
 
         Events.emitter.on(Events.UPDATE_BALANCE, () => {
+            console.error("balance updated");
             try{
                 scene.gameAPI.getBalance().then((data) => {
                     const balance = data.data.balance;
@@ -1601,6 +1603,12 @@ export class Buttons {
                 // console.log("error updating balance " + error);
                 text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
             }
+        });
+
+        Events.emitter.on(Events.UPDATE_FAKE_BALANCE, (reduce: number, increase: number) => {
+            scene.gameData.balance -= reduce;
+            scene.gameData.balance += increase;
+            text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         });
 
         container.setScale(this.isMobile ? 0.5 : 1);
@@ -1730,7 +1738,7 @@ export class Buttons {
         });
 
         // Apply multiplier exactly once when bombs explode (emits WIN with applyMultiplier flag)
-        Events.emitter.on(Events.WIN, (data:any) => {
+        Events.emitter.on(Events.WIN, (data: any) => {
             if (data && data.applyMultiplier === true) {
                 if (multiplierApplied) return;
                 multiplierApplied = true;

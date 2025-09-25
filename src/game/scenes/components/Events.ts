@@ -40,6 +40,7 @@ export class Events {
     static readonly UPDATE_TOTAL_WIN: string = 'updateTotalWin';
     static readonly UPDATE_CURRENCY: string = 'updateCurrency';
     static readonly UPDATE_BALANCE: string = 'updateBalance';
+    static readonly UPDATE_FAKE_BALANCE: string = 'updateFakeBalance';
     static readonly GET_BALANCE: string = 'getBalance';
 
     // UI Y-axis toggle events for specific buttons

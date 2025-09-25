@@ -366,6 +366,8 @@ export class SlotMachine {
         console.log("result", result);
         console.log("slotArea", result.slot.area);
         console.log("Tumbles", result.slot.tumbles);
+
+        Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, result.bet, 0);
         if(result.slot.freeSpin?.length > 0){
             console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
         }
@@ -498,7 +500,7 @@ export class SlotMachine {
             await this.processMatchesSequentially(scene, newValues, result.slot.tumbles);
         } else {
             // No tumbles; emit end events and reset spin state so autoplay won't advance early
-            Events.emitter.emit(Events.WIN, {});
+            // Events.emitter.emit(Events.WIN, {});
             Events.emitter.emit(Events.SPIN_ANIMATION_END, {
                 symbols: newValues,
                 currentRow: 0
@@ -581,7 +583,7 @@ export class SlotMachine {
             await this.processMatchesSequentially(scene, newValues, tumbles);
         } else {
             // No tumbles; still emit end events to keep flow consistent
-            Events.emitter.emit(Events.WIN, {});
+            // Events.emitter.emit(Events.WIN, {});
             Events.emitter.emit(Events.SPIN_ANIMATION_END, {
                 symbols: newValues,
                 currentRow: 0
@@ -1474,7 +1476,7 @@ export class SlotMachine {
             // In API-driven mode, SymbolsIn.win already represents the tumble win.
             // Avoid multiplying it by number of matched symbols. Sum once per tumble.
                 totalWinAmount += SymbolsIn.symbols.out.find(s => s.symbol === symbol)?.win || 0;
-                Events.emitter.emit(Events.WIN, {win: totalWinAmount});
+                //Events.emitter.emit(Events.WIN, {win: totalWinAmount});
 
             // Add to display symbols
             displaySymbols.push({
@@ -1487,7 +1489,7 @@ export class SlotMachine {
         if (scene.gameData.isBonusRound && !scene.gameData.useApiFreeSpins) {
             //scene.gameData.totalBonusWin += totalWinAmount;
         }
-        Events.emitter.emit(Events.WIN, {});
+        // Events.emitter.emit(Events.WIN, {});
 
         // 5. Show SymbolCountWin display
         this.showSymbolCountWinDisplay(scene, displaySymbols);
