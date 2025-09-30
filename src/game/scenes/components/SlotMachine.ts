@@ -408,6 +408,7 @@ export class SlotMachine {
             const currentSpinsLeft = apiFs[0]?.spinsLeft;
             scene.gameData.freeSpins = currentSpinsLeft;
             scene.gameData.totalFreeSpins = apiFs.length;
+            scene.gameData.totalWinFreeSpinPerTumble = [];
             apiFs.forEach((v)=>{
                 scene.gameData.totalWinFreeSpin.push(v.totalWin);
                 let totalWinFreeSpinPerTumble = 0;
@@ -702,6 +703,7 @@ export class SlotMachine {
     }
 
     private async endApiBonus(scene: GameScene): Promise<void> {
+        Events.emitter.emit(Events.FINAL_WIN_SHOW, {});
         // Toggle back to base game and show summary
         scene.gameData.isBonusRound = false;
         // Ensure totalBonusWin reflects the sum of the API-provided free spins if available
@@ -718,11 +720,7 @@ export class SlotMachine {
             }
         } catch (_e) { /* ignore recompute errors */ }
 
-        Events.emitter.emit(Events.FINAL_WIN_SHOW, {});
-
         
-        scene.background.toggleBackground(scene);
-        scene.audioManager.changeBackgroundMusic(scene);
         const bonusWin = scene.gameData.totalBonusWin;
         console.log("endiAPIBonus", bonusWin);
 
@@ -959,11 +957,11 @@ export class SlotMachine {
                 const result = await this.checkMatchAsync(symbolGrid, scene, SymbolsIn[this.currentIndex]);
                 lastResult = result;
                 // During API-driven Free Spins, emit per-tumble total-win update like reference
-                try {
-                    if (scene.gameData.useApiFreeSpins) {
-                        Events.emitter.emit(Events.FREE_SPIN_TOTAL_WIN);
-                    }
-                } catch (_e) {}
+                // try {
+                //     if (scene.gameData.useApiFreeSpins) {
+                //         Events.emitter.emit(Events.FREE_SPIN_TOTAL_WIN);
+                //     }
+                // } catch (_e) {}
                 if (result === "No more matches" || result === "free spins") {
                     continueMatching = false;
                 }
@@ -1039,6 +1037,10 @@ export class SlotMachine {
             // Always ensure spinning state is reset
             scene.gameData.isSpinning = false;
 
+            if (scene.gameData.useApiFreeSpins) {
+                Events.emitter.emit(Events.FREE_SPIN_TOTAL_WIN);
+            }
+
             console.log("Spin sequence completed, isSpinning reset to false");
             // Immediately re-enable buttons when spinning completes
             if (scene.buttons && scene.buttons.enableButtonsVisually) {
@@ -1080,7 +1082,11 @@ export class SlotMachine {
             this.hideSymbolCountWinDisplay();
             // Cleanup any orphaned symbols in the slot container before starting a new spin
             this.cleanupAloneSymbols();
-            
+            try {
+                if (scene.gameData.useApiFreeSpins) {
+                    Events.emitter.emit(Events.FREE_SPIN_TOTAL_WIN);
+                }
+            } catch (_e) {}
             // Ensure buttons stay disabled during actual spin processing
             if (scene.buttons && scene.buttons.updateButtonStates) {
                 scene.buttons.updateButtonStates(scene);

@@ -37,16 +37,17 @@ export class BombContainer extends GameObjects.Container {
         // Set the animation based on the bomb type
         // Create the bomb sprite
         let bombKey = 'Symbol10_FIS';
+        let animationKey = 'Symbol10_FIS'
         if(this.bombType == 'medium'){
-            bombKey = 'Symbol11_FIS';
+            animationKey = 'Symbol11_FIS';
         }
         else if(this.bombType == 'high'){
-            bombKey = 'Symbol12_FIS';
-        }1
+            animationKey = 'Symbol12_FIS';
+        }
         this.bombSprite = scene.add.spine(0, 0, bombKey, bombKey);
         this.bombSprite.setVisible(true);
-        this.bombSprite.setDepth(1);
-        this.bombSprite.animationState.setAnimation(0, 'animation', false);
+        this.bombSprite.setDepth(10000);
+        this.bombSprite.animationState.setAnimation(0, animationKey, false);
         // Pause the animation at frame 1 (i.e., after the first frame)
         this.bombSprite.animationState.timeScale = 1;
 
@@ -149,13 +150,13 @@ export class BombContainer extends GameObjects.Container {
         // Match other symbols' scaling; actual sizing is handled by setBombDisplaySize
         this.setScale(0.8);
         
-        // Debug logging
-        this.gameData.debugLog('BombContainer created', {
-            bombValue,
-            multiplier: this.multiplier,
-            bombType: this.bombType,
-            position: { x, y }
-        });
+        // // Debug logging
+        // console.log('BombContainer created', {
+        //     bombValue,
+        //     multiplier: this.multiplier,
+        //     bombType: this.bombType,
+        //     position: { x, y }
+        // });
     }
 
     /**
@@ -207,13 +208,13 @@ export class BombContainer extends GameObjects.Container {
             const scaleY = height / currentHeight;
             const scale = Math.min(scaleX, scaleY);
 
-            this.bombSprite.setScale(scale * 1.15);
+            this.bombSprite.setScale(1.1);
             // Place at the center of the container; children are positioned relative to container center
-            this.bombSprite.setPosition(10, 0);
+            this.bombSprite.setPosition(0, 0);
         } catch (_e) {
             // Fallback: approximate scale if bounds are not available yet
             const approximateScale = Math.min(width, height) / 120;
-            this.bombSprite.setScale(approximateScale);
+            //this.bombSprite.setScale(approximateScale);
             this.bombSprite.setPosition(0, 0);
         }
 
@@ -227,14 +228,14 @@ export class BombContainer extends GameObjects.Container {
         // Update container size so tweens and layout treat it like a symbol cell
         this.setSize(width, height);
 
-        this.gameData.debugLog('Bomb display size set', { width, height });
+        // console.log('Bomb display size set', { width, height });
     }
 
     /**
      * Play bomb animation based on type
      */
     playBombAnimation(): void {
-        this.gameData.debugLog('Playing bomb animation', { bombType: this.bombType });
+        console.log('Playing bomb animation', { bombType: this.bombType });
         
         // Set the appropriate animation based on bomb type
         setTimeout(() => {
@@ -308,14 +309,14 @@ export class BombContainer extends GameObjects.Container {
      */
     updateText(text: string): void {
         this.textOverlay.setText(text);
-        this.gameData.debugLog('Bomb text updated', { text });
+        console.log('Bomb text updated', { text });
     }
 
     /**
      * Show explosion effect
      */
     showExplosion(): void {
-        this.gameData.debugLog('Showing bomb explosion');
+        console.log('Showing bomb explosion');
         
         // Use an overlay bomb so the animation sits above other symbols
         try {
@@ -339,8 +340,9 @@ export class BombContainer extends GameObjects.Container {
         
         // Animate text overlay
         this.scene.tweens.add({
-            targets: this.textOverlay,
-            alpha: 1,
+            targets: this.bombSprite,
+            scaleX: 0.9,
+            scaleY: 0.9,
             
             duration: 500,
             ease: 'Power2',
@@ -364,14 +366,14 @@ export class BombContainer extends GameObjects.Container {
             
             overlay = this.scene.add.spine(overlayX, overlayY, animationName, animationName) as SpineGameObject;
             // Match visual size of the original bomb sprite
-            overlay.setScale(this.bombSprite.scaleX, this.bombSprite.scaleY);
+            //overlay.setScale(this.bombSprite.scaleX, this.bombSprite.scaleY);
             overlay.setAlpha(1);
             // Scale down overlay from 100% to 50% at animation start
             try {
                 this.scene.tweens.add({
                     targets: overlay,
-                    scaleX: overlay.scaleX * 0.5,
-                    scaleY: overlay.scaleY * 0.5,
+                    scaleX: overlay.scaleX * 2,
+                    scaleY: overlay.scaleY * 2,
                     duration: 800,
                     ease: 'Power2'
                 });
@@ -585,7 +587,7 @@ export class BombContainer extends GameObjects.Container {
                         Events.emitter.emit(Events.SHOW_BOMB_WIN);
                         // console.log(this.scene.gameData.totalWinFreeSpinPerTumble[this.scene.gameData.apiFreeSpinsIndex]);
                         Events.emitter.emit(Events.UPDATE_TOTAL_WIN, 0, true);
-                    }, 50);
+                    }, 15);
                  } catch (_e) {}
             }
         });

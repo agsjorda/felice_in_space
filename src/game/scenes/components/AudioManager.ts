@@ -85,7 +85,7 @@ export class AudioManager {
         scene.load.audio('EpicW', `${prefixAudio}/epicw_fis${fileType}`);
         scene.load.audio('EpicWinSkip', `${prefixAudio}/epicwskip_fis${fileType}`);
 
-        scene.load.audio('FreeSpinWon', `${prefixAudio}/superw_fis${fileType}`); // wala pa nito
+        scene.load.audio('FreeSpinWon', `${prefixAudio}/freespinwon_fis${fileType}`);
         scene.load.audio('WinSkip', `${prefixAudio}/bigwskip_fis${fileType}`);
         scene.load.audio('Congrats', `${prefixAudio}/congrats_FIS${fileType}`);
         scene.load.audio('FreeSpin', `${prefixAudio}/superw_fis${fileType}`);
@@ -101,7 +101,7 @@ export class AudioManager {
         this.UtilityButtonSFX = scene.sound.add('UtilityButtonSFX', { volume: this.sfxVolume }) as Sound.WebAudioSound;
         this.ScatterSFX = scene.sound.add('ScatterSFX', { volume: this.sfxVolume }) as Sound.WebAudioSound;
         this.TExplosion = scene.sound.add('TExplosion', { volume: this.sfxVolume }) as Sound.WebAudioSound;
-        this.FreeSpinWon = scene.sound.add('FreeSpinWon', { volume: this.sfxVolume }) as Sound.WebAudioSound;
+        this.FreeSpinWon = scene.sound.add('FreeSpinWon', { volume: this.sfxVolume, loop: true }) as Sound.WebAudioSound;
         this.WinSkip = scene.sound.add('WinSkip', { volume: this.sfxVolume }) as Sound.WebAudioSound;
         this.CongratsW = scene.sound.add('Congrats', { volume: this.sfxVolume }) as Sound.WebAudioSound;
 
@@ -123,7 +123,6 @@ export class AudioManager {
         this.SuperWinSkip = scene.sound.add('SuperWinSkip', { volume: this.sfxVolume }) as Sound.WebAudioSound;
 
         //this.BonusW = scene.sound.add('BonusW', { volume: this.sfxVolume }) as Sound.WebAudioSound; // wala pa nito
-        this.FreeSpinW = scene.sound.add('FreeSpin', { volume: 0}) as Sound.WebAudioSound;
 
         this.BonusBG = scene.sound.add('BonusBG', { 
             loop: true, 
@@ -225,6 +224,7 @@ export class AudioManager {
             this.EpicW.stop();
             this.SuperW.stop();
             this.WinSkip.stop();
+            this.FreeSpinWon.stop();
 
             this.BGChecker.resume();
             // this.setMusicVolume(this.getMusicVolume() / 0.01);

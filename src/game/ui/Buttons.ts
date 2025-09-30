@@ -323,7 +323,7 @@ export class Buttons {
             const count = this.forceSpinsLeftOverlay ? 10 : (scene.gameData.freeSpins ?? 0);
             if(this.isMobile){
                 this.remainingFsLabel.setText(`Remaining Free Spins:`);
-                this.remainingFsLabel_Count.setText(`${count}`);
+                this.remainingFsLabel_Count.setText(`${count - 1}`);
             }
             else {
                 this.remainingFsLabel.setText(`Spins Left:`);
@@ -1696,14 +1696,13 @@ export class Buttons {
                         const idx = Math.max(0, Math.min(scene.gameData.apiFreeSpinsIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
                         const arr = scene.gameData.totalWinFreeSpin || [];
                         totalWinCurrentTotal = arr.slice(0, idx + 1).reduce((sum, v) => sum + (v || 0), 0);
+
+                        if(idx == arr.length - 1){
+                            totalWinCurrentTotal = scene.gameData.totalWin;
+                        }
                     }
 
-                    if(totalWinCurrentTotal >= scene.gameData.totalBonusWin){
-                        text2.setText(`$ ${formatMoney(scene.gameData.totalBonusWin)}`);
-                    }
-                    else{
-                        text2.setText(`$ ${formatMoney(totalWinCurrentTotal)}`);
-                    }
+                    text2.setText(`$ ${formatMoney(totalWinCurrentTotal)}`);
                     return;
                 }
                 const increment = totalWinQueue.shift() as number;
@@ -2761,6 +2760,8 @@ export class Buttons {
             const totalProduct = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex] * scene.gameData.totalBombWin;
             const totalProductString = totalProduct.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             //youWonLabel.setText('WIN');
+            console.log('2764 Show Bomb Win ' + scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex]);
+            console.log('2765 Total Bomb Win ', scene.gameData.totalWinFreeSpinPerTumble);
             if(multiplier > 1)
             youWonAmount.setText(`${scene.gameData.currency} ${totalWin} x ${multiplier} = ${totalProductString}`);
         });
@@ -2770,10 +2771,10 @@ export class Buttons {
             try {
                 const fsLen = (scene.gameData.totalWinFreeSpin?.length || 0);
                 if (this.isMobile && scene.gameData.useApiFreeSpins && fsLen > 0 && (scene.gameData.apiFreeSpinsIndex >= fsLen)) {
-                    const finalTotal = (scene.gameData.totalBonusWin && scene.gameData.totalBonusWin > 0)
-                        ? scene.gameData.totalBonusWin
-                        : (scene.gameData.totalWinFreeSpin || []).reduce((s, v) => s + (Number(v) || 0), 0);
+                    const finalTotal =
+                     (scene.gameData.totalWinFreeSpin || []).reduce((s, v) => s + (Number(v) || 0));
                     youWonLabel.setText('TOTAL WIN');
+                    console.log('Total Win', finalTotal);
                     youWonAmount.setText(`${scene.gameData.currency} ${finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 }
             } catch (_e) {}
@@ -2839,10 +2840,11 @@ export class Buttons {
                     
                         // End of a tumble (or after bombs): show TOTAL WIN with the final value
                         youWonLabel.setText('TOTAL WIN');
-                        const finalDisplay = (marqueeCurrentTotal >= scene.gameData.totalBonusWin)
-                            ? scene.gameData.totalBonusWin
+                        const finalDisplay = (marqueeCurrentTotal >= scene.gameData.totalWin)
+                            ? scene.gameData.totalWin
                             : marqueeCurrentTotal;
                         youWonAmount.setText(`${scene.gameData.currency} ${finalDisplay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
                         return;
                     }
 
@@ -2852,15 +2854,18 @@ export class Buttons {
                         return;
                     }
 
-                    const capValue = scene.gameData.totalBonusWin || 0;
+                    const capValue = scene.gameData.totalWin || 0;
                     const finalDisplay = (capValue > 0 && marqueeCurrentTotal >= capValue)
                         ? capValue
                         : marqueeCurrentTotal;
                     totalWinFinalTimer = scene.time.delayedCall(250, ()=>{
-                        youWonLabel.setText('TOTAL WIN');
                         if(!scene.gameData.isBonusRound){
                             youWonLabel.setText('WIN');
                         }
+                        else{
+                            youWonLabel.setText('TOTAL WIN');
+                        }
+
                         youWonAmount.setText(`${scene.gameData.currency} ${finalDisplay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                         totalWinFinalTimer = null;
                     });
@@ -2941,10 +2946,17 @@ export class Buttons {
 
         Events.emitter.on(Events.FINAL_WIN_SHOW, () => {
             youWonLabel.setText('TOTAL WIN');
-            youWonAmount.setText(`${scene.gameData.currency} ${scene.gameData.totalBonusWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+            youWonAmount.setText(`${scene.gameData.currency} ${scene.gameData.totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         });
         Events.emitter.on(Events.FREE_SPIN_TOTAL_WIN, ()=>{
+            console.log(scene.gameData.currentFreeSpinIndex);
+            
+            // Calculate finalTotal as the sum of totalWinFreeSpin up to and including currentFreeSpinIndex
+            const idx = Math.max(0, Math.min(scene.gameData.currentFreeSpinIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
+            const finalTotal = (scene.gameData.totalWinFreeSpin || []).slice(0, idx + 1).reduce((s, v) => s + (Number(v) || 0), 0);
+            
             youWonLabel.setText('TOTAL WIN');
+            youWonAmount.setText(`${scene.gameData.currency} ${finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         });
     }
 

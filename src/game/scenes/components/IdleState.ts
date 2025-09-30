@@ -177,7 +177,10 @@ export function getRandomRows(): number[] {
 }
 
 function reduceBalance(scene: GameScene): void {
-    if (scene.gameData.doubleChanceEnabled) {
+    if(scene.gameData.buyFeatureEnabled){
+        scene.gameData.balance -= scene.gameData.getBuyFeaturePrice();
+    }
+    else if (scene.gameData.doubleChanceEnabled) {
         scene.gameData.balance -= scene.gameData.getDoubleFeaturePrice();
     } else {
         scene.gameData.balance -= scene.gameData.bet;

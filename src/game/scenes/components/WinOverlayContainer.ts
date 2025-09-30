@@ -191,7 +191,7 @@ export class WinOverlayContainer {
                 return;
             }
             if (winType === 'Congrats') {
-                this.winText.setPosition(0, 150);
+                this.winText.setPosition(25, 150);
                 this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 this.winText.setScale(0.75);
                 this.freeSpinsText.visible = false;
@@ -306,7 +306,7 @@ export class WinOverlayContainer {
         
         // Handle special cases first
         if (this.multiplier === -1) {
-            winSound = this.scene.audioManager.FreeSpinW;
+            winSound = this.scene.audioManager.FreeSpinWon;
         } else if (this.multiplier === -2) {
             winSound = this.scene.audioManager.CongratsW;
         } else {
@@ -331,7 +331,9 @@ export class WinOverlayContainer {
 
     public destroy(): void {
         if (this.isActive) {
-
+            if(this.scene.audioManager.FreeSpinWon.isPlaying){
+                this.scene.audioManager.FreeSpinWon.stop();
+            }
             this.scene.slotMachine.activeWinOverlay = false;
             this.winAnimation.exitAnimation();
             if (this.onUpdateTotalWin) {
@@ -733,6 +735,9 @@ export class WinOverlayContainer {
                             Events.emitter.emit(Events.AUTOPLAY_START, this.scene.gameData.freeSpins);
                         }
                     }
+                    
+                    this.scene.background.toggleBackground(this.scene);
+                    this.scene.audioManager.changeBackgroundMusic(this.scene);
                     this.destroy();
                 });
             });

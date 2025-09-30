@@ -25,20 +25,17 @@ export class RetriggerOverlayContainer {
 		// Semi-transparent fullscreen dimmer
 		const dim = this.scene.add.graphics();
 		dim.fillStyle(0x000000, 0.7);
-		dim.fillRect(0, 0, this.scene.scale.width * 2, this.scene.scale.height * 2);
+		dim.fillRect(0, 0, 428 * 2, 926 * 2);
 		this.container.add(dim);
 
 		// Centered content container
-		this.contentContainer = this.scene.add.container(
-			this.isMobile ? this.scene.scale.width : this.scene.scale.width * 0.5,
-			this.isMobile ? this.scene.scale.height : this.scene.scale.height * 0.5
-		);
+		this.contentContainer = this.scene.add.container(428, 926);
 		this.container.add(this.contentContainer);
 
 		// Fullscreen interactive zone for click-to-continue
-		this.buttonZone = this.scene.add.zone(0, 0, this.scene.scale.width, this.scene.scale.height);
+		this.buttonZone = this.scene.add.zone(0, 0, 428, 926);
 		this.buttonZone.setInteractive(
-			new Phaser.Geom.Rectangle(0, 0, this.scene.scale.width * 2, this.scene.scale.height * 2),
+			new Phaser.Geom.Rectangle(0, 0, 428 * 2, 926 * 2),
 			Phaser.Geom.Rectangle.Contains
 		);
 		this.container.add(this.buttonZone);
@@ -77,7 +74,7 @@ export class RetriggerOverlayContainer {
 		}
 
 		// Pointer skip
-		this.buttonZone.on('pointerdown', () => this.tryClose(onClose));
+		//this.buttonZone.on('pointerdown', () => this.tryClose(onClose));
 
 		// Auto-close in autoplay/API-driven scenarios after a short pause
 		const shouldAutoClose = (this.scene as any).buttons?.autoplay?.isAutoPlaying || (this.scene as any).gameData?.useApiFreeSpins;
