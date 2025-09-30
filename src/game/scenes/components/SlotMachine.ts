@@ -721,7 +721,7 @@ export class SlotMachine {
         } catch (_e) { /* ignore recompute errors */ }
 
         
-        const bonusWin = scene.gameData.totalBonusWin;
+        const bonusWin = scene.gameData.totalWin;
         console.log("endiAPIBonus", bonusWin);
 
         this.showBonusWin(scene, bonusWin);
@@ -1264,6 +1264,7 @@ export class SlotMachine {
 
         // Otherwise, show congrats normally
         this.enqueueWinOverlay(scene, totalWin, 'Congrats');
+        //this.showWinOverlay(scene, scene.gameData.totalWin, scene.gameData.bet);
         scene.buttons.freeSpinBtn.visible = false;
     }
 
