@@ -109,7 +109,7 @@ export class IdleState extends State {
                 });
             }
         } else {
-            reduceBalance(scene);
+            //reduceBalance(scene);
         }
 
         const slot = scene.gameData.slot;

@@ -338,12 +338,7 @@ export class SlotMachine {
             return;
         }
 
-        Events.emitter.emit(Events.UPDATE_BALANCE);
-
-        scene.gameAPI.getBalance().then((data) => {
-            console.log(data);
-            Events.emitter.emit(Events.GET_BALANCE);
-        });
+        //Events.emitter.emit(Events.UPDATE_BALANCE);
 
         this.cleanupAloneSymbols();
         let newValues: number[][] = [];
@@ -369,7 +364,15 @@ export class SlotMachine {
         console.log("slotArea", result.slot.area);
         console.log("Tumbles", result.slot.tumbles);
 
-        Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, result.bet, 0);
+        let toBet = result.bet;
+        if(scene.gameData.buyFeatureEnabled){
+            toBet *= 100;
+        }
+         else if(scene.gameData.doubleChanceEnabled){
+            toBet *= 1.25;
+        }
+
+        Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, toBet, 0); // ( reduce , increase )
         
         if(result.slot.freeSpin?.length > 0){
             console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);

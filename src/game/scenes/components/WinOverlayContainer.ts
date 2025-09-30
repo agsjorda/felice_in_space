@@ -78,7 +78,7 @@ export class WinOverlayContainer {
         this.container.add(contentContainer);
 
         // Add win animation
-        this.winAnim = this.scene.add.spine(0, 0, 'myWinAnim2', 'myWinAnim2') as SpineGameObject;
+        this.winAnim = this.scene.add.spine(100, 0, 'myWinAnim2', 'myWinAnim2') as SpineGameObject;
         this.winAnim.setOrigin(0.5, 0.5);
         this.winAnim.name = 'winAnim';
         contentContainer.add(this.winAnim);
@@ -93,6 +93,7 @@ export class WinOverlayContainer {
         });
         this.winText_x = this.winText.x;
         this.winText_y = this.winText.y;
+        
         const gradient = this.winText.context.createLinearGradient(0,0,0,this.winText.height);
         gradient.addColorStop(0, '#00FF88');
         gradient.addColorStop(0.5, '#00DD55');
@@ -149,7 +150,7 @@ export class WinOverlayContainer {
         contentContainer.add(this.freeSpinsText);
 
         // Add continue button
-        this.buttonText = this.scene.add.text(0, this.winText_y + 100, 'Press anywhere to continue', {
+        this.buttonText = this.scene.add.text(100, this.winText_y + 120, 'Press anywhere to continue', {
             fontSize: '30px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
@@ -191,6 +192,7 @@ export class WinOverlayContainer {
                 return;
             }
             if (winType === 'Congrats') {
+                this.winAnim.setPosition(50, 0);
                 this.winText.setPosition(25, 150);
                 this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 this.winText.setScale(0.75);
@@ -290,7 +292,7 @@ export class WinOverlayContainer {
 
         if(this.winAnim){
             this.winAnim.setScale(0.6);
-            this.buttonText.setPosition(0, this.buttonText.y + 200);
+            this.buttonText.setPosition(50, this.buttonText.y + 225);
             this.buttonText.setScale(1.0989);
         }
 

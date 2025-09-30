@@ -1586,13 +1586,17 @@ export class Buttons {
 
         Events.emitter.on(Events.WIN, (data: any) => {
             if(!data)
+            {
+                console.error("balance updated");
                 Events.emitter.emit(Events.UPDATE_BALANCE);
+            }
         });
 
         Events.emitter.on(Events.UPDATE_BALANCE, () => {
             console.error("balance updated");
             try{
                 scene.gameAPI.getBalance().then((data) => {
+                    console.log("balance", data);
                     const balance = data.data.balance;
                         text2.setText(scene.gameData.currency + " " + balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); 
                     // console.log("update balance " + balance);
@@ -1608,6 +1612,7 @@ export class Buttons {
         Events.emitter.on(Events.UPDATE_FAKE_BALANCE, (reduce: number, increase: number) => {
             scene.gameData.balance -= reduce;
             scene.gameData.balance += increase;
+            console.error("fake balance updated> reduce:" + reduce + " increase:" + increase + " = balance:" +  scene.gameData.balance);
             text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         });
 
@@ -1692,15 +1697,15 @@ export class Buttons {
                 if (totalWinQueue.length === 0) {
                     isProcessingTotalWinQueue = false;
 
-                    if (isBomb) {
-                        const idx = Math.max(0, Math.min(scene.gameData.apiFreeSpinsIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
-                        const arr = scene.gameData.totalWinFreeSpin || [];
-                        totalWinCurrentTotal = arr.slice(0, idx + 1).reduce((sum, v) => sum + (v || 0), 0);
+                    // if (isBomb) {
+                    //     const idx = Math.max(0, Math.min(scene.gameData.apiFreeSpinsIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
+                    //     const arr = scene.gameData.totalWinFreeSpin || [];
+                    //     totalWinCurrentTotal = arr.slice(0, i/d/x + 1).reduce((sum, v) => sum + (v || 0), 0);
 
-                        if(idx == arr.length - 1){
-                            totalWinCurrentTotal = scene.gameData.totalWin;
-                        }
-                    }
+                    //     if(idx == arr.length - 1){
+                    //         totalWinCurrentTotal = scene.gameData.totalWin;
+                    //     }
+                    // }
 
                     text2.setText(`$ ${formatMoney(totalWinCurrentTotal)}`);
                     return;
