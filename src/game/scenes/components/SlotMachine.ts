@@ -251,13 +251,13 @@ export class SlotMachine {
             entryContainers.push(entry);
 
             if(validSymbols.length === 3){
-                entry.setScale(2);
+                entry.setScale(3);
             }
             else if(validSymbols.length === 2){
-                entry.setScale(1.33);
+                entry.setScale(2);
             }
             else{
-                entry.setScale(0.8);
+                entry.setScale(0.75);
             }
 
             // Track for cleanup
@@ -266,7 +266,7 @@ export class SlotMachine {
         });
 
         // Lay out the entries within available width
-        const maxWidth = scene.scale.width * 0.8;
+        const maxWidth = scene.scale.width * 0.6;
         layoutContainersRow(scene, entryContainers, {
             x: 0,
             y: 0,
