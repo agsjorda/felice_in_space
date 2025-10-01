@@ -17,7 +17,7 @@ function getUrlParameter(name: string): string | null {
 function logUrlParameters(): void {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.toString()) {
-        console.log('🔍 URL Parameters:', Object.fromEntries(urlParams.entries()));
+        // console.log('🔍 URL Parameters:', Object.fromEntries(urlParams.entries()));
     }
 }
 
@@ -129,7 +129,7 @@ export class GameData {
     // Debug mode property - initialized from URL parameter
     public debugged: number = (() => {
         const debugParam = getUrlParameter('debug');
-        console.log('debugParam', debugParam, parseInt(debugParam || '0'));
+        //console.log('debugParam', debugParam, parseInt(debugParam || '0'));
         return debugParam ? parseInt(debugParam) : 0;
     })();
 
@@ -148,20 +148,6 @@ export class GameData {
     // Utility method to check if debug mode is enabled
     isDebugMode(): boolean {
         return this.debugged > 0;
-    }
-
-    // Debug error logging method - only logs when debug mode is enabled
-    debugError(message: string, ...args: any[]): void {
-        if (this.debugged > 0) {
-            console.error(`%c[DEBUG ERROR] ${message}`, 'color: #ff0000', ...args);
-        }
-    }
-
-    // Debug logging method - only logs when debug mode is enabled
-    debugLog(message: string, ...args: any[]): void {
-        if (this.debugged > 0) {
-            console.log(`[DEBUG] ${message}`, ...args);
-        }
     }
 }
 

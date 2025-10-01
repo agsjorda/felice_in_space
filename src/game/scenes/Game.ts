@@ -144,7 +144,7 @@ export class Game extends Scene {
         try {
             // Debug logging example (only logs every 60 frames to avoid spam)
             if (this.gameData.debugged > 0 && time % 1000 < 16) { // ~60fps
-                this.gameData.debugLog('Game update - isSpinning:', this.gameData.isSpinning);
+                console.log('Game update - isSpinning:', this.gameData.isSpinning);
             }
             
             // Update state machine

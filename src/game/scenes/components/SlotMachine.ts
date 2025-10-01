@@ -281,7 +281,7 @@ export class SlotMachine {
         else{
             this.symbolCountWinContainer.setVisible(false);
         }
-        scene.gameData.debugLog("SymbolCountWin display is now visible");
+
     }
 
     private hideSymbolCountWinDisplay(): void {
@@ -348,8 +348,8 @@ export class SlotMachine {
         const betAmount =  scene.gameData.bet;
         const isEnhancedBet = data.isEnhancedBet ?? scene.gameData.doubleChanceEnabled;
         
-        if(isBuyFeature || isEnhancedBet)
-            console.log('[BUY FEATURE] isBuyFeature:', isBuyFeature, 'betAmount sent:', betAmount, 'isEnhancedBet:', isEnhancedBet);;
+        // if(isBuyFeature || isEnhancedBet)
+        //     console.log('[BUY FEATURE] isBuyFeature:', isBuyFeature, 'betAmount sent:', betAmount, 'isEnhancedBet:', isEnhancedBet);;
         
         const result = await scene.gameAPI.doSpin(betAmount, isBuyFeature, isEnhancedBet);
 
@@ -361,8 +361,8 @@ export class SlotMachine {
         }
         
         console.log("result", result);
-        console.log("slotArea", result.slot.area);
-        console.log("Tumbles", result.slot.tumbles);
+        // console.log("slotArea", result.slot.area);
+        // console.log("Tumbles", result.slot.tumbles);
 
         let toBet = result.bet;
         if(scene.gameData.buyFeatureEnabled){
@@ -374,9 +374,9 @@ export class SlotMachine {
 
         Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, toBet, 0); // ( reduce , increase )
         
-        if(result.slot.freeSpin?.items?.length > 0){
-            console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
-        }
+        // if(result.slot.freeSpin?.items?.length > 0){
+        //     console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
+        // }
         
         // If backend returned free spin sequence, store it to drive the bonus round from API data
         const apiFs = result?.slot?.freeSpin?.items || result?.slot?.freeSpins?.items || [];
@@ -468,7 +468,7 @@ export class SlotMachine {
                 if (scene.buttons?.hideBottomControlsForBonus) {
                     scene.buttons.hideBottomControlsForBonus(scene, true);
                 }
-                console.error(`[BONUS] API FS: animations done, setting isBonusRound=true and showing popup (FS=${currentSpinsLeft})`);
+                // console.error(`[BONUS] API FS: animations done, setting isBonusRound=true and showing popup (FS=${currentSpinsLeft})`);
                 this.showFreeSpinsPopup(scene, currentSpinsLeft);
             });
         }
@@ -630,7 +630,7 @@ export class SlotMachine {
                 }
             }
         } catch (e) {
-            scene.gameData.debugError('Scatter animation (API) failed', e);
+            console.error('Scatter animation (API) failed', e);
         }
 
         // After all animations for this free spin, show Big/Mega/Epic/Super overlay
@@ -684,7 +684,7 @@ export class SlotMachine {
     private async animateScatterSymbolsForApi(scene: GameScene, scatterSprites: (Phaser.GameObjects.Sprite | SpineGameObject | SymbolContainer)[]): Promise<void> {
         if (scatterSprites.length === 0) return;
         if (scatterSprites.length < 3) return;
-        console.log(`[SCATTER] (API) Preparing to animate ${scatterSprites.length} scatter symbol(s)`);
+        // console.log(`[SCATTER] (API) Preparing to animate ${scatterSprites.length} scatter symbol(s)`);
         scene.audioManager.ScatterSFX.play();
         const animationPromises: Promise<void>[] = [];
         scatterSprites.forEach((sprite, index) => {
@@ -725,7 +725,7 @@ export class SlotMachine {
 
         
         const bonusWin = scene.gameData.totalWin;
-        console.log("endiAPIBonus", bonusWin);
+        // console.log("endiAPIBonus", bonusWin);
 
         this.showBonusWin(scene, bonusWin);
         scene.gameData.useApiFreeSpins = false;
@@ -985,7 +985,7 @@ export class SlotMachine {
             console.error("Error in match processing: " + error);
         } finally {
             // Only handle deferred scatter at the end of all matches
-            console.log(chalk.green.bold('totalWin: ' + scene.gameData.totalWin.toFixed(2)));
+            // console.log(chalk.green.bold('totalWin: ' + scene.gameData.totalWin.toFixed(2)));
             // Big/Mega/Epic/Super overlays will be handled per-tumble during FreeSpins only
             // Ensure bomb animations complete before showing win overlay
             if (this.hadMatchThisSpin) {
@@ -1045,7 +1045,7 @@ export class SlotMachine {
                 Events.emitter.emit(Events.FREE_SPIN_TOTAL_WIN);
             }
 
-            console.log("Spin sequence completed, isSpinning reset to false");
+            // console.log("Spin sequence completed, isSpinning reset to false");
             // Immediately re-enable buttons when spinning completes
             if (scene.buttons && scene.buttons.enableButtonsVisually) {
                 scene.buttons.enableButtonsVisually(scene);
@@ -1100,7 +1100,7 @@ export class SlotMachine {
                     scene.gameData.demoMode = true;
                 }
 
-                scene.audioManager.ReelDrop.play('hit',{delay:0.01});
+                scene.audioManager.ReelDrop.play();
                 // Fire spin start event so UI (e.g., total win text) can reset immediately
                 try { Events.emitter.emit(Events.SPIN_ANIMATION_START, { currentRow: scene.gameData.currentRow }); } catch (_e) {}
                 if (scene.gameData.demoMode) {
@@ -1120,7 +1120,7 @@ export class SlotMachine {
                     await this.createReel(scene, data);
                 }
             } catch (error) {
-                scene.gameData.debugError("Error during spin: " + error);
+                console.error("Error during spin: " + error);
                 scene.gameData.isSpinning = false; // Reset state on error
                 // Re-enable buttons on error
                 if (scene.buttons && scene.buttons.enableButtonsVisually) {
@@ -1881,7 +1881,7 @@ export class SlotMachine {
                     newSymbol = new BombContainer(scene, symbolX, startY, symbolValue, scene.gameData);
                     // Match the size of normal symbols
                     newSymbol.setBombDisplaySize(width * Slot.SYMBOL_SIZE * Slot.BOMB_SCALE, height * Slot.SYMBOL_SIZE * Slot.BOMB_SCALE);
-                    console.log('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
+                    // console.log('Created BombContainer for dropAndRefill', { symbolValue, position: { x: symbolX, y: startY } });
                 } else {
                     const sc = new SymbolContainer(scene, symbolX, startY, symbolValue === 0 ? 0 : symbolValue, scene.gameData);
                     try { sc.getSymbolSprite().animationState.setAnimation(0, `animation`, false); } catch (_e) {}

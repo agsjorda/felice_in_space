@@ -117,7 +117,7 @@ export class GameAPI {
             sessionStorage.removeItem('exit_url');
             sessionStorage.removeItem('what_device');
             
-            console.log(chalk.yellowBright.bold('Starting gameLauncher...'));
+            // console.log(chalk.yellowBright.bold('Starting gameLauncher...'));
             //let {url, token} = await this.generateGameUrlToken();
             let token1 = '';
             let tokenParam = getUrlParameter('token');
@@ -142,7 +142,7 @@ export class GameAPI {
 
             let startGame = getUrlParameter('start_game');
             if(startGame){
-                console.log('startGame');
+                // console.log('startGame');
                 let {url, token} = await this.generateGameUrlToken();
                 token1 = token;
                 localStorage.setItem('gameToken', token);
@@ -189,18 +189,16 @@ export class GameAPI {
             //console.log('getbalance', data);
             return data;
         } catch (error) {
-            this.gameData.debugError('Error in getBalance:', error);
             throw error;
         }
     }
 
     public async doSpin(bet: number, isBuyFs:boolean, isEnhancedBet:boolean): Promise<any> {
-        let _isBuyFs : string = isBuyFs? chalk.green('true') : chalk.red('false');
-        let _isEnBet : string = isEnhancedBet? chalk.green('true') : chalk.red('false');
-        console.log(
-            chalk.grey('[API] doSpin called. bet: ') + chalk.blue(bet) + 
-        chalk.grey(' | isBuyFs: ') + _isBuyFs + 
-        chalk.grey(' | isEnhancedBet: ') + _isEnBet);
+        // let _isBuyFs : string = isBuyFs? chalk.green('true') : chalk.red('false');
+        // let _isEnBet : string = isEnhancedBet? chalk.green('true') : chalk.red('false');
+        // console.log(chalk.grey('[API] doSpin called. bet: ') + chalk.blue(bet) + 
+        // chalk.grey(' | isBuyFs: ') + _isBuyFs + 
+        // chalk.grey(' | isEnhancedBet: ') + _isEnBet);
         if(!localStorage.getItem('gameToken')){
             return "error";
         }
@@ -226,6 +224,7 @@ export class GameAPI {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+           
             // Treat HTTP 400 as session timeout
             if(response.status === 400){
                 try { Events.emitter.emit(Events.SESSION_TIMEOUT, {}); } catch (_e) {}
@@ -241,7 +240,7 @@ export class GameAPI {
                 try { Events.emitter.emit(Events.SESSION_TIMEOUT, {}); } catch (_e) {}
                 throw new Error(`HTTP error! status: ${data.statusCode}`);
             }
-            console.log(chalk.gray('[API] doSpin response data:'), data);
+            // console.log(chalk.gray('[API] doSpin response data:'), data);
             return data;
 
         } catch (error) {

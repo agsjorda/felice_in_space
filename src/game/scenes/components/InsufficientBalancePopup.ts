@@ -99,7 +99,7 @@ export class InsufficientBalancePopup {
         interactiveZone.setOrigin(0, 0);
         interactiveZone.setInteractive(new Geom.Rectangle(0, 0, buttonWidth, buttonHeight), Geom.Rectangle.Contains);
         interactiveZone.on('pointerdown', () => {
-            console.log('[UI] InsufficientBalancePopup OK clicked');
+            // console.log('[UI] InsufficientBalancePopup OK clicked');
             this.hide(scene);
         });
         this.container.add(interactiveZone);
@@ -114,7 +114,7 @@ export class InsufficientBalancePopup {
         this.isVisible = true;
         this.container.setVisible(true);
         this.container.alpha = 1;
-        console.log('[UI] Showing InsufficientBalancePopup');
+        // console.log('[UI] Showing InsufficientBalancePopup');
     }
 
     hide(scene: GameScene): void {

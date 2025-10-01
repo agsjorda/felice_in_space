@@ -99,7 +99,7 @@ export class Animation {
                 return !!(currentAnimation && currentAnimation.animation && currentAnimation.animation.name === 'animation');
             }
         } catch (error) {
-            this.scene.gameData.debugError("Error checking symbol animation state: " + error);
+            console.error("Error checking symbol animation state: " + error);
         }
         return false;
     }

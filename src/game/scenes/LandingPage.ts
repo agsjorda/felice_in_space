@@ -31,7 +31,7 @@ export class LandingPage extends Scene {
     }
 
     create(): void {
-        console.log(this.cameras.main.width, this.cameras.main.height);
+        // console.log(this.cameras.main.width, this.cameras.main.height);
         
         // Log font status for debugging
         logFontStatus();

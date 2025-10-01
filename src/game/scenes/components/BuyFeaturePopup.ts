@@ -211,9 +211,9 @@ export class BuyFeaturePopup {
             const cost = scene.gameData.getBuyFeaturePrice();
             const balance = scene.gameData.balance;
             const ok = balance >= cost;
-            console.log(`[BUY FEATURE] Clicked. balance=${balance}, cost=${cost}, ok=${ok}`);
+            // console.log(`[BUY FEATURE] Clicked. balance=${balance}, cost=${cost}, ok=${ok}`);
             if (!ok) {
-                console.log('[BUY FEATURE] Blocked: insufficient balance, showing popup');
+                // console.log('[BUY FEATURE] Blocked: insufficient balance, showing popup');
                 Events.emitter.emit(Events.SHOW_INSUFFICIENT_BALANCE);
                 return;
             }

@@ -81,7 +81,7 @@ export class SymbolContainer extends GameObjects.Container {
                     resolve();
                 }
             } catch (error) {
-                this.gameData.debugError('Could not play animation for symbol', {
+                console.error('Could not play animation for symbol', {
                     symbolValue: this.symbolValue,
                     error
                 });

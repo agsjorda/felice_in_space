@@ -164,7 +164,7 @@ export class BombContainer extends GameObjects.Container {
      */
     private getMultiplierFromBombValue(bombValue: number): number {
         if (bombValue < 10 || bombValue > 22) {
-            this.gameData.debugError('Invalid bomb value:', bombValue);
+            console.error('Invalid bomb value:', bombValue);
             return 1; // Default fallback
         }
         
@@ -175,7 +175,7 @@ export class BombContainer extends GameObjects.Container {
             return multipliers[multiplierIndex];
         }
         
-        this.gameData.debugError('Multiplier index out of range:', multiplierIndex);
+        console.error('Multiplier index out of range:', multiplierIndex);
         return 1; // Default fallback
     }
 
@@ -235,7 +235,7 @@ export class BombContainer extends GameObjects.Container {
      * Play bomb animation based on type
      */
     playBombAnimation(): void {
-        console.log('Playing bomb animation', { bombType: this.bombType });
+        //console.log('Playing bomb animation', { bombType: this.bombType });
         
         // Set the appropriate animation based on bomb type
         setTimeout(() => {
@@ -309,14 +309,14 @@ export class BombContainer extends GameObjects.Container {
      */
     updateText(text: string): void {
         this.textOverlay.setText(text);
-        console.log('Bomb text updated', { text });
+        //console.log('Bomb text updated', { text });
     }
 
     /**
      * Show explosion effect
      */
     showExplosion(): void {
-        console.log('Showing bomb explosion');
+        //console.log('Showing bomb explosion');
         
         // Use an overlay bomb so the animation sits above other symbols
         try {

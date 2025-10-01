@@ -29,6 +29,7 @@ export class WinOverlayContainer {
     private freeSpinsText: GameObjects.Text;
     private buttonText: GameObjects.Text;
     private winAnim: SpineGameObject;
+    private winAnim_x: number = 0;
     private winAnim_y: number = 0;
     private isActive: boolean = false;
     private isAnimating: boolean = false;
@@ -79,8 +80,12 @@ export class WinOverlayContainer {
 
         // Add win animation
         this.winAnim = this.scene.add.spine(100, 0, 'myWinAnim2', 'myWinAnim2') as SpineGameObject;
-        this.winAnim.setOrigin(0.5, 0.5);
+        this.winAnim.setOrigin(0.475, 0.5);
         this.winAnim.name = 'winAnim';
+        this.winAnim_x = this.winAnim.x;
+        this.winAnim_x -= 50;
+        this.winAnim_y = this.winAnim.y;
+
         contentContainer.add(this.winAnim);
 
         // Add win amount text
@@ -91,6 +96,7 @@ export class WinOverlayContainer {
             fontStyle: 'bold',
             align: 'center',
         });
+        this.winText.setPosition(0, 100);
         this.winText_x = this.winText.x;
         this.winText_y = this.winText.y;
         
@@ -150,7 +156,7 @@ export class WinOverlayContainer {
         contentContainer.add(this.freeSpinsText);
 
         // Add continue button
-        this.buttonText = this.scene.add.text(100, this.winText_y + 120, 'Press anywhere to continue', {
+        this.buttonText = this.scene.add.text(100, this.winText_y + 50, 'Press anywhere to continue', {
             fontSize: '30px',
             color: '#FFFFFF',
             fontFamily: 'Poppins',
@@ -186,14 +192,15 @@ export class WinOverlayContainer {
     private setupEventListeners(): void {
         this.onUpdateTotalWin = (totalWin: number, winType: string) => {
             if (this.currentWinType === 'FreeSpin') {
-                this.winText.setPosition(50, 50);
+                this.winAnim.setPosition(0, 0);
+                this.winText.setPosition(80, 50);
                 this.winText.setText(`${totalWin.toFixed(0)}`);
                 this.freeSpinsText.visible = false;
                 return;
             }
             if (winType === 'Congrats') {
-                this.winAnim.setPosition(50, 0);
-                this.winText.setPosition(25, 150);
+                this.winAnim.setPosition(15, 0);
+                this.winText.setPosition(45, 150);
                 this.winText.setText(`${totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 this.winText.setScale(0.75);
                 this.freeSpinsText.visible = false;
@@ -204,7 +211,6 @@ export class WinOverlayContainer {
                 this.freeSpinsText.visible = false;
 
             } else {
-                
                 this.startCounting(this.winAnim, totalWin);
                 this.freeSpinsText.visible = false;
             }
@@ -292,7 +298,7 @@ export class WinOverlayContainer {
 
         if(this.winAnim){
             this.winAnim.setScale(0.6);
-            this.buttonText.setPosition(50, this.buttonText.y + 225);
+            this.buttonText.setPosition(50, this.buttonText.y + 150);
             this.buttonText.setScale(1.0989);
         }
 
@@ -419,7 +425,9 @@ export class WinOverlayContainer {
 		this.currentAnimationPhase = 'bigwin_intro';
 
 		this.winAnim.animationState.setAnimation(0, 'bigwin_intro_fis', false);
-		this.winText.setPosition(this.winText_x, this.winText_y + 150);
+        this.winAnim.x = this.winAnim_x;
+        this.winAnim.setPosition(this.winAnim_x - 50, this.winAnim_y);
+		this.winText.setPosition(this.winText_x + 20, this.winText_y + 50);
 		this.winTextFadeIn();
         
         this.scene.audioManager.queueWinSFX(['BigWin']);
@@ -465,7 +473,6 @@ export class WinOverlayContainer {
 		this.currentAnimationPhase = 'bigwin_idle';
 
 		this.winAnim.animationState.setAnimation(0, 'bigwin_idle_fis', true);
-        this.winAnim_y = this.winAnim.y;
 		let incrementTo = this.finalBetTotal;
 		if(this.finalBetTotal - 0.01 > this.scene.gameData.bet * this.scene.gameData.winRank[1]){
 			incrementTo = this.scene.gameData.bet * this.scene.gameData.winRank[1];
@@ -488,7 +495,9 @@ export class WinOverlayContainer {
 		this.currentAnimationPhase = 'megawin_intro';
             
 		this.winAnim.animationState.setAnimation(0, 'megawin_intro_fis', false); 
-		this.winText.setPosition(this.winText_x, this.winText_y + 150);
+        this.winAnim.x = this.winAnim_x;
+        this.winAnim.setPosition(this.winAnim_x - 80, this.winAnim_y);
+		this.winText.setPosition(this.winText_x + 30, this.winText_y + 50);
 		this.winTextFadeIn();
 
 		// Queue the appropriate sounds
@@ -539,9 +548,9 @@ export class WinOverlayContainer {
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'epicwin_intro';
 		this.winAnim.animationState.setAnimation(0, 'epicwin_intro_fis', false);
-        this.winAnim.setPosition(this.winAnim.x, this.winAnim_y);
-        this.winAnim.setPosition(this.winAnim.x, this.winAnim.y + 75);
-		this.winText.setPosition(this.winText_x, this.winText_y + 150);
+        this.winAnim.setScale(0.66);
+        this.winAnim.setPosition(this.winAnim_x - 70, this.winAnim_y + 20);
+		this.winText.setPosition(this.winText_x + 20, this.winText_y + 35);
 		this.winTextFadeIn();
 
 		// Queue the appropriate sounds
@@ -592,9 +601,9 @@ export class WinOverlayContainer {
 		this.isIntroPlaying = true;
 		this.currentAnimationPhase = 'superwin_intro';
 		this.winAnim.animationState.setAnimation(0, 'superwin_intro_fis', false);
-        this.winAnim.setPosition(this.winAnim.x, this.winAnim_y);
-        //this.winAnim.setPosition(this.winAnim.x, this.winAnim.y);
-		this.winText.setPosition(this.winText_x, this.winText_y + 150);
+        this.winAnim.x = this.winAnim_x;
+        this.winAnim.setPosition(this.winAnim_x - 85, this.winAnim_y);
+        this.winText.setPosition(this.winText_x + 50, this.winText_y + 50);
 		this.winTextFadeIn();
 
 		// Queue the appropriate sounds

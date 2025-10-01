@@ -1210,7 +1210,7 @@ export class Buttons {
                     }
                 });
                 
-                scene.gameData.debugLog("autoplay.isAutoPlaying", this.autoplay.isAutoPlaying);
+                // console.log("autoplay.isAutoPlaying", this.autoplay.isAutoPlaying);
                 // Start autoplay 
                 Events.emitter.emit(Events.AUTOPLAY_START, selectedSpins);
 
@@ -1593,10 +1593,10 @@ export class Buttons {
         });
 
         Events.emitter.on(Events.UPDATE_BALANCE, () => {
-            console.error("balance updated");
+            // console.error("balance updated");
             try{
                 scene.gameAPI.getBalance().then((data) => {
-                    console.log("balance", data);
+                    // console.log("balance", data);
                     const balance = data.data.balance;
                         text2.setText(scene.gameData.currency + " " + balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); 
                     // console.log("update balance " + balance);
@@ -1612,7 +1612,7 @@ export class Buttons {
         Events.emitter.on(Events.UPDATE_FAKE_BALANCE, (reduce: number, increase: number) => {
             scene.gameData.balance -= reduce;
             scene.gameData.balance += increase;
-            console.error("fake balance updated> reduce:" + reduce + " increase:" + increase + " = balance:" +  scene.gameData.balance);
+            //console.error("fake balance updated> reduce:" + reduce + " increase:" + increase + " = balance:" +  scene.gameData.balance);
             text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         });
 
@@ -2765,8 +2765,6 @@ export class Buttons {
             const totalProduct = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex] * scene.gameData.totalBombWin;
             const totalProductString = totalProduct.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             //youWonLabel.setText('WIN');
-            console.log('2764 Show Bomb Win ' + scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex]);
-            console.log('2765 Total Bomb Win ', scene.gameData.totalWinFreeSpinPerTumble);
             if(multiplier > 1)
             youWonAmount.setText(`${scene.gameData.currency} ${totalWin} x ${multiplier} = ${totalProductString}`);
         });
@@ -2779,7 +2777,6 @@ export class Buttons {
                     const finalTotal =
                      (scene.gameData.totalWinFreeSpin || []).reduce((s, v) => s + (Number(v) || 0));
                     youWonLabel.setText('TOTAL WIN');
-                    console.log('Total Win', finalTotal);
                     youWonAmount.setText(`${scene.gameData.currency} ${finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 }
             } catch (_e) {}
@@ -2954,7 +2951,7 @@ export class Buttons {
             youWonAmount.setText(`${scene.gameData.currency} ${scene.gameData.totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         });
         Events.emitter.on(Events.FREE_SPIN_TOTAL_WIN, ()=>{
-            console.log(scene.gameData.currentFreeSpinIndex);
+            //console.log(scene.gameData.currentFreeSpinIndex);
             
             // Calculate finalTotal as the sum of totalWinFreeSpin up to and including currentFreeSpinIndex
             const idx = Math.max(0, Math.min(scene.gameData.currentFreeSpinIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));

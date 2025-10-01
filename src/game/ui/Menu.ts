@@ -525,7 +525,7 @@ export class Menu {
             loader.destroy();
             this.historyIsLoading = false;
         }
-        console.log(result);
+        // console.log(result);
 
         // Update pagination state
         this.historyCurrentPage = result?.meta?.page ?? page;
