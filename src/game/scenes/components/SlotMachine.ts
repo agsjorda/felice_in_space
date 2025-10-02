@@ -365,10 +365,10 @@ export class SlotMachine {
         // console.log("Tumbles", result.slot.tumbles);
 
         let toBet = result.bet;
-        if(scene.gameData.buyFeatureEnabled){
+        if(data.isBuyFeature){
             toBet *= 100;
         }
-         else if(scene.gameData.doubleChanceEnabled){
+         else if(data.isEnhancedBet){
             toBet *= 1.25;
         }
 
