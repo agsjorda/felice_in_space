@@ -62,4 +62,7 @@ export class Events {
     static readonly HIDE_BOMB_WIN: string = 'hide_bomb_win';
     
     static readonly TOGGLE_BACKGROUND: string = 'toggle_background';
+
+	// Scatter anticipation control
+	static readonly SCATTER_ANTICIPATION_TOGGLE: string = 'scatter_anticipation_toggle';
 } 

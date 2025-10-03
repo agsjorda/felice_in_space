@@ -94,6 +94,8 @@ export class SlotMachine {
     private deferredScatterCount: number = 0;
     private bonusTriggeredThisSpin: boolean = false;
     private maxWinClaim?: MaxWinClaimPopup;
+    private scatterAnticipations: SpineGameObject[] = [];
+    private droppingScatters: Set<SymbolContainer> = new Set();
 
     constructor() {
         this.symbolDisplayWidth = 153.17;
@@ -110,6 +112,8 @@ export class SlotMachine {
 
     preload(scene: Scene): void {
         scene.load.image('slotBackground', 'assets/Reels/Mobile_Grid.png');
+        scene.load.spineAtlas(`scatterAnticipation`,`assets/Controllers/Animation/ScatterAnticipation/skeleton.atlas`);
+        scene.load.spineJson(`scatterAnticipation`,`assets/Controllers/Animation/ScatterAnticipation/skeleton.json`);
 
         // Initialize animation
         this.animation = new Animation(scene);
@@ -158,13 +162,11 @@ export class SlotMachine {
     }
 
     private createContainer(scene: GameScene): void {
-        this.container = scene.add.container(
-            this.isMobile ? scene.scale.width * 0.05 : this.slotX,
-            this.isMobile ? scene.scale.height * 0.23 : this.slotY);
-        this.container.setScale(this.isMobile ? 0.4 : 1);
+        this.container = scene.add.container(scene.scale.width * 0.05, scene.scale.height * 0.23)
+        this.container.setScale(0.4);
 
-        this.totalGridWidth = this.isMobile ? this.totalGridWidth * 0.43 : this.totalGridWidth;
-        this.totalGridHeight = this.isMobile ? this.totalGridHeight * 0.43 : this.totalGridHeight; 
+        this.totalGridWidth = this.totalGridWidth * 0.43;
+        this.totalGridHeight = this.totalGridHeight * 0.43; 
         this.container.setDepth(4);
         
         // Create SymbolCountWin display container
@@ -328,6 +330,102 @@ export class SlotMachine {
         const mask = maskShape.createGeometryMask();
         this.container.setMask(mask);
         maskShape.setVisible(false);
+        
+        // Create 5 ScatterAnticipation spines centered on the screen and log their sizes
+		const centerX = scene.scale.width * 0.495;
+		const centerY = scene.scale.height * 0.4;
+        
+		this.scatterAnticipations = new Array(6);
+
+		// Create a temporary instance to determine native bounds for spacing and scaling
+		const temp = scene.add.spine(centerX, centerY, `scatterAnticipation`, `scatterAnticipation`) as SpineGameObject;
+		temp.animationState.setAnimation(0, `animation`, true);
+		const rawBounds: any = (temp as any).getBounds ? (temp as any).getBounds() : undefined;
+		const nativeW = rawBounds?.size?.x ?? 0;
+		const nativeH = rawBounds?.size?.y ?? 0;
+		// console.log(`[ScatterAnticipation] native size: ${nativeW} x ${nativeH}`);
+
+		// Compute a scale to fit 5 items within ~80% of screen width
+		const targetTotalWidth = scene.scale.width * 0.8;
+		let scaleFactor = 1;
+		const baseW = nativeW > 0 ? nativeW : scene.scale.width * 0.12; // robust fallback width
+		{
+			// Gap equals one width per item, so total is 5 widths + 4 gaps of 1 width = 9 widths
+			const totalNative = baseW * 9;
+			scaleFactor = Math.min(1, targetTotalWidth / totalNative);
+		}
+		// Reduce horizontal scale (scaleX) by 20%, increase vertical scale (height) by 1.5x
+		temp.setScale(scaleFactor * 0.8, scaleFactor * 1.5);
+
+		// Recalculate width/height after scaling for accurate spacing
+		const scaledBounds: any = (temp as any).getBounds ? (temp as any).getBounds() : undefined;
+		const scaledW = (scaledBounds?.size?.x ?? baseW * scaleFactor) * 1; // already includes 0.8 in temp scale
+		const scaledH = scaledBounds?.size?.y ?? (nativeH > 0 ? nativeH * scaleFactor : baseW * scaleFactor);
+		console.log(`[ScatterAnticipation] scaled size: ${scaledW} x ${scaledH}`);
+
+		// Position calculation for 5 items horizontally centered at screen middle
+		// Gap equals width, so spacing = width + gap = width * 2
+		const spacing = (scaledW || 0) * 1.66;
+		const startX = centerX - ((6 - 1) * spacing) * 0.5;
+		temp.setDepth(1000);
+		temp.setPosition(startX + spacing * 2, centerY);
+		temp.setVisible(false);
+		this.scatterAnticipations[2] = temp;
+
+		for (let i = 0; i < 6; i++) {
+			if (i === 2) continue; // index 2 already created as temp (center)
+			const spineObj = scene.add.spine(centerX, centerY, `scatterAnticipation`, `scatterAnticipation`) as SpineGameObject;
+			spineObj.animationState.setAnimation(0, `animation`, true);
+			// Apply reduced horizontal scale (scaleX -20%) and 1.5x vertical scale
+			spineObj.setScale(scaleFactor * 0.8, scaleFactor * 1.5);
+			spineObj.setDepth(1000);
+			spineObj.setPosition(startX + spacing * i, centerY);
+			spineObj.setVisible(false);
+			this.scatterAnticipations[i] = spineObj;
+            const b: any = (spineObj as any).getBounds ? (spineObj as any).getBounds() : undefined;
+			const w = b?.size?.x ?? 0;
+			const h = b?.size?.y ?? 0;
+			// console.log(`[ScatterAnticipation] instance ${i} size: ${w} x ${h}`);
+		}
+    }
+
+    public setScatterAnticipationVisible(index: number, visible: boolean): void {
+        const obj = this.scatterAnticipations[index];
+        if (obj) {
+            obj.setVisible(visible);
+        }
+    }
+
+    public setAllScatterAnticipationsVisible(visible: boolean): void {
+        this.scatterAnticipations.forEach((obj) => obj.setVisible(visible));
+    }
+
+    private getLandedScatterCount(): number {
+        let count = 0;
+        try {
+            for (let r = 0; r < (this.symbolGrid?.length || 0); r++) {
+                const rowArr = (this.symbolGrid as any)[r] as Array<any>;
+                if (!rowArr) continue;
+                for (let c = 0; c < rowArr.length; c++) {
+                    const sym = rowArr[c];
+                    if (sym instanceof SymbolContainer) {
+                        const val = (sym as any).getSymbolValue ? (sym as any).getSymbolValue() : undefined;
+                        if (val === 0 && (sym as any).visible && !this.droppingScatters.has(sym)) {
+                            count++;
+                        }
+                    }
+                }
+            }
+        } catch (_e) {}
+        return count;
+    }
+
+    private logVisibleScatterCount(): void {
+        try {
+            // Count only landed, visible scatter containers (symbol 0) that are NOT currently dropping
+            const count = this.getLandedScatterCount();
+            console.log(`[SCATTER DROP] Visible scatter (symbol0) count (landed): ${count}`);
+        } catch (_e) { /* ignore log errors */ }
     }
     
     private async createReel(scene: GameScene, data: SpinData): Promise<void> {
@@ -453,7 +551,7 @@ export class SlotMachine {
                             }
                         }
                     }
-                    if (scatterObjs.length > 0) {
+                    if (scatterObjs.length >= 3) {
                         await this.animateScatterSymbolsForApi(scene, scatterObjs);
                     }
                 } catch (_e) { /* no-op */ }
@@ -915,6 +1013,11 @@ export class SlotMachine {
                 // Move new symbol down
                 if(newSymbol) {
                     const animationPromise = new Promise<void>((resolve) => {
+                        // Track only scatter containers during arrival tween
+                        const isScatterContainer = (newSymbol instanceof SymbolContainer) && (newSymbol as any).getSymbolValue?.() === 0;
+                        if (isScatterContainer) {
+                            this.droppingScatters.add(newSymbol as SymbolContainer);
+                        }
                         scene.tweens.add({
                             targets: newSymbol,
                             y: symbolY,
@@ -927,6 +1030,10 @@ export class SlotMachine {
                                         scene.audioManager.ReelDrop.play();
                                     }
                                 }
+                                if (isScatterContainer) {
+                                    this.droppingScatters.delete(newSymbol as SymbolContainer);
+                                }
+                                try { this.logVisibleScatterCount(); } catch (_e) {}
                                 resolve();
                             }
                         });
@@ -1797,8 +1904,6 @@ export class SlotMachine {
     }
 
     private async dropAndRefillAsync(symbolGrid: number[][], toRemove: boolean[][], scene: GameScene, SymbolsIn : Tumble): Promise<void> {
-        
-
         const rows = symbolGrid.length;
         const cols = symbolGrid[0].length;
         const width = this.symbolDisplayWidth;
@@ -1810,9 +1915,29 @@ export class SlotMachine {
         this.cleanupAloneSymbols();
 
         const dropPromises: Promise<void>[] = [];
+        console.log(`[DROP] dropAndRefillAsync start rows=${rows} cols=${cols}`);
 
         // For each column, drop down and fill new randoms
-        for (let col = 0; col < cols; col++) {
+		for (let col = 0; col < cols; col++) {
+			// Predictive anticipation: show when landed + incoming scatters in this column > 3
+			const landedCount = this.getLandedScatterCount();
+			// Estimate how many new symbols will enter this column using toRemove
+			let numIncoming = 0;
+			for (let r = 0; r < rows; r++) { if (toRemove[r][col]) numIncoming++; }
+			const incomingCol = (SymbolsIn?.symbols?.in && SymbolsIn.symbols.in[col]) ? SymbolsIn.symbols.in[col] : [];
+			let upcomingScatters = 0;
+			for (let i = 0; i < numIncoming && i < incomingCol.length; i++) {
+				const v = incomingCol[i];
+				if (v === Slot.SCATTER_SYMBOL || v === 0) upcomingScatters++;
+			}
+			const predictedTotal = landedCount + upcomingScatters;
+			console.log(`[DROP] preparing col=${col} landed=${landedCount} upcomingInCol=${upcomingScatters} predicted=${predictedTotal}`);
+			if (numIncoming > 0 && (landedCount === 2 || predictedTotal >= 3)) {
+				console.log(`[SCATTER ANTICIPATION] Trigger for column ${col} (landed=${landedCount}, predicted=${predictedTotal})`);
+				this.setScatterAnticipationVisible(col, true);
+				await new Promise<void>((resolve) => { scene.time.delayedCall(2000, () => resolve()); });
+				this.setScatterAnticipationVisible(col, false);
+			}
             // Build new column after removals
             const newCol: number[] = [];
             let dropMap: number[] = [];
@@ -1826,7 +1951,7 @@ export class SlotMachine {
             // Fill the rest with new random symbols at the top
             
             const numNew = rows - newCol.length;
-            for (let i = 0; i < numNew; i++) {
+			for (let i = 0; i < numNew; i++) {
                 //const newSymbol = Math.floor(Math.random() * Slot.SYMBOLS) + 1; // symbol will come from API, not random
                 //const newSymbol = col + 1;
                 const newSymbol = SymbolsIn.symbols.in[col][i];
@@ -1902,16 +2027,27 @@ export class SlotMachine {
                 tempSymbolGrid[i] = newSymbol;
                 symbolGrid[i][col] = symbolValue;
 
-                const dropPromise = new Promise<void>((resolve) => {
-                    scene.tweens.add({
-                        targets: newSymbol,
-                        y: endY,
-                        duration: 300,
-                        ease: 'Cubic.easeIn',
-                        onComplete: () => resolve()
-                    });
-                    // console.log("dropPromise: i: " + i + " col: " + col + " symbolValue: " + symbolValue);
+            const dropPromise = new Promise<void>((resolve) => {
+                // Track only newly dropping scatter containers
+                const isScatterContainer = (newSymbol instanceof SymbolContainer) && (newSymbol as any).getSymbolValue?.() === 0;
+                if (isScatterContainer) {
+                    this.droppingScatters.add(newSymbol as SymbolContainer);
+                }
+                scene.tweens.add({
+                    targets: newSymbol,
+                    y: endY,
+                    duration: 300,
+                    ease: 'Cubic.easeIn',
+                    onComplete: () => {
+                        if (isScatterContainer) {
+                            this.droppingScatters.delete(newSymbol as SymbolContainer);
+                        }
+                        try { this.logVisibleScatterCount(); } catch (_e) {}
+                        resolve();
+                    }
                 });
+                // console.log("dropPromise: i: " + i + " col: " + col + " symbolValue: " + symbolValue);
+            });
                 dropPromises.push(dropPromise);
             }
             
