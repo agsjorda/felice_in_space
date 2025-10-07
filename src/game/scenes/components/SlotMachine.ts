@@ -395,7 +395,6 @@ export class SlotMachine {
             obj.setVisible(visible);
         }
         scene.audioManager.anticipationSFX.play();
-        
     }
 
     public setAllScatterAnticipationsVisible(visible: boolean): void {
@@ -427,6 +426,7 @@ export class SlotMachine {
             // Count only landed, visible scatter containers (symbol 0) that are NOT currently dropping
             const count = this.getLandedScatterCount();
             // console.log(`[SCATTER DROP] Visible scatter (symbol0) count (landed): ${count}`);
+
         } catch (_e) { /* ignore log errors */ }
     }
     
@@ -461,7 +461,6 @@ export class SlotMachine {
         }
         
         console.log("result", result.slot);
-        // console.log("slotArea", result.slot.area);
         // console.log("Tumbles", result.slot.tumbles);
 
         let toBet = result.bet;

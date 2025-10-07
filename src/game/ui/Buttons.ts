@@ -37,6 +37,7 @@ export class Buttons {
     private bombWinContainer: Phaser.GameObjects.Container;
     private bombMarqueeContainer : Phaser.GameObjects.Container;
     private bombWin: Phaser.GameObjects.Graphics;
+    private turboAnimation: SpineGameObject;
 
     private width: number;
     private height: number;
@@ -143,9 +144,26 @@ export class Buttons {
         scene.load.spineAtlas('button_animation_idle', 'assets/Controllers/Animation/Spin/button_animation_idle.atlas');
         scene.load.spineJson('button_animation_idle', 'assets/Controllers/Animation/Spin/button_animation_idle.json');
 
-        // Preload Spine animation for the spin button idle effect
+        // Preload Spine animation for the spin button press effect
         scene.load.spineAtlas('Amplify_Bet', 'assets/Controllers/Animation/AmplifyBet/Amplify Bet.atlas');
         scene.load.spineJson( 'Amplify_Bet', 'assets/Controllers/Animation/AmplifyBet/Amplify Bet.json');
+
+        // Preload Spine animation for the spin button idle effect
+        scene.load.spineAtlas('Amplify_Bet_Idle', 'assets/Controllers/Animation/AmplifyBet_Idle/Amplify Bet.atlas');
+        scene.load.spineJson( 'Amplify_Bet_Idle', 'assets/Controllers/Animation/AmplifyBet_Idle/Amplify Bet.json');
+        
+
+        // Preload spine animation for the spin click event
+        scene.load.spineJson('generic_UI_animation', 'assets/Controllers/Animation/generic_UI_animation/generic_UI_animation.json');
+        scene.load.spineAtlas('generic_UI_animation', 'assets/Controllers/Animation/generic_UI_animation/generic_UI_animation.atlas');
+
+        // Preload spine animation for the turbo animation
+        scene.load.spineJson('turbo_animation', 'assets/Controllers/Animation/turbo_animation/Turbo_Spin.json');
+        scene.load.spineAtlas('turbo_animation', 'assets/Controllers/Animation/turbo_animation/Turbo_Spin.atlas');
+
+        // Preload spine animation for Spin button animation
+        scene.load.spineJson('spin_button_animation', 'assets/Controllers/Animation/spin_button_anim/spin_button_anim.json');
+        scene.load.spineAtlas('spin_button_animation', 'assets/Controllers/Animation/spin_button_anim/spin_button_anim.atlas');
 
         // Preload help screen assets
         const menu = new Menu(false);
@@ -266,6 +284,7 @@ export class Buttons {
     }
 
     private spinAnimation: SpineGameObject;
+    private genericUIAnimation: SpineGameObject;
 
     private createContainer(scene: GameScene): void {
         this.buttonContainer = scene.add.container(0, 0) as ButtonContainer;
@@ -482,12 +501,16 @@ export class Buttons {
         if (!scene.gameData.isSpinning) {
             this.turboButton.visible = !this.turboButton.visible;
             this.turboOnButton.visible = !this.turboOnButton.visible;
+            this.turboOnButton.setAlpha(this.turboOnButton.visible ? 1 : 0);
+            this.turboAnimationEnable(this.turboOnButton.visible);
             scene.gameData.turbo = !scene.gameData.turbo;
         } else {
             // Queue the turbo toggle for after current spin completes
             const onSpinComplete = () => {
                 this.turboButton.visible = !this.turboButton.visible;
                 this.turboOnButton.visible = !this.turboOnButton.visible;
+                this.turboOnButton.setAlpha(this.turboOnButton.visible ? 1 : 0);
+                this.turboAnimationEnable(this.turboOnButton.visible);
                 scene.gameData.turbo = !scene.gameData.turbo;
                 Events.emitter.off(Events.MATCHES_DONE, onSpinComplete); // Remove listener after use
             };
@@ -531,6 +554,14 @@ export class Buttons {
         container.name = 'turboContainer';
         container.setScale(this.isMobile ? 0.3 : 1);
         this.turboOnButton.setScale(this.isMobile ? 0.9 : 1);
+
+        const spineObject = scene.add.spine(0, 10, 'turbo_animation', 'turbo_animation') as SpineGameObject;
+        spineObject.setScale(2.5);
+        container.add(spineObject);
+        spineObject.setAlpha(1);
+        this.turboAnimation = spineObject;
+
+        container.bringToTop(spineObject);
 
         
         if(this.isMobile){
@@ -582,6 +613,7 @@ export class Buttons {
         });
         
             
+        this.turboAnimationEnable(false);
     }
 
     
@@ -629,6 +661,7 @@ export class Buttons {
                 symbols: scene.gameData.slot.values
             });
         });
+        
     }
 
     private spinAnimationOnce() {
@@ -640,6 +673,22 @@ export class Buttons {
                 this.spinAnimation.setAlpha(0);
             }
         });
+    }
+
+    public playGenericUIAnimationOnce() {
+        if (!this.genericUIAnimation) { return; }
+        this.genericUIAnimation.setAlpha(1);
+        this.genericUIAnimation.animationState.setAnimation(0, 'animation', false);
+        this.genericUIAnimation.animationState.addListener({
+            complete: () => {
+                this.genericUIAnimation.setAlpha(0);
+            }
+        });
+    }
+
+    private turboAnimationEnable(status: boolean) {
+        this.turboAnimation.setVisible(status);
+        this.turboAnimation.animationState.setAnimation(0, 'animation', true);
     }
 
     private createSpinButton(scene: GameScene): void {
@@ -691,14 +740,14 @@ export class Buttons {
             const spineObject = scene.add.spine(0, 0, 'button_animation_idle', 'button_animation_idle') as SpineGameObject;
             // Position relative to the container center
             spineObject.setPosition(0, 0);
-            spineObject.setOrigin(0.4, 1.20);
+            spineObject.setOrigin(0.6, 1.5);
             spineObject.setAlpha(0);
-            spineObject.setScale(this.isMobile ? 1.4 : 3.3);
+            spineObject.setScale( 0.25);
             // Ensure it renders above the spin button within the same container
             container.add(spineObject);
-            container.bringToTop(spineObject);
             // Loop idle animation
             this.spinAnimation = spineObject;
+            
         }, 10);
 
         this.buttonContainer.add(container);
@@ -802,6 +851,7 @@ export class Buttons {
             }
             scene.audioManager.SpinSFX.play();
             this.spinAnimationOnce();
+            // this.playGenericUIAnimationOnce();
             spinAction();
         });
 
@@ -898,6 +948,15 @@ export class Buttons {
         container.add(this.autoplayButton);
         container.add(this.autoplayOnButton);
         this.autoplayOnButton.visible = false;
+
+        // Create generic UI click animation overlay for autoplay (hidden by default)
+        const autoplayGenericSpine = scene.add.spine(0, 0, 'generic_UI_animation', 'generic_UI_animation') as SpineGameObject;
+        autoplayGenericSpine.setPosition(0, 0);
+        autoplayGenericSpine.setOrigin(0.5, 0.5);
+        autoplayGenericSpine.setScale(0.25);
+        autoplayGenericSpine.setAlpha(0);
+        container.add(autoplayGenericSpine);
+        this.genericUIAnimation = autoplayGenericSpine;
 
         this.buttonContainer.add(container);
         // Record base Y and hook Y-axis toggle event
@@ -1247,6 +1306,7 @@ export class Buttons {
         this.autoplayButton.on('pointerdown', () => {
             if (scene.gameData.isSpinning) return;
             scene.audioManager.UtilityButtonSFX.play();
+            this.playGenericUIAnimationOnce();
             
             // Close buy feature popup if open
             if (scene.buyFeaturePopup && scene.buyFeaturePopup.isVisible()) {
@@ -1764,6 +1824,7 @@ export class Buttons {
     }
 
     private amplifyBet: SpineGameObject;
+    private amplifyBetIdle: SpineGameObject;
     private amplifyBetAnimation(){
         this.amplifyBet.setAlpha(1);
         this.amplifyBet.animationState.setAnimation(0, 'animation', false);
@@ -1834,7 +1895,18 @@ export class Buttons {
             this.amplifyBet = amplifyAnim;
             container.sendToBack(amplifyAnim);
         } catch (_e) {
-            // ignore if spine not available
+        }
+
+        // Amplify_Bet_Idle spine animation inside bet panel
+        try {
+            const amplifyAnim = scene.add.spine(width * 0.5, Buttons.PANEL_HEIGHT * 0.5, 'Amplify_Bet_Idle', 'Amplify_Bet_Idle') as SpineGameObject;
+            amplifyAnim.setScale(this.isMobile ? 1.75 : 2.5);
+            container.addAt(amplifyAnim, 0); // above background, behind texts
+            amplifyAnim.setAlpha(0);
+
+            this.amplifyBetIdle = amplifyAnim;
+            container.sendToBack(amplifyAnim);
+        } catch (_e) {
         }
 
         // plus button
@@ -2762,6 +2834,7 @@ export class Buttons {
             this.bombMarqueeContainer.setVisible(true);
             let multiplier = scene.gameData.totalBombWin;
             let totalWin = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex].toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            
             const totalProduct = scene.gameData.totalWinFreeSpinPerTumble[scene.gameData.apiFreeSpinsIndex] * scene.gameData.totalBombWin;
             const totalProductString = totalProduct.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             //youWonLabel.setText('WIN');
@@ -2774,8 +2847,7 @@ export class Buttons {
             try {
                 const fsLen = (scene.gameData.totalWinFreeSpin?.length || 0);
                 if (this.isMobile && scene.gameData.useApiFreeSpins && fsLen > 0 && (scene.gameData.apiFreeSpinsIndex >= fsLen)) {
-                    const finalTotal =
-                     (scene.gameData.totalWinFreeSpin || []).reduce((s, v) => s + (Number(v) || 0));
+                    const finalTotal = (scene.gameData.totalWinFreeSpin || []).reduce((s, v) => s + (Number(v) || 0));
                     youWonLabel.setText('TOTAL WIN');
                     youWonAmount.setText(`${scene.gameData.currency} ${finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 }
@@ -2839,14 +2911,12 @@ export class Buttons {
                         const idx = Math.max(0, Math.min(scene.gameData.apiFreeSpinsIndex || 0, (scene.gameData.totalWinFreeSpin?.length || 1) - 1));
                         const arr = scene.gameData.totalWinFreeSpin || [];
                         marqueeCurrentTotal = arr.slice(0, idx + 1).reduce((sum, v) => sum + (v || 0), 0);
-                    
                         // End of a tumble (or after bombs): show TOTAL WIN with the final value
                         youWonLabel.setText('TOTAL WIN');
                         const finalDisplay = (marqueeCurrentTotal >= scene.gameData.totalWin)
                             ? scene.gameData.totalWin
                             : marqueeCurrentTotal;
                         youWonAmount.setText(`${scene.gameData.currency} ${finalDisplay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-
                         return;
                     }
 
@@ -2883,9 +2953,9 @@ export class Buttons {
             }
             youWonAmount.setText(`${scene.gameData.currency} ${marqueeCurrentTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             scene.time.delayedCall(reelSpeed, step);
-            };
-            step();
         };
+        step();
+    };
 
         const hideMarquee = () => {
             //marquee.setVisible(false);

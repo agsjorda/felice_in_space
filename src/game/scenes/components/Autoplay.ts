@@ -444,6 +444,8 @@ export class Autoplay {
             }
             // Decrement remaining spins for regular play
             this.remainingSpins--;
+            // Play generic UI animation on each decrement
+            try { this.scene.buttons.playGenericUIAnimationOnce(); } catch (_e) {}
             // Update overlay count immediately after decrement
             this.updateRemainingSpinsDisplay();
         } else {
