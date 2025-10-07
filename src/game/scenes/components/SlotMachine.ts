@@ -361,7 +361,7 @@ export class SlotMachine {
 		const scaledBounds: any = (temp as any).getBounds ? (temp as any).getBounds() : undefined;
 		const scaledW = (scaledBounds?.size?.x ?? baseW * scaleFactor) * 1; // already includes 0.8 in temp scale
 		const scaledH = scaledBounds?.size?.y ?? (nativeH > 0 ? nativeH * scaleFactor : baseW * scaleFactor);
-		console.log(`[ScatterAnticipation] scaled size: ${scaledW} x ${scaledH}`);
+		// console.log(`[ScatterAnticipation] scaled size: ${scaledW} x ${scaledH}`);
 
 		// Position calculation for 5 items horizontally centered at screen middle
 		// Gap equals width, so spacing = width + gap = width * 2
@@ -389,11 +389,13 @@ export class SlotMachine {
 		}
     }
 
-    public setScatterAnticipationVisible(index: number, visible: boolean): void {
+    public setScatterAnticipationVisible(index: number, visible: boolean, scene: GameScene): void {
         const obj = this.scatterAnticipations[index];
         if (obj) {
             obj.setVisible(visible);
         }
+        scene.audioManager.anticipationSFX.play();
+        
     }
 
     public setAllScatterAnticipationsVisible(visible: boolean): void {
@@ -424,14 +426,14 @@ export class SlotMachine {
         try {
             // Count only landed, visible scatter containers (symbol 0) that are NOT currently dropping
             const count = this.getLandedScatterCount();
-            console.log(`[SCATTER DROP] Visible scatter (symbol0) count (landed): ${count}`);
+            // console.log(`[SCATTER DROP] Visible scatter (symbol0) count (landed): ${count}`);
         } catch (_e) { /* ignore log errors */ }
     }
     
     private async createReel(scene: GameScene, data: SpinData): Promise<void> {
         // If we're in bonus and using API-provided free spins, do not call backend spin
         if (scene.gameData.isBonusRound && scene.gameData.useApiFreeSpins) {
-            console.log(`[BONUS] createReel: Already in API-driven bonus. isBonusRound=${scene.gameData.isBonusRound}, freeSpins=${scene.gameData.freeSpins}`);
+            // console.log(`[BONUS] createReel: Already in API-driven bonus. isBonusRound=${scene.gameData.isBonusRound}, freeSpins=${scene.gameData.freeSpins}`);
             //await this.playApiFreeSpin(scene);
             return;
         }
@@ -458,7 +460,7 @@ export class SlotMachine {
             return;
         }
         
-        console.log("result", result);
+        console.log("result", result.slot);
         // console.log("slotArea", result.slot.area);
         // console.log("Tumbles", result.slot.tumbles);
 
@@ -1915,7 +1917,7 @@ export class SlotMachine {
         this.cleanupAloneSymbols();
 
         const dropPromises: Promise<void>[] = [];
-        console.log(`[DROP] dropAndRefillAsync start rows=${rows} cols=${cols}`);
+        // console.log(`[DROP] dropAndRefillAsync start rows=${rows} cols=${cols}`);
 
         // For each column, drop down and fill new randoms
 		for (let col = 0; col < cols; col++) {
@@ -1931,12 +1933,12 @@ export class SlotMachine {
 				if (v === Slot.SCATTER_SYMBOL || v === 0) upcomingScatters++;
 			}
 			const predictedTotal = landedCount + upcomingScatters;
-			console.log(`[DROP] preparing col=${col} landed=${landedCount} upcomingInCol=${upcomingScatters} predicted=${predictedTotal}`);
+			// console.log(`[DROP] preparing col=${col} landed=${landedCount} upcomingInCol=${upcomingScatters} predicted=${predictedTotal}`);
 			if (numIncoming > 0 && (landedCount === 2 || predictedTotal >= 3)) {
-				console.log(`[SCATTER ANTICIPATION] Trigger for column ${col} (landed=${landedCount}, predicted=${predictedTotal})`);
-				this.setScatterAnticipationVisible(col, true);
-				await new Promise<void>((resolve) => { scene.time.delayedCall(2000, () => resolve()); });
-				this.setScatterAnticipationVisible(col, false);
+				// console.log(`[SCATTER ANTICIPATION] Trigger for column ${col} (landed=${landedCount}, predicted=${predictedTotal})`);
+				this.setScatterAnticipationVisible(col, true, scene);
+				await new Promise<void>((resolve) => { scene.time.delayedCall(scene.gameData.turbo ? 500 : 1500, () => resolve()); });
+				this.setScatterAnticipationVisible(col, false, scene);
 			}
             // Build new column after removals
             const newCol: number[] = [];

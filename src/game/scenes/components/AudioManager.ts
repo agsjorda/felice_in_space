@@ -47,6 +47,8 @@ export class AudioManager {
     public FreeSpinWon: Sound.WebAudioSound;
     public WinSkip: Sound.WebAudioSound;
 
+    public anticipationSFX: Sound.WebAudioSound;
+
 
     preload(scene: Scene): void {
         const prefixAudio = 'assets/Audio';
@@ -89,6 +91,8 @@ export class AudioManager {
         scene.load.audio('WinSkip', `${prefixAudio}/bigwskip_fis${fileType}`);
         scene.load.audio('Congrats', `${prefixAudio}/congrats_FIS${fileType}`);
         scene.load.audio('FreeSpin', `${prefixAudio}/superw_fis${fileType}`);
+
+        scene.load.audio('anticipationSFX', `${prefixAudio}/reelroll_ZL${fileType}`);
         
     }
 
@@ -145,6 +149,8 @@ export class AudioManager {
                 this.ClickSFX.play({ volume: this.sfxVolume });
             }
         });
+
+        this.anticipationSFX = scene.sound.add('anticipationSFX', { volume: this.sfxVolume, loop: false}) as Sound.WebAudioSound;
     }
     changeBackgroundMusic(scene: Scene): void {
         if (scene.gameData.isBonusRound) {
