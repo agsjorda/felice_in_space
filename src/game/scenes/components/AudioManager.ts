@@ -92,7 +92,7 @@ export class AudioManager {
         scene.load.audio('Congrats', `${prefixAudio}/congrats_FIS${fileType}`);
         scene.load.audio('FreeSpin', `${prefixAudio}/superw_fis${fileType}`);
 
-        scene.load.audio('anticipationSFX', `${prefixAudio}/reelroll_ZL${fileType}`);
+        scene.load.audio('anticipationSFX', `${prefixAudio}/scatteranticipation_fis${fileType}`);
         
     }
 

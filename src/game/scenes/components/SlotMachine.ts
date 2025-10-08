@@ -115,6 +115,8 @@ export class SlotMachine {
         scene.load.spineAtlas(`scatterAnticipation`,`assets/Controllers/Animation/ScatterAnticipation/skeleton.atlas`);
         scene.load.spineJson(`scatterAnticipation`,`assets/Controllers/Animation/ScatterAnticipation/skeleton.json`);
 
+        scene.load.image('bottom_masking', 'assets/Reels/Bottom_Masking.png');
+
         // Initialize animation
         this.animation = new Animation(scene);
         this.animation.preload();
@@ -316,13 +318,19 @@ export class SlotMachine {
         background.setPosition(this.slotX, this.slotY);
         background.setScale(0.49, 0.525);
         background.setOrigin(-0.63, -0.15);
+
+        const bottomMasking = scene.add.image(0, 0, 'bottom_masking');
+        bottomMasking.setDepth(16);
+        bottomMasking.setPosition(this.slotX, this.slotY + this.totalGridHeight * 1.325);
+        bottomMasking.setScale(0.49, 0.525);
+        bottomMasking.setOrigin(-0.63, -0.15);
     }
 
     private createSlot(scene: GameScene): void {
         const x = scene.scale.width * 0;
-        const y = scene.scale.height * 0.23;
+        const y = scene.scale.height * 0.22;
         const width = this.totalGridWidth * 1.01;
-        const height = this.totalGridHeight * 0.97;
+        const height = this.totalGridHeight * 1.05;
         
         const maskShape = scene.add.graphics();
         maskShape.fillRect(x, y, width, height);
@@ -363,24 +371,31 @@ export class SlotMachine {
 		const scaledH = scaledBounds?.size?.y ?? (nativeH > 0 ? nativeH * scaleFactor : baseW * scaleFactor);
 		// console.log(`[ScatterAnticipation] scaled size: ${scaledW} x ${scaledH}`);
 
-		// Position calculation for 5 items horizontally centered at screen middle
-		// Gap equals width, so spacing = width + gap = width * 2
+		// Position calculation for 6 items, each centered on their respective columns, with parabolic distance from centerX
 		const spacing = (scaledW || 0) * 1.66;
-		const startX = centerX - ((6 - 1) * spacing) * 0.5;
-		temp.setDepth(1000);
-		temp.setPosition(startX + spacing * 2, centerY);
+
+		// Parabolic offset: offset = (i - 2.5) * spacing * (1 + parabolaStrength * Math.pow(i - 2.5, 2))
+		const parabolaStrength = 0.01; // tweak this for more/less curve
+		const getScatterX = (i: number) => {
+			const linear = (i - 2.5) * spacing;
+			const parabola = 1 + parabolaStrength * Math.pow(i - 2.5, 2);
+			return centerX + linear * parabola;
+		};
+		temp.setDepth(2);
+		temp.setPosition(getScatterX(2), centerY);
 		temp.setVisible(false);
 		this.scatterAnticipations[2] = temp;
 
 		for (let i = 0; i < 6; i++) {
-			if (i === 2) continue; // index 2 already created as temp (center)
+			//if (i === 2) continue; // index 2 already created as temp (center)
 			const spineObj = scene.add.spine(centerX, centerY, `scatterAnticipation`, `scatterAnticipation`) as SpineGameObject;
 			spineObj.animationState.setAnimation(0, `animation`, true);
-			// Apply reduced horizontal scale (scaleX -20%) and 1.5x vertical scale
-			spineObj.setScale(scaleFactor * 0.8, scaleFactor * 1.5);
-			spineObj.setDepth(1000);
-			spineObj.setPosition(startX + spacing * i, centerY);
+			// Apply reduced horizontal scale (scaleX -5%) and 1.6x vertical scale
+			spineObj.setScale(scaleFactor * 0.95, scaleFactor * 1.675);
+			spineObj.setDepth(15);
+			spineObj.setPosition(getScatterX(i), centerY + 10);
 			spineObj.setVisible(false);
+            
 			this.scatterAnticipations[i] = spineObj;
             const b: any = (spineObj as any).getBounds ? (spineObj as any).getBounds() : undefined;
 			const w = b?.size?.x ?? 0;
@@ -394,7 +409,12 @@ export class SlotMachine {
         if (obj) {
             obj.setVisible(visible);
         }
-        scene.audioManager.anticipationSFX.play();
+        if(visible){
+            scene.audioManager.anticipationSFX.play();
+        }
+        else{
+            scene.audioManager.anticipationSFX.stop();
+        }
     }
 
     public setAllScatterAnticipationsVisible(visible: boolean): void {
@@ -460,7 +480,7 @@ export class SlotMachine {
             return;
         }
         
-        console.log("result", result.slot);
+        console.log("result", result);
         // console.log("Tumbles", result.slot.tumbles);
 
         let toBet = result.bet;
@@ -620,15 +640,7 @@ export class SlotMachine {
             }
             // Ensure lone symbols are cleaned even when there are no tumbles
             this.cleanupAloneSymbols();
-            // Notify UI to fetch latest balance like in reference implementation
-            try { Events.emitter.emit(Events.GET_BALANCE); } catch (_e) {}
         }
-
-        // process API winning data
-        // result.slot.area - contains the first slot data
-        // result.slot.totalWin : number , total win if more than 1 tumblee wins
-        // result.slot.tumbles[] : [ symbols[in[], out[ [symbol,count] ] ] , win: number ]
-            // result.slot.tumbles[0].symbols 
 
         scene.gameData.buyFeatureEnabled = false;
     }
@@ -1157,7 +1169,6 @@ export class SlotMachine {
             // Immediately re-enable buttons when spinning completes
             if (scene.buttons && scene.buttons.enableButtonsVisually) {
                 scene.buttons.enableButtonsVisually(scene);
-                Events.emitter.emit(Events.GET_BALANCE);
             }
         }
     }
@@ -1691,7 +1702,7 @@ export class SlotMachine {
                 this.createWinParticles(scene, sprite.x, sprite.y, 0xFF0000);
                 // Play animation and resolve on completion
                 try {
-                    console.log(`[SCATTER] Animating scatter symbol idx=${index}`);
+                    // console.log(`[SCATTER] Animating scatter symbol idx=${index}`);
                     if (sprite instanceof SymbolContainer) {
                         sprite.playSymbolAnimation().then(() => {
                             (sprite as any).alpha = 0;
@@ -1710,7 +1721,7 @@ export class SlotMachine {
         });
 
         await Promise.all(animationPromises);
-        console.log('[SCATTER] All scatter animations finished, calling handleScatterRewards');
+        // console.log('[SCATTER] All scatter animations finished, calling handleScatterRewards');
         
         // Handle scatter rewards after animations complete
         this.handleScatterRewards(scene, scatterCount);
@@ -1719,7 +1730,7 @@ export class SlotMachine {
     private handleScatterRewards(scene: GameScene, scatterCount: number): void {
         // Award free spins based on scatterCount
         let freeSpins = scene.gameData.freeSpins || 0;
-        console.log(`[BONUS] handleScatterRewards start, scatterCount=${scatterCount}, isBonus=${scene.gameData.isBonusRound}`);
+        // console.log(`[BONUS] handleScatterRewards start, scatterCount=${scatterCount}, isBonus=${scene.gameData.isBonusRound}`);
 
 		if (scene.gameData.isBonusRound) {
             // During bonus round, add spins for 3+ scatters
@@ -1729,7 +1740,7 @@ export class SlotMachine {
             //scene.gameData.totalFreeSpins += addFreeSpins;
             scene.gameData.freeSpins += addFreeSpins;
             // scene.buttons.autoplay.addSpins(addFreeSpins);
-            console.log(`[BONUS] Retrigger: +${addFreeSpins} FS → totalFS=${scene.gameData.totalFreeSpins}, remainingFS=${scene.gameData.freeSpins}`);
+            // console.log(`[BONUS] Retrigger: +${addFreeSpins} FS → totalFS=${scene.gameData.totalFreeSpins}, remainingFS=${scene.gameData.freeSpins}`);
             
             // Update the remaining spins display
             if (scene.buttons.autoplay.isAutoPlaying) {
@@ -2021,7 +2032,7 @@ export class SlotMachine {
 
                 // Ensure bombs render above other symbols
                 if (newSymbol && symbolValue >= 10 && symbolValue <= 22) {
-                    newSymbol.setDepth(10);
+                    newSymbol.setDepth(1000);
                 }
 
                 this.container.add(newSymbol);
