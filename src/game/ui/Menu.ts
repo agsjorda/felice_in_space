@@ -25,14 +25,12 @@ interface GameScene extends Scene {
 export class Menu {
     private menuContainer?: ButtonContainer;
     private contentArea: GameObjects.Container;
-    private isMobile: boolean = false;
     private width: number = 0;
     private height: number = 0;
     private menuEventHandlers: Function[] = [];
     private isDraggingMusic: boolean = false;
     private isDraggingSFX: boolean = false;
     private scene: GameScene;
-    public settingsOnly: boolean = false;
 
     private padding = 10;
     private contentWidth = 488;
@@ -75,9 +73,7 @@ export class Menu {
     };
 
 
-    constructor(settingsOnly: boolean = false) {
-        this.isMobile = this.isMobileDevice();
-        //this.settingsOnly = settingsOnly;
+    constructor() {
     }
 
     preload(scene: Scene){
@@ -149,17 +145,6 @@ export class Menu {
     create(scene: GameScene){
         // No need to store scene reference
         this.contentContainer = scene.add.container(0, 0);
-    }
-
-    private isMobileDevice(): boolean {
-        return true;
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.get('device') == 'mobile'){
-            return true;
-        }else if(urlParams.get('device') == 'desktop'){
-            return false;
-        }
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
     public createMenu(scene: GameScene): ButtonContainer {
@@ -273,7 +258,7 @@ export class Menu {
                 const icon = scene.add.image(0, tabHeight / 2, iconKey) as ButtonImage;
                 icon.setOrigin(-0.5, 0.5);
                 // Scale to a consistent height
-                const targetHeight = this.isMobile ? 18 : 22;
+                const targetHeight = 18;
                 const scale = targetHeight / icon.height;
                 icon.setScale(scale);
                 if (tabConfig.icon === 'close') {
@@ -294,7 +279,7 @@ export class Menu {
             const textAlign = index < normalTabCount ? 'left' : 'center';
             
             const text = scene.add.text(textX, tabHeight / 2, tabConfig.text, {
-                fontSize: this.isMobile ? '16px' : '20px',
+                fontSize: '16px',
                 color: '#FFFFFF',
                 fontFamily: 'Poppins',
                 align: textAlign
@@ -1132,7 +1117,7 @@ export class Menu {
 
     private createHelpScreenContent(scene: GameScene, contentArea: GameObjects.Container): void {
             this.padding = 10;
-            this.contentWidth = this.isMobile ? scene.scale.width - this.padding * 6 : this.viewWidth - this.padding * 12;
+            this.contentWidth = scene.scale.width - this.padding * 6;
             this.yPosition = this.padding;
 
             // this.addContent(scene, 'UNDER CONSTRUCTION', 'title');
@@ -1410,35 +1395,35 @@ export class Menu {
             scaledSymbolSize * 25
         );
         this.contentContainer.add(howToPlayContainer);
-
-        this.createHeader(scene, commonPadding , this.isMobile ? commonPadding / 2 : commonPadding * 1.5, howToPlayContainer, 'Bet Controls', '#379557');
-
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 5 : commonPadding * 6 , howToPlayContainer, this.isMobile ? 'howToPlay1Mobile' : 'howToPlay1', this.isMobile ? '' : 'Adjust your total bet.');
-
-        this.createHeader(scene, commonPadding, this.isMobile ? commonPadding * 9.5 : commonPadding * 9, howToPlayContainer, 'Game Actions', '#379557');
         
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 15 : commonPadding * 14, howToPlayContainer, this.isMobile ? 'howToPlay2Mobile' : 'howToPlay2', this.isMobile ? '' : 'Start the game round.');
-        this.createHowToPlayEntry(scene, commonPadding / 3, this.isMobile ? commonPadding * 25 : commonPadding * 21, howToPlayContainer, this.isMobile ? 'howToPlay11Mobile' : 'BuyFeatHelp', this.isMobile ? '' : 'Lets you buy the free spins round for 100x your total bet.');
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 38 : commonPadding * 28, howToPlayContainer, this.isMobile ? 'howToPlay12Mobile' : 'DoubleHelp', this.isMobile ? '' : 'You\'re wagering 25% more per spin, but you also have better chances at hitting big features.');
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 50 : commonPadding * 35, howToPlayContainer, this.isMobile ? 'howToPlay3Mobile' : 'howToPlay3', this.isMobile ? '' : 'Open the autoplay menu. Tap again to stop autoplay.');
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 60 : commonPadding * 42, howToPlayContainer, this.isMobile ? 'howToPlay4Mobile' : 'howToPlay4', this.isMobile ? '' : 'Speeds up the game.');
+        this.createHeader(scene, commonPadding ,  commonPadding / 2 , howToPlayContainer, 'Bet Controls', '#379557');
 
-        this.createHeader(scene, commonPadding, this.isMobile ? commonPadding * 66 : commonPadding * 52, howToPlayContainer, 'Display & Stats', '#379557');
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 5 , howToPlayContainer, 'howToPlay1', 'Adjust your total bet.');
 
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 72 : commonPadding * 52, howToPlayContainer, 'howToPlay5', 'Shows your current available credits.', true, this.contentWidth - this.padding * 2);
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 82 : commonPadding * 59, howToPlayContainer, 'howToPlay6', 'Display your total winnings from the current round.', true, this.contentWidth - this.padding * 2);
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 93 : commonPadding * 66, howToPlayContainer, 'howToPlay7', 'Adjust your wager using the - and + buttons.', true, this.contentWidth - this.padding * 2);
+        this.createHeader(scene, commonPadding, commonPadding * 9.5, howToPlayContainer, 'Game Actions', '#379557');
+        
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 15, howToPlayContainer, 'howToPlay2', 'Start the game round.');
+        this.createHowToPlayEntry(scene, commonPadding / 3, commonPadding * 25, howToPlayContainer, 'howToPlay11Mobile',  '');
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 38, howToPlayContainer, 'howToPlay12Mobile', '');
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 50, howToPlayContainer, 'howToPlay3Mobile', '');
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 60, howToPlayContainer, 'howToPlay4Mobile', '');
 
-        this.createHeader(scene, commonPadding, this.isMobile ? commonPadding * 101 : commonPadding * 71, howToPlayContainer, 'General Controls', '#379557');
+        this.createHeader(scene, commonPadding, commonPadding * 66, howToPlayContainer, 'Display & Stats', '#379557');
 
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 107 : commonPadding * 74, howToPlayContainer, this.isMobile ? 'howToPlay8Mobile' : 'howToPlay8', this.isMobile ? '' : 'Toggle game sounds on and off.');  
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 114.5 : commonPadding * 78, howToPlayContainer, this.isMobile ? 'howToPlay9Mobile' : 'howToPlay9', this.isMobile ? '' : 'Access gameplay preferences and system options.');
-        this.createHowToPlayEntry(scene, commonPadding, this.isMobile ? commonPadding * 124 : commonPadding * 83, howToPlayContainer, this.isMobile ? 'howToPlay10Mobile' : 'howToPlay10', this.isMobile ? '' : 'View game rules, features, and paytable.');        
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 72, howToPlayContainer, 'howToPlay5', 'Shows your current available credits.', true, this.contentWidth - this.padding * 2);
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 82, howToPlayContainer, 'howToPlay6', 'Display your total winnings from the current round.', true, this.contentWidth - this.padding * 2);
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 93, howToPlayContainer, 'howToPlay7', 'Adjust your wager using the - and + buttons.', true, this.contentWidth - this.padding * 2);
+
+        this.createHeader(scene, commonPadding, commonPadding * 101, howToPlayContainer, 'General Controls', '#379557');
+
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 107, howToPlayContainer, 'howToPlay8Mobile', 'Toggle game sounds on and off.');  
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 114.5, howToPlayContainer, 'howToPlay9Mobile', 'Access gameplay preferences and system options.');
+        this.createHowToPlayEntry(scene, commonPadding, commonPadding * 124, howToPlayContainer, 'howToPlay10Mobile', 'View game rules, features, and paytable.');        
 
         this.yPosition -= scaledSymbolSize * 15;
     }
     private createHeader(scene: GameScene, x: number, y: number, container: GameObjects.Container, text: string, color: string): void {
-        const genericTableWidth = this.isMobile ? this.viewWidth - this.padding * 2 : 1129;
+        const genericTableWidth = this.viewWidth - this.padding * 2;
         
         const header = scene.add.text(0, 0,text,
             {
@@ -1604,10 +1589,8 @@ export class Menu {
                 wordWrap: wordWrap ? { width: wordWrapWidth } : undefined,
             }
         );
-        textElement.setPosition(
-            this.isMobile ? x : x + (imageElement != null ? imageElement.displayWidth + this.padding : 0),
-            this.isMobile ? (imageElement != null ? imageElement.y + imageElement.displayHeight / 2 + this.padding * 2 : y) :
-                            (imageElement != null ? imageElement.y - imageElement.displayHeight / 10: y));
+        textElement.setPosition( x, (imageElement != null ? imageElement.y + imageElement.displayHeight / 2 + this.padding * 2 : y));
+                            
         textElement.setOrigin(0, 0);
         
         if(image == 'BuyFeatMobile'){
@@ -1617,9 +1600,7 @@ export class Menu {
             textElement.setPosition(x, textElement.y + this.padding * 6);
         }
         container.add(textElement); 
-        if(this.isMobile){
-            this.yPosition += (imageElement != null ? imageElement.displayHeight * 2 : 0) + textElement.displayHeight + this.padding * 2;
-        }
+        this.yPosition += (imageElement != null ? imageElement.displayHeight * 2 : 0) + textElement.displayHeight + this.padding * 2;
     }
 
     private createBorder(scene: GameScene, _container: GameObjects.Container, _x: number, _y: number, _width: number, _height: number): number {
@@ -1638,15 +1619,15 @@ export class Menu {
         // Add divider
         const divider = scene.add.graphics();
         divider.lineStyle(2, _color);
-        const x2 = this.isMobile ? this.viewWidth - this.padding * 4 : this.contentWidth + this.padding * 2;
+        const x2 = this.viewWidth - this.padding * 4;
         divider.lineBetween(this.padding, this.yPosition, x2, this.yPosition );
         this.contentContainer.add(divider);
         this.yPosition += this.padding;
     }
 
     private createPayoutTable(scene: GameScene, x: number, y: number, container: GameObjects.Container, symbolIndex: number): void {
-        const cellWidth1 = this.isMobile ? 60 : 45; 
-        const cellWidth2 = this.isMobile ? 100 : 80;
+        const cellWidth1 = 60; 
+        const cellWidth2 = 100;
         const cellHeight = 22.5;
         const cellPadding = 5;
 
@@ -1774,10 +1755,8 @@ export class Menu {
                         );
                         scatterTextCell.setOrigin(0, 0);
                         container.add(scatterTextCell);
-                        if(this.isMobile){
-                            scatterTextCell.setPosition(0, scatterTextCell.y + scatterTextCell.displayHeight + this.padding * 10);
-                            scatterTextCell.setWordWrapWidth(this.contentWidth * 2);
-                        }
+                        scatterTextCell.setPosition(0, scatterTextCell.y + scatterTextCell.displayHeight + this.padding * 10);
+                        scatterTextCell.setWordWrapWidth(this.contentWidth * 2);
                     }
                 }
             }
