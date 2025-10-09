@@ -1162,6 +1162,14 @@ export class SlotMachine {
             // Always ensure spinning state is reset
             scene.gameData.isSpinning = false;
 
+            let totalWin = 0;
+            SymbolsIn.forEach(v=>{
+                totalWin += v.win;
+            })
+            if(!scene.gameData.isBonusRound){
+                Events.emitter.emit(Events.UPDATE_BALANCE, totalWin);
+            }
+
             if (scene.gameData.useApiFreeSpins) {
                 Events.emitter.emit(Events.FREE_SPIN_TOTAL_WIN);
             }
