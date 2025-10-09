@@ -4,6 +4,7 @@ export function setupAspectRatioReload(){
     let timeout: number;
 
     window.addEventListener('resize', () => {
+        return;
         clearTimeout(timeout);
         timeout = window.setTimeout(() => {
             const currentAspectRatio = window.innerWidth / window.innerHeight;

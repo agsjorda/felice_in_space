@@ -166,7 +166,7 @@ export class Buttons {
         scene.load.spineAtlas('spin_button_animation', 'assets/Controllers/Animation/spin_button_anim/spin_button_anim.atlas');
 
         // Preload help screen assets
-        const menu = new Menu(false);
+        const menu = new Menu();
         menu.preload(scene);
         const buyFeaturePopup = new BuyFeaturePopup();
         buyFeaturePopup.preload(scene);
@@ -1676,10 +1676,25 @@ export class Buttons {
             text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         });
 
+        Events.emitter.on(Events.GET_BALANCE, () => {
+            try{
+                scene.gameAPI.getBalance().then((data) => {
+                    const balance = data.data.balance;
+                        text2.setText(scene.gameData.currency + " " + balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); 
+
+                        // console.log(chalk.yellowBright.bold("refreshing balance"), data.data.balance);
+                    scene.gameData.balance = parseFloat(balance);
+                });
+            } catch(error) {
+                text2.setText(scene.gameData.currency + " " + scene.gameData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            }
+        });
+
         container.setScale(this.isMobile ? 0.5 : 1);
         this.balanceContainer = container;
         this.buttonContainer.add(container);
 
+        Events.emitter.emit(Events.GET_BALANCE);
         Events.emitter.emit(Events.UPDATE_BALANCE);
     }
 
@@ -3019,6 +3034,8 @@ export class Buttons {
         Events.emitter.on(Events.FINAL_WIN_SHOW, () => {
             youWonLabel.setText('TOTAL WIN');
             youWonAmount.setText(`${scene.gameData.currency} ${scene.gameData.totalWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+            Events.emitter.emit(Events.GET_BALANCE);
         });
         Events.emitter.on(Events.FREE_SPIN_TOTAL_WIN, ()=>{
             //console.log(scene.gameData.currentFreeSpinIndex);
@@ -3030,6 +3047,8 @@ export class Buttons {
             youWonLabel.setText('TOTAL WIN');
             youWonAmount.setText(`${scene.gameData.currency} ${finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         });
+        
+        this.buttonContainer.add(container);
     }
 
     private createSettings(scene: GameScene): void {
@@ -3078,7 +3097,7 @@ export class Buttons {
 
         if (!this.menu){
             // if(this.isMobile){
-                this.menu = new Menu(false);
+                this.menu = new Menu();
             // }
             // else{
             //     this.menu = new Menu();

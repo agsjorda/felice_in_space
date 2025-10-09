@@ -2,8 +2,8 @@ import { Scene, Sound } from 'phaser';
 import chalk from 'chalk';
 
 export class AudioManager {
-    private musicVolume: number = 0.2; // Default music volume (0.0 - 1.0)
-    private sfxVolume: number = 1.0;   // Default SFX volume (0.0 - 1.0)
+    private musicVolume: number = 0.5; // Default music volume (0.0 - 1.0)
+    private sfxVolume: number = 0.5;   // Default SFX volume (0.0 - 1.0)
     public winIsPlaying: boolean = false;
     private winSFXQueue: string[] = []; // Queue for win SFX
     private isPlayingQueue: boolean = false; // Flag to track if we're currently playing from queue

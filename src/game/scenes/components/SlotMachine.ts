@@ -459,6 +459,7 @@ export class SlotMachine {
         }
 
         //Events.emitter.emit(Events.UPDATE_BALANCE);
+        Events.emitter.emit(Events.GET_BALANCE);
 
         this.cleanupAloneSymbols();
         let newValues: number[][] = [];
