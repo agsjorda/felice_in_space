@@ -1840,17 +1840,25 @@ export class Buttons {
 
     private amplifyBet: SpineGameObject;
     private amplifyBetIdle: SpineGameObject;
-    private amplifyBetAnimation(){
-        this.amplifyBet.setAlpha(1);
-        this.amplifyBet.animationState.setAnimation(0, 'animation', false);
-        this.amplifyBet.animationState.addListener({
-            complete: () => {
-                this.amplifyBet.setAlpha(0);
-            }
-        });
+    private amplifyBetAnimation(){        
+        if(this.amplifyBetIdle.alpha === 0){
+            this.amplifyBetIdle.setAlpha(1);
+            this.amplifyBetIdle.animationState.setAnimation(0, 'animation', true);
+            
+            this.amplifyBet.setAlpha(1);
+            this.amplifyBet.animationState.setAnimation(0, 'animation', false);
+            this.amplifyBet.animationState.addListener({
+                complete: () => {
+                    this.amplifyBet.setAlpha(0);
+                }
+            });
+        }
+        else{
+            this.amplifyBetIdle.setAlpha(0);
+            this.amplifyBetIdle.animationState.clearTracks();
+        }
     }
     
-
     private createBet(scene: GameScene): void {
         const width = this.isMobile ? Buttons.PANEL_WIDTH : Buttons.PANEL_WIDTH;
         const x = this.isMobile ? this.totalWinContainer.x * 1.3 : this.totalWinContainer.x + width * 1.5 + this.width * 0.01;
@@ -1915,7 +1923,7 @@ export class Buttons {
         // Amplify_Bet_Idle spine animation inside bet panel
         try {
             const amplifyAnim = scene.add.spine(width * 0.5, Buttons.PANEL_HEIGHT * 0.5, 'Amplify_Bet_Idle', 'Amplify_Bet_Idle') as SpineGameObject;
-            amplifyAnim.setScale(this.isMobile ? 1.75 : 2.5);
+            amplifyAnim.setScale(2);
             container.addAt(amplifyAnim, 0); // above background, behind texts
             amplifyAnim.setAlpha(0);
 
@@ -2443,9 +2451,7 @@ export class Buttons {
            });
        }
     }
-
-
-
+    
     private createBuyFeature(scene: GameScene): void {
         // Elliptical buy feature button in upper left
         const x = this.isMobile ? this.width * 0.505 : this.width * 0.15;
@@ -2466,17 +2472,6 @@ export class Buttons {
             ), Geom.Rectangle.Contains);
             (this.buyFeatureButton as any).isButton = true;
             container.add(this.buyFeatureButton);
-        
-
-        // // Stars
-        // if(!this.isMobile){
-        //     this.buyFeatureStarLeft = scene.add.image(-ellipseWidth/2 + 32, -24, 'star') as ButtonImage;
-        //     container.add(this.buyFeatureStarLeft);
-        //     this.buyFeatureStarRight = scene.add.image(ellipseWidth/2 - 32, -24, 'star') as ButtonImage;
-        //     container.add(this.buyFeatureStarRight);
-        // }
-        
-        // BUY FEATURE text
         
         this.buyFeatureButtonText = scene.add.text(0, -24, 'BUY FEATURE', {
         }) as ButtonText;
@@ -2570,7 +2565,6 @@ export class Buttons {
 			this.buyFeaturePriceText.setText(scene.gameData.currency + ' ' + newPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 		}
 	}
-
 
     private createDoubleFeature(scene: GameScene): void {
         const x = this.width * 0.73;
@@ -3010,8 +3004,8 @@ export class Buttons {
                 totalWinFinalTimer = null;
             }
 			//if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
-			youWonAmount.setText(scene.gameData.currency + ' '
-                + (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+			//youWonAmount.setText(scene.gameData.currency + ' '
+                //+ (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 			//hideMarquee();
 		});
 
