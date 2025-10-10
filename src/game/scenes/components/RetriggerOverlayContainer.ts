@@ -17,10 +17,9 @@ export class RetriggerOverlayContainer {
 
 	constructor(scene: GameScene) {
 		this.scene = scene;
-		this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
 		this.container = this.scene.add.container(0, 0);
 		this.container.setDepth(10000);
-		this.container.setScale(this.isMobile ? 0.5 : 1);
+		this.container.setScale(0.5);
 
 		// Semi-transparent fullscreen dimmer
 		const dim = this.scene.add.graphics();
