@@ -495,7 +495,9 @@ export class SlotMachine {
         }
         // console.log("toBet", toBet, isBuyFeature, isEnhancedBet);
 
-        Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, toBet, 0); // ( reduce , increase )
+        setTimeout(() => {
+            Events.emitter.emit(Events.UPDATE_FAKE_BALANCE, toBet, 0); // ( reduce , increase )
+        }, 100);
         
         // if(result.slot.freeSpin?.items?.length > 0){
         //     console.log(chalk.bgGreenBright.black.bold(' [BUY FEATURE] triggered freeSpin '), result.slot.freeSpin);
