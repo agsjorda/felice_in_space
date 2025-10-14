@@ -2,6 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { Events } from "./Events";
 import { Slot } from "./GameData";
 import { GameData } from "./GameData";
+
 import { AudioManager } from "./AudioManager";
 import { Animation } from './Animation';
 import { WinAnimation } from './WinAnimation';
@@ -12,6 +13,7 @@ import { GameAPI } from '../backend/GameAPI';
 import { BombContainer } from './BombContainer';
 import { SymbolContainer } from './SymbolContainer';
 import { getRandomRows } from './IdleState';
+
 import chalk from 'chalk';
 import { MaxWinClaimPopup } from './MaxWinClaimPopup';
 import { layoutContainersRow } from '../../utils/layoutRow';
@@ -1316,69 +1318,6 @@ export class SlotMachine {
             }
         }
     }
-
-
-    public async spin(scene: Scene, data: any): Promise<void> {
-        // Clear previous bomb animations
-        
-        const gameScene = scene as GameScene;
-        
-
-
-        // Create new spin data
-        const spinData: SpinData = {
-            symbols: data.symbols,
-            currentRow: 0,
-            isBuyFeature: scene.gameData.buyFeatureEnabled,
-            isEnhancedBet: scene.gameData.doubleChanceEnabled,
-            betAmount: scene.gameData.bet
-        };
-
-        // Place scatters if needed
-        if (gameScene.gameData.scatterCount > 0) {
-            gameScene.gameData.slot.placeScatters(
-                gameScene.gameData.minScatter,
-                gameScene.gameData.maxScatter,
-                gameScene.gameData.scatterChance
-            );
-        }
-
-        // Place bombs during bonus round
-        if (gameScene.gameData.isBonusRound) {
-            // Create a copy of the symbols array to modify
-            const symbols: number[][] = data.symbols.map((row: number[]) => [...row]);
-            
-            // Place bombs in the grid
-            for (let row = 0; row < Slot.ROWS; row++) {
-                for (let col = 0; col < Slot.COLUMNS; col++) {
-                    // Only replace regular symbols (1-9)
-                    if (symbols[row][col] >= 1 && symbols[row][col] <= 9) {
-                        // Determine if we should place a bomb
-                        if (Math.random() < gameScene.gameData.bombChance / 100) { // Convert percentage to decimal
-                            // Determine bomb type based on probabilities
-                            const rand = Math.random();
-                            let bombType: number;
-                            if (rand < 0.6) { // Low (60%)
-                                bombType = Math.floor(Math.random() * 7) + 10; // 10-16
-                            } else if (rand < 0.9) { // Medium (30%)
-                                bombType = Math.floor(Math.random() * 4) + 17; // 17-20
-                            } else { // High (10%)
-                                bombType = Math.floor(Math.random() * 2) + 21; // 21-22
-                            }
-                            symbols[row][col] = bombType;
-                            gameScene.gameData.slot.bombCount++;
-                        }
-                    }
-                }
-            }
-            
-            // Update the spin data with the modified symbols
-            spinData.symbols = symbols;
-        }
-        // Create the reel
-        this.createReel(gameScene, spinData);
-    }
-
 
     public showBonusWin(scene: GameScene, totalWin: number): void {    
         // If max win cap reached, show claim FIRST then proceed to congrats on claim

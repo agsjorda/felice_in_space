@@ -954,7 +954,7 @@ export class Buttons {
         autoplayGenericSpine.setPosition(0, 0);
         autoplayGenericSpine.setOrigin(0.5, 0.5);
         autoplayGenericSpine.setScale(0.25);
-        autoplayGenericSpine.setAlpha(0);
+        autoplayGenericSpine.setAlpha(1);
         container.add(autoplayGenericSpine);
         this.genericUIAnimation = autoplayGenericSpine;
 
@@ -974,14 +974,11 @@ export class Buttons {
         });
 
         // --- AUTOPLAY SETTINGS POPUP ---
-        const popupWidth = this.isMobile ? scene.scale.width : 466 ;
+        const popupWidth = scene.scale.width;
         const popupHeight = 722;
-        const popup = scene.add.container(
-            this.isMobile ? 0  : scene.scale.width / 2 - popupWidth / 2,
-            this.isMobile ? scene.scale.height / 2 - popupHeight * (1 - popupHeight/scene.scale.height * .75): scene.scale.height / 2 - popupHeight / 2);
+        const popup = scene.add.container(0, scene.scale.height / 2 - popupHeight * (1 - popupHeight/scene.scale.height * .75));
         popup.setDepth(1000);
         popup.setVisible(false);
-        popup.setScale(this.isMobile ? 1 : 1);
 
         // Store popup reference for external access
         this.autoplayPopup = popup;
@@ -1060,7 +1057,7 @@ export class Buttons {
         const spinOptions = [10, 30, 50, 75, 100, 150, 500, 1000];
         const buttonWidth = 88.5 * 0.9;
         const buttonHeight = 60;
-        const spacing = this.isMobile ? 16 : 28;
+        const spacing = 16;
         let selectedSpins = spinOptions[0]; // Set default to first option
         let selectedButton: GameObjects.Container | null = null;
 

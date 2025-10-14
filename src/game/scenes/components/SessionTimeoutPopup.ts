@@ -6,23 +6,14 @@ interface GameScene extends Scene {}
 export class SessionTimeoutPopup {
     private container: GameObjects.Container | null = null;
     private isVisible: boolean = false;
-    private isMobile: boolean = false;
 
     constructor() {}
-
-    private isMobileDevice(): boolean {
-        return true;
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-               window.innerWidth <= 768;
-    }
 
     preload(_scene: GameScene): void {
         // No external assets required; uses vector graphics and text
     }
 
     create(scene: GameScene): void {
-        this.isMobile = this.isMobileDevice();
-
         const width = scene.scale.width;
         const height = scene.scale.height;
 
@@ -37,8 +28,8 @@ export class SessionTimeoutPopup {
         mask.setInteractive(new Geom.Rectangle(0, 0, width, height), Geom.Rectangle.Contains);
         this.container.add(mask);
 
-        const panelWidth = Math.min(width * 0.9, this.isMobile ? width * 0.9 : 720);
-        const panelHeight = Math.min(height * 0.6, this.isMobile ? height * 0.5 : 360);
+        const panelWidth = Math.min(width * 0.9,width * 0.9);
+        const panelHeight = Math.min(height * 0.6,height * 0.5);
 
         const panelX = (width - panelWidth) / 2;
         const panelY = (height - panelHeight) / 2;
@@ -51,7 +42,7 @@ export class SessionTimeoutPopup {
         this.container.add(panel);
 
         const title = scene.add.text(width / 2, panelY + panelHeight * 0.3, 'SESSION TIMEOUT', {
-            fontSize: this.isMobile ? '28px' : '36px',
+            fontSize: '28px' ,
             color: '#FFFFFF',
             fontFamily: 'Poppins',
             fontStyle: 'bold',
@@ -61,7 +52,7 @@ export class SessionTimeoutPopup {
         this.container.add(title);
 
         const message = scene.add.text(width / 2, panelY + panelHeight * 0.5, 'Please refresh the game to continue.', {
-            fontSize: this.isMobile ? '18px' : '22px',
+            fontSize: '18px' ,
             color: '#FFFFFF',
             fontFamily: 'Poppins',
             align: 'center',
@@ -70,8 +61,8 @@ export class SessionTimeoutPopup {
         message.setOrigin(0.5, 0.5);
         this.container.add(message);
 
-        const buttonWidth = this.isMobile ? panelWidth * 0.6 : 260;
-        const buttonHeight = this.isMobile ? 48 : 56;
+        const buttonWidth = panelWidth * 0.6 ;
+        const buttonHeight = 48 ;
         const buttonX = width / 2 - buttonWidth / 2;
         const buttonY = panelY + panelHeight * 0.7 - buttonHeight / 2;
 
@@ -83,7 +74,7 @@ export class SessionTimeoutPopup {
         this.container.add(button);
 
         const buttonLabel = scene.add.text(width / 2, buttonY + buttonHeight / 2, 'Refresh', {
-            fontSize: this.isMobile ? '20px' : '24px',
+            fontSize: '20px' ,
             color: '#000000',
             fontFamily: 'Poppins',
             fontStyle: 'bold',
