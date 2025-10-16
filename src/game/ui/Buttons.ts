@@ -3002,7 +3002,7 @@ export class Buttons {
             }
 			//if (hideTimer) { hideTimer.remove(false); hideTimer = null; }
 			//youWonAmount.setText(scene.gameData.currency + ' '
-                //+ (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+			youWonAmount.setText(`${scene.gameData.currency} `+ (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 			//hideMarquee();
 		});
 

@@ -584,6 +584,8 @@ export class SlotMachine {
                 } catch (_e) { /* no-op */ }
 
                 scene.gameData.isBonusRound = true;
+
+                this.showFreeSpinsPopup(scene,currentSpinsLeft);
                 scene.background.toggleBackground(scene);
                 scene.audioManager.changeBackgroundMusic(scene);
                 // Show remaining FS label immediately and hide bottom controls
