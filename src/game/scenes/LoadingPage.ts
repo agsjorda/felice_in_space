@@ -12,9 +12,17 @@ import { Menu } from '../ui/Menu';
 export class LoadingPage extends Scene {
     private loadingBar!: Phaser.GameObjects.Graphics;
     private progressText!: Phaser.GameObjects.Text;
+    
+	private centerLoadingBar?: Phaser.GameObjects.Graphics;
+	private centerProgressText?: Phaser.GameObjects.Text;
+
     private width = 310;
     private barX: number = 0;
     private barY: number = 0;
+    
+	private centerBarX: number = 0;
+	private centerBarY: number = 0;
+
     private isMobile: boolean = false;
 
     public stateMachine: StateMachine;
@@ -28,6 +36,7 @@ export class LoadingPage extends Scene {
     private menu: Menu;
 
     private components: any[];
+    private deferAudio: boolean = true;
 
     constructor() {
         super('LoadingPage');
@@ -56,6 +65,10 @@ export class LoadingPage extends Scene {
     preload(): void {
         // Detect if mobile
         this.isMobile = this.isMobileDevice();
+        // Tune loader concurrency for faster parallel downloads without overwhelming mobile radios
+        try {
+            (this.load as any).maxParallelDownloads = this.isMobile ? 4 : 8;
+        } catch (_e) {}
         
         // Create loading bar
         this.createLoadingBar();

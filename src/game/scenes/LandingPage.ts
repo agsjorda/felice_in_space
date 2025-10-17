@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import type { SpineGameObject } from '@esotericsoftware/spine-phaser-v3/dist/SpineGameObject';
 import { GameAPI } from './backend/GameAPI';
 import { getFontFamily, logFontStatus } from '../utils/fonts';
 import { WakeLockManager } from '../utils/wakeLock';
@@ -16,6 +17,8 @@ export class LandingPage extends Scene {
     
     private onDomFsChange?: () => void;
     private onResize?: () => void;
+    private diOverlay: Phaser.GameObjects.Graphics | null = null;
+    private diSpine?: SpineGameObject;
 
     constructor() {
         super('LandingPage');
@@ -28,6 +31,9 @@ export class LandingPage extends Scene {
         // Fullscreen toggle icons
         this.load.image('fs_max', 'assets/Controllers/Maximize.png');
         this.load.image('fs_min', 'assets/Controllers/Minimize.png');
+        // Preload DI JOKER spine
+        this.load.spineAtlas('di_joker', 'assets/background/DI JOKER.atlas');
+        this.load.spineJson('di_joker', 'assets/background/DI JOKER.json');
     }
 
     create(): void {
@@ -43,6 +49,38 @@ export class LandingPage extends Scene {
         const backgroundKey = 'background_mobile';
         this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, backgroundKey)
         .setOrigin(0.5);
+
+        // Dark graphic mask behind the spine animation
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 1);
+        const w = this.cameras.main.width;
+        const h = this.cameras.main.height;
+        // const rectW = Math.min(w * 0.9, 720);
+        // const rectH = Math.min(h * 0.6, 420);
+        // const rectX = (w - rectW) / 2;
+        // const rectY = (h - rectH) / 2;
+        overlay.fillRect(0, 0, w, h);
+        overlay.setDepth(1000);
+        this.diOverlay = overlay;
+
+        // Centered DI JOKER spine
+        try {
+            const cx = this.cameras.main.centerX;
+            const cy = this.cameras.main.centerY;
+            const spine = (this.add as any).spine?.(cx, cy, 'di_joker', 'di_joker');
+            if (spine) {
+                const baseSize = Math.max(1138, 1143);
+                const target = Math.min(this.scale.width, this.scale.height) * (this.isMobile ? 0.6 : 0.75);
+                const scale = Math.max(0.1, target / baseSize) / 4;
+                spine.setScale(scale);
+                spine.setDepth(1001);
+                if (spine.animationState) {
+                    spine.animationState.setAnimation(0, 'animation', true);
+                }
+                this.diSpine = spine as SpineGameObject;
+            }
+        } catch (_e) {}
+        
         
         // Fullscreen toggle button (above background)
         const padding = this.isMobile ? 10 : 12;
@@ -235,6 +273,24 @@ export class LandingPage extends Scene {
     public doneLoading(): void {
         this.spinButton.setAlpha(1);
         this.notificationText.setAlpha(1);
+
+        // Fade out and destroy the DI JOKER splash and dark overlay once first load completes
+        const toFade: any[] = [];
+        if (this.diOverlay) toFade.push(this.diOverlay);
+        if (this.diSpine) toFade.push(this.diSpine);
+        if (toFade.length > 0) {
+            try {
+                try { this.diOverlay?.destroy(); } catch {}
+                this.diOverlay = null;
+                try { (this.diSpine as any)?.destroy?.(); } catch {}
+                this.diSpine = undefined;
+            } catch {
+                try { this.diOverlay?.destroy(); } catch {}
+                this.diOverlay = null;
+                try { (this.diSpine as any)?.destroy?.(); } catch {}
+                this.diSpine = undefined;
+            }
+        }
         
            // Initialize and run the game launcher with retries
            const gameAPI = new GameAPI(this.gameData);
