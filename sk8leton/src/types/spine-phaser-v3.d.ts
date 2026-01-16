@@ -1,1 +1,0 @@
-declare module '@esotericsoftware/spine-phaser-v3'; 
