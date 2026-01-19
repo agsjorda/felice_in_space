@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import { gzipSync, brotliCompressSync, constants as ZLIB_CONSTANTS } from 'node:zlib';
+import viteCompression from 'vite-plugin-compression2';
 
 const phasermsg = () => {
     return {
@@ -20,8 +20,10 @@ const phasermsg = () => {
 export default defineConfig({
     base: './',
     logLevel: 'warning',
+    resolve: {
+        dedupe: ['phaser']
+    },
     build: {
-        target: 'es2018',
         rollupOptions: {
             output: {
                 manualChunks: {
@@ -38,32 +40,30 @@ export default defineConfig({
             format: {
                 comments: false
             }
-        },
-        brotliSize: true,
-        chunkSizeWarningLimit: 1500
+        }
     },
     server: {
         port: 8080,
         host: true,
-        allowedHosts: ['minium.dev.fybtech.xyz']
+        allowedHosts: ['minium.dev.fybtech.xyz', 'dev-games.dijoker.com']
     },
     plugins: [
         phasermsg(),
-        {
-            name: 'emit-compressed-assets',
-            apply: 'build',
-            generateBundle(_options, bundle) {
-                for (const [fileName, asset] of Object.entries(bundle)) {
-                    if (!/\.(js|css|html|json|wasm)$/i.test(fileName)) continue;
-                    const source = (asset.type === 'asset') ? Buffer.from(asset.source) : Buffer.from(asset.code);
-                    const gz = gzipSync(source, { level: 9 });
-                    this.emitFile({ type: 'asset', fileName: fileName + '.gz', source: gz });
-                    const br = brotliCompressSync(source, {
-                        params: { [ZLIB_CONSTANTS.BROTLI_PARAM_QUALITY]: 11 }
-                    });
-                    this.emitFile({ type: 'asset', fileName: fileName + '.br', source: br });
-                }
-            }
-        }
+        // Precompress text assets to Brotli
+        viteCompression({
+            algorithm: 'brotliCompress',
+            ext: '.br',
+            deleteOriginalAssets: false,
+            threshold: 1024,
+            filter: (file) => /\.(js|css|html|svg|json|ttf|woff2?)$/i.test(file)
+        }),
+        // Also generate gzip as fallback
+        viteCompression({
+            algorithm: 'gzip',
+            ext: '.gz',
+            deleteOriginalAssets: false,
+            threshold: 1024,
+            filter: (file) => /\.(js|css|html|svg|json|ttf|woff2?)$/i.test(file)
+        })
     ]
 });
