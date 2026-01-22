@@ -587,7 +587,7 @@ export class GameAPI {
                 throw new Error('No authentication token available');
             }
 
-            const response = await fetch(`${getApiBaseUrl()}api/v1/slots/balance`, {
+            const response = await fetch(`${getApiBaseUrl()}/api/v1/slots/balance`, {
             //const response = await fetch('http://192.168.0.17:3000/api/v1/slots/balance', {
                 method: 'POST',
                 headers: {
