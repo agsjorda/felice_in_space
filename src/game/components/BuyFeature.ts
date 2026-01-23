@@ -14,10 +14,12 @@ export class BuyFeature {
 	private container: Phaser.GameObjects.Container;
 	private background: Phaser.GameObjects.Graphics;
 	private confirmButtonMask: Phaser.GameObjects.Graphics;
+	private confirmButtonImage: Phaser.GameObjects.Image;
 	private featurePrice: number = 24000.00;
 	private currentBet: number = 0.2; // Start with first bet option
 	private slotController: SlotController | null = null;
 	private readonly BET_MULTIPLIER: number = 100; // Multiplier for price display
+	private readonly DISABLED_ALPHA: number = 0.5;
 	private betOptions: number[] = [
 		0.2, 0.4, 0.6, 0.8, 1,
 		1.2, 1.6, 2, 2.4, 2.8,
@@ -95,6 +97,46 @@ export class BuyFeature {
 	 */
 	private getCurrentBetValue(): number {
 		return this.currentBet * this.BET_MULTIPLIER;
+	}
+
+	/**
+	 * Returns current price (bet × 100)
+	 */
+	private getCurrentFeaturePrice(): number {
+		return this.getCurrentBetValue();
+	}
+
+	/**
+	 * Returns true if the player balance can cover the current feature price.
+	 */
+	private canAffordFeature(): boolean {
+		try {
+			const balance = this.slotController?.getBalanceAmount?.() ?? 0;
+			const price = this.getCurrentFeaturePrice();
+			if (!isFinite(price) || price <= 0) {
+				// Safety fallback: don't block if price is invalid
+				return true;
+			}
+			return balance >= price;
+		} catch {
+			return true;
+		}
+	}
+
+	/**
+	 * Dim + disable BUY FEATURE when unaffordable.
+	 */
+	private updateBuyButtonState(): void {
+		if (!this.confirmButtonImage) return;
+
+		const affordable = this.canAffordFeature();
+		if (!affordable) {
+			this.confirmButtonImage.setAlpha(this.DISABLED_ALPHA);
+			this.confirmButtonImage.disableInteractive();
+		} else {
+			this.confirmButtonImage.setAlpha(1);
+			this.confirmButtonImage.setInteractive();
+		}
 	}
 
 	/**
@@ -412,7 +454,7 @@ export class BuyFeature {
 		// Calculate price as 100 * current base bet
 		const calculatedPrice = this.getCurrentBetValue();
 		
-		this.priceDisplay = scene.add.text(screenWidth / 2, backgroundTop + 340, `£${this.formatNumberWithCommas(calculatedPrice)}`, {
+		this.priceDisplay = scene.add.text(screenWidth / 2, backgroundTop + 340, `$${this.formatNumberWithCommas(calculatedPrice)}`, {
 			fontSize: '42px',
 			fontFamily: 'Poppins-Regular',
 			color: '#ffffff',
@@ -435,6 +477,7 @@ export class BuyFeature {
 		buttonImage.setOrigin(0.5, 0.5);
 		buttonImage.setDisplaySize(364, 62);
 		this.container.add(buttonImage);
+		this.confirmButtonImage = buttonImage;
 		
 		// Button label
 		this.confirmButton = scene.add.text(x, y, 'BUY FEATURE', {
@@ -447,6 +490,7 @@ export class BuyFeature {
 		
 		buttonImage.setInteractive();
 		buttonImage.on('pointerdown', () => this.confirmPurchase());
+		this.updateBuyButtonState();
 	}
 
 	private createCloseButton(scene: Scene): void {
@@ -468,6 +512,12 @@ export class BuyFeature {
 
 	private confirmPurchase(): void {
 		console.log(`[BuyFeature] Confirming purchase`);
+
+		// Click safety guard
+		if (!this.canAffordFeature()) {
+			this.updateBuyButtonState();
+			return;
+		}
 		
 		if (this.onConfirmCallback) {
 			this.onConfirmCallback();
@@ -481,6 +531,7 @@ export class BuyFeature {
 			const calculatedPrice = this.getCurrentBetValue();
 			this.priceDisplay.setText(`$${this.formatNumberWithCommas(calculatedPrice)}`);
 		}
+		this.updateBuyButtonState();
 	}
 
 	private formatNumberWithCommas(num: number): string {
@@ -721,6 +772,7 @@ export class BuyFeature {
 		
 		this.updatePriceDisplay();
 		this.updateBetDisplay();
+		this.updateBuyButtonState();
 		this.animateIn();
 		
 		// Show the mask when the panel is shown (same as BetOptions)

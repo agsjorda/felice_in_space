@@ -541,8 +541,13 @@ export class Game extends Scene
 		EventBus.on('autoplay', () => {
 			console.log('[Game] Autoplay button clicked - showing options');
 			
-			const currentBetText = this.slotController.getBetAmountText();
-			const currentBet = currentBetText ? parseFloat(currentBetText) : 0.20;
+			// Use base bet for internal selection; displayed bet may include +25% when enhanced bet is active
+			const currentBaseBetText = this.slotController.getBetAmountText();
+			const fallbackBet = currentBaseBetText ? parseFloat(currentBaseBetText) : 0.20;
+			const currentBaseBet = this.slotController.getBaseBetAmount() || fallbackBet;
+			const isEnhancedBet = this.slotController.getIsEnhancedBet();
+			const betDisplayMultiplier = isEnhancedBet ? 1.25 : 1;
+			const currentBetDisplay = currentBaseBet * betDisplayMultiplier;
 			
 			// Get the most current balance as a numeric value from the SlotController
 			const currentBalance = this.slotController.getBalanceAmount();
@@ -551,7 +556,10 @@ export class Game extends Scene
 			
 			this.autoplayOptions.show({
 				currentAutoplayCount: 10,
-				currentBet: currentBet,
+				currentBet: currentBaseBet,
+				currentBetDisplay: currentBetDisplay,
+				betDisplayMultiplier: betDisplayMultiplier,
+				isEnhancedBet: isEnhancedBet,
 				currentBalance: currentBalance,
 				onClose: () => {
 					console.log('[Game] Autoplay options closed');
@@ -561,12 +569,12 @@ export class Game extends Scene
 					// Read the bet selected within the autoplay panel
 					const selectedBet = this.autoplayOptions.getCurrentBet();
 					// If bet changed, update UI and backend
-					if (Math.abs(selectedBet - currentBet) > 0.0001) {
+					if (Math.abs(selectedBet - currentBaseBet) > 0.0001) {
 						// Use a dedicated API so amplify/enhance bet is preserved when active
 						this.slotController.updateBetAmountFromAutoplay(selectedBet);
-						gameEventManager.emit(GameEventType.BET_UPDATE, { newBet: selectedBet, previousBet: currentBet });
+						gameEventManager.emit(GameEventType.BET_UPDATE, { newBet: selectedBet, previousBet: currentBaseBet });
 					}
-					console.log(`[Game] Total cost: $${(selectedBet * autoplayCount).toFixed(2)}`);
+					console.log(`[Game] Total cost: $${(selectedBet * betDisplayMultiplier * autoplayCount).toFixed(2)}`);
 					
 					// Start autoplay using the new SlotController method
 					this.slotController.startAutoplay(autoplayCount);
