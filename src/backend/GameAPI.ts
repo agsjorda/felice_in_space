@@ -38,7 +38,7 @@ const getApiBaseUrl = (): string => {
     if (typeof configuredUrl === 'string' && configuredUrl.length > 0) {
         return configuredUrl.replace(/\/$/, "");
     }
-    return 'https://game-launcher.torrospins.com/'; // 192.168.0.17:3000/
+    return 'https://dev-game-launcher.dijoker.com/'; // 192.168.0.17:3000/
 
 };
 
