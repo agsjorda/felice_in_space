@@ -99,9 +99,9 @@ export class Preloader extends Scene
 		console.log(`[Preloader] Background position: (${this.scale.width * 0.5}, ${this.scale.height * 0.5})`);
 
 		// Persistent clock display in the top bar (matches Hustle Horse positioning), using poppins-regular
-		const clockY = this.scale.height * 0.015;
+		const clockY = this.scale.height * 0.01;
 		this.clockDisplay = new ClockDisplay(this, {
-			offsetX: -140,
+			offsetX: 10,
 			offsetY: clockY,
 			fontSize: 16,
 			fontFamily: 'poppins-regular',
@@ -111,7 +111,7 @@ export class Preloader extends Scene
 			scale: 0.7,
 			suffixText: ` | Felice in Space${this.gameAPI.getDemoState() ? ' | DEMO' : ''}`,
 			additionalText: 'DiJoker',
-			additionalTextOffsetX: 185,
+			additionalTextOffsetX: 10,
 			additionalTextOffsetY: 0,
 			additionalTextScale: 0.7,
 			additionalTextColor: '#FFFFFF',

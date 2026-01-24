@@ -163,23 +163,23 @@ export class Game extends Scene
 		).setOrigin(0.5, 0.5).setScrollFactor(0).setAlpha(1);
 		
 		// Backend initialization removed - using SlotController autoplay system
-		// Create header using the managers
-		this.header = new Header(this.networkManager, this.screenModeManager);
-		this.header.create(this);
+		// // Create header using the managers
+		// this.header = new Header(this.networkManager, this.screenModeManager);
+		// this.header.create(this);
 		
 		// Create background using the managers
 		this.background = new Background(this.networkManager, this.screenModeManager);
 		this.background.create(this);
-		
+
 		// Create header using the managers
 		this.header = new Header(this.networkManager, this.screenModeManager);
 		this.header.create(this);
 
 		// Create persistent clock display (stays on screen)
 		// Match positioning + formatting with Preloader scene for consistency
-		const clockY = this.scale.height * 0.015;
+		const clockY = this.scale.height * 0.01;
 		this.clockDisplay = new ClockDisplay(this, {
-			offsetX: -140,
+			offsetX: 10,
 			offsetY: clockY,
 			fontSize: 16,
 			fontFamily: 'poppins-regular',
@@ -189,7 +189,7 @@ export class Game extends Scene
 			scale: 0.7,
 			suffixText: ` | Felice in Space${this.gameAPI.getDemoState() ? ' | DEMO' : ''}`,
 			additionalText: 'DiJoker',
-			additionalTextOffsetX: 185,
+			additionalTextOffsetX: 10,
 			additionalTextOffsetY: 0,
 			additionalTextScale: 0.7,
 			additionalTextColor: '#FFFFFF',
@@ -518,12 +518,19 @@ export class Game extends Scene
 		EventBus.on('show-bet-options', () => {
 			console.log('[Game] Showing bet options with fade-in effect');
 			
-			// Get the current bet from the slot controller display
+			// Use base bet for internal selection; displayed bet may include +25% when enhanced bet is active
 			const currentBetText = this.slotController.getBetAmountText();
-			const currentBet = currentBetText ? parseFloat(currentBetText) : 0.20;
+			const parsedDisplayBet = currentBetText ? parseFloat(currentBetText) : Number.NaN;
+			const fallbackBaseBet = Number.isFinite(parsedDisplayBet) && parsedDisplayBet > 0 ? parsedDisplayBet : 0.20;
+			const currentBaseBet = this.slotController.getBaseBetAmount() || fallbackBaseBet;
+
+			const isEnhancedBet = this.slotController.getIsEnhancedBet();
+			const betDisplayMultiplier = isEnhancedBet ? 1.25 : 1;
+			const currentBetDisplay = currentBaseBet * betDisplayMultiplier;
 			
 			this.betOptions.show({
-				currentBet: currentBet,
+				currentBet: currentBaseBet,
+				currentBetDisplay: currentBetDisplay,
 				onClose: () => {
 					console.log('[Game] Bet options closed');
 				},
@@ -532,7 +539,7 @@ export class Game extends Scene
 					// Update the bet display in the slot controller
 					this.slotController.updateBetAmount(betAmount);
 					// Update the bet amount in the backend
-					gameEventManager.emit(GameEventType.BET_UPDATE, { newBet: betAmount, previousBet: currentBet });
+					gameEventManager.emit(GameEventType.BET_UPDATE, { newBet: betAmount, previousBet: currentBaseBet });
 				}
 			});
 		});

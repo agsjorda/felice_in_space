@@ -13,6 +13,7 @@ export interface BuyFeatureConfig {
 export class BuyFeature {
 	private container: Phaser.GameObjects.Container;
 	private background: Phaser.GameObjects.Graphics;
+	private fullScreenBlocker: Phaser.GameObjects.Graphics;
 	private confirmButtonMask: Phaser.GameObjects.Graphics;
 	private confirmButtonImage: Phaser.GameObjects.Image;
 	private featurePrice: number = 24000.00;
@@ -185,6 +186,9 @@ export class BuyFeature {
 		this.container = scene.add.container(0, 0);
 		this.container.setDepth(2000); // Very high depth to appear above everything
 		
+		// Create full-screen interaction blocker
+		this.createFullScreenBlocker(scene);
+		
 		// Create background
 		this.createBackground(scene);
 		
@@ -216,6 +220,22 @@ export class BuyFeature {
 			this.container.setVisible(false);
 			this.container.setY(scene.scale.height);
 		}
+		if (this.fullScreenBlocker) {
+			this.fullScreenBlocker.setVisible(false);
+		}
+	}
+
+	private createFullScreenBlocker(scene: Scene): void {
+		const screenWidth = scene.cameras.main.width;
+		const screenHeight = scene.cameras.main.height;
+		
+		// Create full-screen blocker behind the menu
+		this.fullScreenBlocker = scene.add.graphics();
+		this.fullScreenBlocker.fillStyle(0x000000, 0.01); // Nearly transparent, just to block interactions
+		this.fullScreenBlocker.fillRect(0, 0, screenWidth, screenHeight);
+		this.fullScreenBlocker.setInteractive(new Phaser.Geom.Rectangle(0, 0, screenWidth, screenHeight), Phaser.Geom.Rectangle.Contains);
+		this.fullScreenBlocker.setDepth(1999); // Just below the menu container (2000)
+		this.fullScreenBlocker.setVisible(false);
 	}
 
 	private createBackground(scene: Scene): void {
@@ -773,6 +793,12 @@ export class BuyFeature {
 		this.updatePriceDisplay();
 		this.updateBetDisplay();
 		this.updateBuyButtonState();
+		
+		// Show full-screen blocker
+		if (this.fullScreenBlocker) {
+			this.fullScreenBlocker.setVisible(true);
+		}
+		
 		this.animateIn();
 		
 		// Show the mask when the panel is shown (same as BetOptions)
@@ -788,6 +814,11 @@ export class BuyFeature {
 		// Stop any continuous button presses
 		this.stopContinuousDecrement();
 		this.stopContinuousIncrement();
+		
+		// Hide full-screen blocker
+		if (this.fullScreenBlocker) {
+			this.fullScreenBlocker.setVisible(false);
+		}
 		
 		this.animateOut();
 		
@@ -811,6 +842,10 @@ export class BuyFeature {
 		// Stop any continuous button presses
 		this.stopContinuousDecrement();
 		this.stopContinuousIncrement();
+		
+		if (this.fullScreenBlocker) {
+			this.fullScreenBlocker.destroy();
+		}
 		
 		if (this.scatterSpine) {
 			try { this.scatterSpine.destroy(); } catch {}

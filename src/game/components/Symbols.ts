@@ -10,6 +10,7 @@ import { TurboConfig } from '../../config/TurboConfig';
 import { SLOT_ROWS, SLOT_COLUMNS, DELAY_BETWEEN_SPINS, MULTIPLIER_SYMBOLS } from '../../config/GameConfig';
 import { SoundEffectType } from '../../managers/AudioManager';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
+import { SpinData } from "../../backend/SpinData";
 
 export class Symbols {
   private static readonly WINLINE_CHECKING_DISABLED: boolean = true;
@@ -52,6 +53,9 @@ export class Symbols {
   
   // Track if multiplier animations are currently in progress
   private multiplierAnimationsInProgress: boolean = false;
+  
+  // Cached total win calculated before freespin dialog is shown
+  private cachedTotalWin: number = 0;
 
  
 
@@ -1531,10 +1535,77 @@ export class Symbols {
   }
 
   /**
+   * Calculate total win from spinData using multiple fallback sources
+   * This method tries to get totalWin directly from spinData, then falls back to
+   * calculating from freespin items, multiplierValue, slot paylines, and tumbles
+   */
+  private calculateTotalWinFromSpinData(): number {
+    console.log(`[Symbols] cachedTotalWin calculateTotalWinFromSpinData:`, this.currentSpinData);
+    let totalWin = 0;
+    try {
+      // First, try to get totalWin directly from spinData
+      if (this.currentSpinData && this.currentSpinData.slot && typeof this.currentSpinData.slot.totalWin === 'number') {
+        totalWin = this.currentSpinData.slot.totalWin;
+        console.log(`[Symbols] cachedTotalWin Using spinData.totalWin for cached total: ${totalWin}`);
+      } else {
+        // Fallback: calculate total win from freespin items, multiplierValue, slot paylines, and tumbles
+        console.log('[Symbols] cachedTotalWin spinData.totalWin not available - calculating from fallback sources');
+        
+        if (this.currentSpinData && this.currentSpinData.slot) {
+          const slot = this.currentSpinData.slot;
+          const freespinData = slot.freespin || slot.freeSpin;
+          
+          // Sum wins from freespin.items
+          if (freespinData && freespinData.items && Array.isArray(freespinData.items)) {
+            const freespinItemsWin = freespinData.items.reduce((sum: number, item: any) => {
+              const perSpinTotal =
+                (typeof item.totalWin === 'number' && item.totalWin > 0)
+                  ? item.totalWin
+                  : (item.subTotalWin || 0);
+              return sum + perSpinTotal;
+            }, 0);
+            totalWin += freespinItemsWin;
+            console.log(`[Symbols] cachedTotalWin Added wins from freespin.items: ${freespinItemsWin}`);
+          }
+          
+          // Sum wins from slot.paylines
+          if (slot.paylines && Array.isArray(slot.paylines) && slot.paylines.length > 0) {
+            const paylinesWin = calculateTotalWinFromPaylines(slot.paylines);
+            totalWin += paylinesWin;
+            console.log(`[Symbols] cachedTotalWin Added wins from slot.paylines: ${paylinesWin}`);
+          }
+          
+          // Sum wins from slot.tumbles
+          if (slot.tumbles && Array.isArray(slot.tumbles) && slot.tumbles.length > 0) {
+            const tumblesWin = slot.tumbles.reduce((sum: number, tumble: any) => {
+              const win = Number(tumble?.win || 0);
+              return sum + (isNaN(win) ? 0 : win);
+            }, 0);
+            totalWin += tumblesWin;
+            console.log(`[Symbols] cachedTotalWin Added wins from slot.tumbles: ${tumblesWin}`);
+          }
+          
+          console.log(`[Symbols] cachedTotalWin Calculated total win from fallback sources: ${totalWin}`);
+        }
+      }
+    } catch (e) {
+      console.warn('[Symbols] cachedTotalWin Failed to calculate total win from spinData', e);
+    }
+    
+    return totalWin;
+  }
+
+  /**
    * Start the scatter animation sequence (called after win dialog closes or immediately if no dialog)
    */
   public startScatterAnimationSequence(mockData: any): void {
     console.log('[Symbols] Starting scatter animation sequence');
+    
+    // Calculate and cache total win before freespin dialog is shown
+    if(this.cachedTotalWin <= 0) {
+      this.cachedTotalWin = this.calculateTotalWinFromSpinData();
+    }
+    console.log(`[Symbols] Cached total win before freespin dialog: ${this.cachedTotalWin}`);
     
     // Keep animations running and symbols visible during scatter; do not stop or hide
     this.hideWinningOverlay();
@@ -2903,61 +2974,17 @@ export class Symbols {
       }
     }
     
-    // Priority 1: Use the authoritative totalWin from the spinData response (freespin.totalWin)
-    // This is the backend's calculated total and should always be used when available
-    let totalWin = 0;
-    try {
-      if (this.currentSpinData && this.currentSpinData.slot) {
-        const freespinData = this.currentSpinData.slot.freespin || this.currentSpinData.slot.freeSpin;
-        if (freespinData && typeof freespinData.totalWin === 'number' && freespinData.totalWin > 0) {
-          totalWin = freespinData.totalWin;
-          console.log(`[Symbols] Using freespin.totalWin from spinData response for congrats: ${totalWin}`);
-        }
-      }
-    } catch (e) {
-      console.warn('[Symbols] Failed to read freespin.totalWin from spinData, trying fallbacks', e);
-    }
+    // Use cached total win that was calculated before freespin dialog was shown
+    let totalWin = this.cachedTotalWin;
+    this.cachedTotalWin = 0;
 
-    // Priority 2: Fallback to BonusHeader cumulative total if spinData totalWin not available
-    if (totalWin === 0) {
-      try {
-        const bonusHeader = (gameScene as any)?.bonusHeader;
-        if (bonusHeader) {
-          // Use the internal cumulative tracker if available; this includes the
-          // scatter trigger win plus all per-spin bonus wins.
-          if (typeof bonusHeader.getCumulativeBonusWin === 'function') {
-            const cumulativeTotal = Number(bonusHeader.getCumulativeBonusWin()) || 0;
-            if (cumulativeTotal > 0) {
-              totalWin = cumulativeTotal;
-              console.log(`[Symbols] Using BonusHeader cumulative bonus total for congrats (fallback): ${totalWin}`);
-            }
-          } else if (typeof bonusHeader.getCurrentWinnings === 'function') {
-            // Backward compatibility: fall back to whatever the bonus header is currently showing
-            const headerTotal = Number(bonusHeader.getCurrentWinnings()) || 0;
-            if (headerTotal > 0) {
-              totalWin = headerTotal;
-              console.log(`[Symbols] Using BonusHeader current winnings for congrats total (legacy fallback): ${totalWin}`);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('[Symbols] Failed to read BonusHeader winnings for congrats, trying final fallback', e);
-      }
-    }
-
-    // Priority 3: Final fallback - calculate total win from freespinItems if neither above worked
-    if (totalWin === 0 && this.currentSpinData && this.currentSpinData.slot) {
-      const freespinData = this.currentSpinData.slot.freespin || this.currentSpinData.slot.freeSpin;
-      if (freespinData && freespinData.items && Array.isArray(freespinData.items)) {
-        totalWin = freespinData.items.reduce((sum: number, item: any) => {
-          const perSpinTotal =
-            (typeof item.totalWin === 'number' && item.totalWin > 0)
-              ? item.totalWin
-              : (item.subTotalWin || 0);
-          return sum + perSpinTotal;
-        }, 0);
-        console.log(`[Symbols] Calculated total win from freespinItems (final fallback, per-spin totalWin/subTotalWin): ${totalWin}`);
-      }
+    if (totalWin > 0) {
+      console.log(`[Symbols] Using cached total win for congrats: ${totalWin}`);
+    } else {
+      // Fallback: if cached value is 0 or not set, recalculate (shouldn't happen normally)
+      console.warn('[Symbols] Cached total win is 0 or not set - recalculating as fallback');
+      totalWin = this.calculateTotalWinFromSpinData();
+      console.log(`[Symbols] Recalculated total win for congrats: ${totalWin}`);
     }
     
     // Derive how many free spins were used for this bonus (total spins played, including retriggers)
