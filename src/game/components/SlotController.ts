@@ -32,6 +32,8 @@ export class SlotController {
 	private featureAmountText: Phaser.GameObjects.Text;
 	private featureDollarText: Phaser.GameObjects.Text;
 	private featureLabelText: Phaser.GameObjects.Text | null = null;
+	private featureImage: Phaser.GameObjects.Image | null = null;
+	private featureButtonHitbox: Phaser.GameObjects.Rectangle | null = null;
 	private primaryControllers: Phaser.GameObjects.Container;
 	private controllerTexts: Phaser.GameObjects.Text[] = [];
 	private amplifyDescriptionContainer: Phaser.GameObjects.Container;
@@ -214,9 +216,11 @@ export class SlotController {
 
 		// Completely hide the Buy Feature visuals while free rounds are active so the
 		// center row can be used by the FreeRoundManager info panel instead.
-		const featureButton = this.buttons.get('feature');
-		if (featureButton) {
-			featureButton.setVisible(false);
+		if (this.featureImage) {
+			this.featureImage.setVisible(false);
+		}
+		if (this.featureButtonHitbox) {
+			this.featureButtonHitbox.setVisible(false);
 		}
 		if (this.featureAmountText) {
 			this.featureAmountText.setVisible(false);
@@ -259,9 +263,11 @@ export class SlotController {
 		this.enableFeatureButton();
 
 		// Restore Buy Feature visuals after free rounds end
-		const featureButton = this.buttons.get('feature');
-		if (featureButton) {
-			featureButton.setVisible(true);
+		if (this.featureImage) {
+			this.featureImage.setVisible(true);
+		}
+		if (this.featureButtonHitbox) {
+			this.featureButtonHitbox.setVisible(true);
 		}
 		if (this.featureAmountText) {
 			this.featureAmountText.setVisible(true);
@@ -809,19 +815,12 @@ export class SlotController {
 		const decreaseBetButton = this.buttons.get('decrease_bet');
 		const increaseBetButton = this.buttons.get('increase_bet');
 
-		if (decreaseBetButton) {
-			decreaseBetButton.setAlpha(0.3); // Make it semi-transparent/greyed out
-			decreaseBetButton.setTint(0x777777); // Apply grey tint
-			decreaseBetButton.disableInteractive(); // Disable clicking
-			console.log('[SlotController] Decrease bet button disabled');
-		}
-
-		if (increaseBetButton) {
-			increaseBetButton.setAlpha(0.3); // Make it semi-transparent/greyed out
-			increaseBetButton.setTint(0x777777); // Apply grey tint
-			increaseBetButton.disableInteractive(); // Disable clicking
-			console.log('[SlotController] Increase bet button disabled');
-		}
+		// IMPORTANT: keep the buttons interactive even when "disabled" so they still
+		// block pointer events from falling through to the bet background (which opens
+		// the bet options panel). The pointer handlers will no-op while disabled.
+		this.setBetButtonEnabled(decreaseBetButton, false);
+		this.setBetButtonEnabled(increaseBetButton, false);
+		console.log('[SlotController] Bet +/- buttons disabled (interactive, but no-op)');
 	}
 
 	/**
@@ -831,23 +830,34 @@ export class SlotController {
 		const decreaseBetButton = this.buttons.get('decrease_bet');
 		const increaseBetButton = this.buttons.get('increase_bet');
 
-		if (decreaseBetButton) {
-			decreaseBetButton.setAlpha(1.0); // Restore full opacity before applying limit logic
-			decreaseBetButton.clearTint(); // Remove any grey tint before applying limit logic
-			decreaseBetButton.setInteractive(); // Re-enable clicking before applying limit logic
-			console.log('[SlotController] Decrease bet button enabled (pre limit check)');
-		}
-
-		if (increaseBetButton) {
-			increaseBetButton.setAlpha(1.0); // Restore full opacity before applying limit logic
-			increaseBetButton.clearTint(); // Remove any grey tint before applying limit logic
-			increaseBetButton.setInteractive(); // Re-enable clicking before applying limit logic
-			console.log('[SlotController] Increase bet button enabled (pre limit check)');
-		}
+		this.setBetButtonEnabled(decreaseBetButton, true);
+		this.setBetButtonEnabled(increaseBetButton, true);
+		console.log('[SlotController] Bet +/- buttons enabled');
 
 		// After generic enable, apply min/max limit greying based on current bet
 		const currentBaseBet = this.getBaseBetAmount() || 0.2;
 		this.updateBetLimitButtons(currentBaseBet);
+	}
+
+	/**
+	 * Set bet button enabled/disabled state while keeping it interactive to block clicks.
+	 * This prevents clicks from falling through to the bet background (which opens bet options).
+	 */
+	private setBetButtonEnabled(button: Phaser.GameObjects.Image | undefined, enabled: boolean): void {
+		if (!button) return;
+
+		button.setAlpha(enabled ? 1.0 : 0.3);
+		if (enabled) {
+			button.clearTint(); // Remove any grey tint
+		} else {
+			button.setTint(0x777777); // Apply grey tint
+		}
+		// Keep interactive for hit-testing so disabled +/- buttons still block pointer
+		// events from falling through to the bet background (which opens bet options).
+		if (!button.input) {
+			button.setInteractive();
+		}
+		button.setData('disabled', !enabled);
 	}
 
 	/**
@@ -895,33 +905,21 @@ export class SlotController {
 		const isAtMax = idx === betLevels.length - 1;
 
 		// Update decrease bet button state
-		if (decreaseBetButton) {
-			if (isAtMin) {
-				decreaseBetButton.setAlpha(0.3);
-				decreaseBetButton.setTint(0x777777);
-				decreaseBetButton.disableInteractive();
-				console.log('[SlotController] Decrease bet button greyed out at minimum bet');
-			} else {
-				decreaseBetButton.setAlpha(1.0);
-				decreaseBetButton.clearTint();
-				decreaseBetButton.setInteractive();
-				console.log('[SlotController] Decrease bet button enabled (above minimum bet)');
-			}
+		if (isAtMin) {
+			this.setBetButtonEnabled(decreaseBetButton, false);
+			console.log('[SlotController] Decrease bet button greyed out at minimum bet');
+		} else {
+			this.setBetButtonEnabled(decreaseBetButton, true);
+			console.log('[SlotController] Decrease bet button enabled (above minimum bet)');
 		}
 
 		// Update increase bet button state
-		if (increaseBetButton) {
-			if (isAtMax) {
-				increaseBetButton.setAlpha(0.3);
-				increaseBetButton.setTint(0x777777);
-				increaseBetButton.disableInteractive();
-				console.log('[SlotController] Increase bet button greyed out at maximum bet');
-			} else {
-				increaseBetButton.setAlpha(1.0);
-				increaseBetButton.clearTint();
-				increaseBetButton.setInteractive();
-				console.log('[SlotController] Increase bet button enabled (below maximum bet)');
-			}
+		if (isAtMax) {
+			this.setBetButtonEnabled(increaseBetButton, false);
+			console.log('[SlotController] Increase bet button greyed out at maximum bet');
+		} else {
+			this.setBetButtonEnabled(increaseBetButton, true);
+			console.log('[SlotController] Increase bet button enabled (below maximum bet)');
 		}
 	}
 
@@ -929,22 +927,29 @@ export class SlotController {
 	 * Disable feature button (grey out and disable interaction)
 	 */
 	private disableFeatureButton(): void {
-		const featureButton = this.buttons.get('feature');
-		
-		if (featureButton) {
-			featureButton.setAlpha(0.3); // Make it semi-transparent/greyed out
-			featureButton.disableInteractive(); // Disable clicking
+		const desiredAlpha = 0.3;
+
+		if (this.featureButtonHitbox) {
+			this.featureButtonHitbox.disableInteractive(); // Disable clicking
 			console.log('[SlotController] Feature button disabled');
 		}
+
+		if (this.featureImage) {
+			this.featureImage.setAlpha(desiredAlpha);
+		}
+
+		this.featureLabelText?.setAlpha(desiredAlpha);
+		this.featureAmountText?.setAlpha(desiredAlpha);
+		this.featureDollarText?.setAlpha(desiredAlpha);
 	}
 
 	/**
 	 * Enable feature button (restore opacity and enable interaction)
 	 */
 	private enableFeatureButton(): void {
-		const featureButton = this.buttons.get('feature');
+		const desiredAlpha = 1.0;
 
-		if (featureButton) {
+		if (this.featureButtonHitbox) {
 			// Guard: do not re-enable during bonus or before explicit allow
 			if (gameStateManager.isBonus || !this.canEnableFeatureButton) {
 				console.log('[SlotController] Skipping feature enable (bonus active or not allowed yet)');
@@ -956,10 +961,17 @@ export class SlotController {
 				console.log('[SlotController] Skipping feature enable (enhance/amplify bet is ON)');
 				return;
 			}
-			featureButton.setAlpha(1.0); // Restore full opacity
-			featureButton.setInteractive(); // Re-enable clicking
+			this.featureButtonHitbox.setInteractive(); // Re-enable clicking
 			console.log('[SlotController] Feature button enabled');
 		}
+
+		if (this.featureImage) {
+			this.featureImage.setAlpha(desiredAlpha);
+		}
+
+		this.featureLabelText?.setAlpha(desiredAlpha);
+		this.featureAmountText?.setAlpha(desiredAlpha);
+		this.featureDollarText?.setAlpha(desiredAlpha);
 	}
 
 	/**
@@ -1275,6 +1287,10 @@ export class SlotController {
 				this.stopAutoplay();
 				return;
 			}
+			if ((gameStateManager as any).isProcessingSpin) {
+				console.log('[SlotController] Spin blocked - already processing spin');
+				return;
+			}
 			// Click safety guard: block if unaffordable
 			if (!this.canAffordSpin()) {
 				this.updateSpinButtonState();
@@ -1284,6 +1300,8 @@ export class SlotController {
 				console.log('[SlotController] Spin blocked - already spinning');
 				return;
 			}
+			// Mark that we have begun processing a spin on this frame (prevents immediate re-enable)
+			(gameStateManager as any).isProcessingSpin = true;
 			
 			// Disable spin button, bet buttons, feature button and play animations
 			this.disableSpinButton();
@@ -1711,6 +1729,11 @@ export class SlotController {
 		).setOrigin(0.5, 0.5).setScale(assetScale * 0.55).setDepth(10);
 		decreaseBetButton.setInteractive();
 		decreaseBetButton.on('pointerdown', () => {
+			// Keep the button interactive even when disabled so it blocks clicks from
+			// falling through to the bet background. No-op when disabled.
+			if (decreaseBetButton.getData('disabled')) {
+				return;
+			}
 			console.log('[SlotController] Decrease bet button clicked');
 			this.adjustBetByStep(-1);
 		});
@@ -1725,6 +1748,11 @@ export class SlotController {
 		).setOrigin(0.5, 0.5).setScale(assetScale * 0.55).setDepth(10);
 		increaseBetButton.setInteractive();
 		increaseBetButton.on('pointerdown', () => {
+			// Keep the button interactive even when disabled so it blocks clicks from
+			// falling through to the bet background. No-op when disabled.
+			if (increaseBetButton.getData('disabled')) {
+				return;
+			}
 			console.log('[SlotController] Increase bet button clicked');
 			this.adjustBetByStep(1);
 		});
@@ -1888,18 +1916,31 @@ export class SlotController {
 		const featureX = scene.scale.width * 0.5; // Center between balance and bet
 		const featureY = scene.scale.height * 0.724; // Same Y as balance and bet containers
 
-		// Feature button image (serves as background)
-		const featureButton = scene.add.image(
+		// Visual image for the feature button
+		this.featureImage = scene.add.image(
 			featureX,
 			featureY,
 			'feature'
 		).setOrigin(0.5, 0.5).setScale(assetScale).setDepth(10);
+		this.controllerContainer.add(this.featureImage);
+
+		// Interactable area (slightly smaller than the visual) as an invisible rectangle
+		const baseWidth = this.featureImage ? this.featureImage.displayWidth : 200;
+		const baseHeight = this.featureImage ? this.featureImage.displayHeight : 80;
+		const featureButton = scene.add.rectangle(
+			featureX,
+			featureY,
+			baseWidth * 0.65,
+			baseHeight * 0.45,
+			0xffffff,
+			0 // fully transparent
+		).setOrigin(0.5, 0.5).setDepth(11);
 		featureButton.setInteractive();
 		featureButton.on('pointerdown', () => {
 			console.log('[SlotController] Feature button clicked');
 			this.showBuyFeatureDrawer();
 		});
-		this.buttons.set('feature', featureButton);
+		this.featureButtonHitbox = featureButton;
 		this.controllerContainer.add(featureButton);
 
 		// "BUY FEATURE" label (1st line)
@@ -2009,6 +2050,10 @@ export class SlotController {
 				this.stopAutoplay();
 				return;
 			}
+			if ((gameStateManager as any).isProcessingSpin) {
+				console.log('[SlotController] Spin blocked - already processing spin');
+				return;
+			}
 			// Click safety guard: block if unaffordable
 			if (!this.canAffordSpin()) {
 				this.updateSpinButtonState();
@@ -2018,6 +2063,8 @@ export class SlotController {
 				console.log('[SlotController] Spin blocked - already spinning');
 				return;
 			}
+			// Mark that we have begun processing a spin on this frame (prevents immediate re-enable)
+			(gameStateManager as any).isProcessingSpin = true;
 			
 			// Disable spin button, bet buttons, feature button and play animations
 			this.disableSpinButton();
@@ -2172,6 +2219,13 @@ export class SlotController {
 		try {
 			this.updateBetAmount(betAmount);
 
+			// Manually update baseBetAmount since updateBetAmount skips it when isInternalBetChange is true
+			// This is critical for autoplay to use the correct bet amount
+			this.baseBetAmount = betAmount;
+			
+			// Update Buy Feature amount to sync with the new base bet
+			this.updateFeatureAmountFromCurrentBet();
+
 			// If enhance/amplify bet is currently ON, keep the displayed bet at +25%
 			// while the underlying base bet (used for API and Buy Feature price) is betAmount.
 			const gameData = this.getGameData();
@@ -2231,9 +2285,31 @@ export class SlotController {
 
 		// Update base bet amount when changed externally (not by amplify bet)
 		if (!this.isInternalBetChange) {
+			const gameData = this.getGameData();
+			const wasEnhancedBetActive = gameData && gameData.isEnhancedBet;
+			
 			this.baseBetAmount = betAmount;
-			// Reset amplify bet state when bet amount is changed externally
-			this.resetAmplifyBetOnBetChange();
+			
+			// If enhanced bet was active, preserve it and update the displayed bet with 25% increase
+			if (wasEnhancedBetActive) {
+				// Keep enhanced bet state active
+				// Update displayed bet amount to show new bet with 25% increase
+				if (this.betAmountText) {
+					const increasedBet = betAmount * 1.25;
+					this.betAmountText.setText(increasedBet.toFixed(2));
+					
+					// Update dollar sign position based on new bet amount width
+					if (this.betDollarText) {
+						const betX = this.betAmountText.x;
+						const betY = this.betAmountText.y;
+						this.betDollarText.setPosition(betX - (this.betAmountText.width / 2) - 5, betY);
+					}
+				}
+				console.log(`[SlotController] Bet amount changed to $${betAmount} - preserving enhanced bet state (displayed: $${(betAmount * 1.25).toFixed(2)})`);
+			} else {
+				// Reset amplify bet state when bet amount is changed externally and enhanced bet was not active
+				this.resetAmplifyBetOnBetChange();
+			}
 		}
 
 		// Keep the Buy Feature amount synced with current base bet (using the updated baseBetAmount)
@@ -3670,28 +3746,20 @@ export class SlotController {
 		}
 		
 		// Grey out the feature button
-		const featureButton = this.buttons.get('feature');
-		if (featureButton) {
-			featureButton.setAlpha(0.3); // Make it semi-transparent/greyed out
-			featureButton.disableInteractive(); // Disable clicking
+		if (this.featureButtonHitbox) {
+			this.featureButtonHitbox.disableInteractive(); // Disable clicking
 			console.log('[SlotController] Feature button greyed out and disabled');
+		}
+		if (this.featureImage) {
+			this.featureImage.setAlpha(0.3); // Make it semi-transparent/greyed out
 		}
 		
 		// Grey out the bet buttons
 		const decreaseBetButton = this.buttons.get('decrease_bet');
 		const increaseBetButton = this.buttons.get('increase_bet');
 		
-		if (decreaseBetButton) {
-			decreaseBetButton.setAlpha(0.3); // Make it semi-transparent/greyed out
-			decreaseBetButton.disableInteractive(); // Disable clicking
-			console.log('[SlotController] Decrease bet button greyed out and disabled');
-		}
-		
-		if (increaseBetButton) {
-			increaseBetButton.setAlpha(0.3); // Make it semi-transparent/greyed out
-			increaseBetButton.disableInteractive(); // Disable clicking
-			console.log('[SlotController] Increase bet button greyed out and disabled');
-		}
+		this.setBetButtonEnabled(decreaseBetButton, false);
+		this.setBetButtonEnabled(increaseBetButton, false);
 		
 		// Note: Free spin display will be shown separately with actual scatter data
 		console.log('[SlotController] Primary controller hidden, free spin display will be shown separately');
@@ -3730,28 +3798,20 @@ export class SlotController {
 		}
 		
 		// Restore the feature button
-		const featureButton = this.buttons.get('feature');
-		if (featureButton) {
-			featureButton.setAlpha(1.0); // Restore full opacity
-			featureButton.setInteractive(); // Re-enable clicking
+		if (this.featureButtonHitbox) {
+			this.featureButtonHitbox.setInteractive(); // Re-enable clicking
 			console.log('[SlotController] Feature button restored and enabled');
+		}
+		if (this.featureImage) {
+			this.featureImage.setAlpha(1.0); // Restore full opacity
 		}
 		
 		// Restore the bet buttons
 		const decreaseBetButton = this.buttons.get('decrease_bet');
 		const increaseBetButton = this.buttons.get('increase_bet');
 
-		if (decreaseBetButton) {
-			decreaseBetButton.setAlpha(1.0); // Restore full opacity before applying limit logic
-			decreaseBetButton.setInteractive(); // Re-enable clicking before applying limit logic
-			console.log('[SlotController] Decrease bet button restored and enabled (pre limit check)');
-		}
-
-		if (increaseBetButton) {
-			increaseBetButton.setAlpha(1.0); // Restore full opacity before applying limit logic
-			increaseBetButton.setInteractive(); // Re-enable clicking before applying limit logic
-			console.log('[SlotController] Increase bet button restored and enabled (pre limit check)');
-		}
+		this.setBetButtonEnabled(decreaseBetButton, true);
+		this.setBetButtonEnabled(increaseBetButton, true);
 
 		// Apply min/max greying based on the current base bet after bonus ends
 		const currentBaseBet = this.getBaseBetAmount() || 0.2;
@@ -4025,6 +4085,8 @@ public updateAutoplayButtonState(): void {
 	private async handleSpin(): Promise<void> {
 		if (!this.gameAPI) {
 			console.warn('[SlotController] GameAPI not available, falling back to EventBus');
+			// No backend call is made in this fallback path, consider spin processing done
+			(gameStateManager as any).isProcessingSpin = false;
 			EventBus.emit('spin');
 			return;
 		}
@@ -4037,6 +4099,7 @@ public updateAutoplayButtonState(): void {
 			const totalBetToCharge = gd && gd.isEnhancedBet ? currentBet * 1.25 : currentBet;
 			if (currentBalance < totalBetToCharge) {
 				console.error(`[SlotController] Insufficient balance for spin: $${currentBalance} < $${totalBetToCharge}`);
+				(gameStateManager as any).isProcessingSpin = false;
 				if (this.autoplaySpinsRemaining > 0 || this.gameData?.isAutoPlaying || gameStateManager.isAutoPlaying) {
 					this.stopAutoplay();
 				}
@@ -4212,6 +4275,14 @@ public updateAutoplayButtonState(): void {
 		} catch (error) {
 			console.error('[SlotController] ❌ Spin failed:', error);
 			// Don't emit the spin event if the API call failed
+			(gameStateManager as any).isProcessingSpin = false;
+			try { this.hideSpinner(); } catch {}
+			this.updateSpinButtonState();
+			this.enableAutoplayButton();
+			this.enableTurboButton();
+			this.enableBetButtons();
+			this.enableFeatureButton();
+			this.enableAmplifyButton();
 		}
 	}
 
@@ -4234,6 +4305,9 @@ public updateAutoplayButtonState(): void {
 			},
 			onConfirm: () => {
 				console.log('[SlotController] Buy feature confirmed');
+				// Treat buy-feature confirmation like a spin start: prevent immediate UI re-enable
+				// until REELS_STOP (GameStateManager clears isProcessingSpin on REELS_STOP).
+				(gameStateManager as any).isProcessingSpin = true;
 				// Immediately disable interactions to prevent other actions
 				this.disableSpinButton();
 				this.disableAutoplayButton();
@@ -4254,6 +4328,13 @@ public updateAutoplayButtonState(): void {
 		
 		if (!this.buyFeature || !this.gameAPI) {
 			console.error('[SlotController] Buy feature or GameAPI not available');
+			(gameStateManager as any).isProcessingSpin = false;
+			this.updateSpinButtonState();
+			this.enableAutoplayButton();
+			this.enableFeatureButton();
+			this.enableBetButtons();
+			this.enableAmplifyButton();
+			this.enableBetBackgroundInteraction('buy feature unavailable');
 			return;
 		}
 		
@@ -4272,6 +4353,7 @@ public updateAutoplayButtonState(): void {
 			const currentBalance = this.getBalanceAmount();
 			if (currentBalance < calculatedPrice) {
 			console.error(`[SlotController] Insufficient balance: $${currentBalance.toFixed(2)} < $${calculatedPrice.toFixed(2)}`);
+			(gameStateManager as any).isProcessingSpin = false;
 			// Re-enable controls since purchase cannot proceed
 			this.updateSpinButtonState();
 			this.enableAutoplayButton();
@@ -4362,6 +4444,7 @@ public updateAutoplayButtonState(): void {
 			
 		} catch (error) {
 			console.error('[SlotController] Error processing buy feature purchase:', error);
+			(gameStateManager as any).isProcessingSpin = false;
 			// Re-enable controls on error to avoid locking the UI
 			this.updateSpinButtonState();
 			this.enableAutoplayButton();
@@ -4823,6 +4906,7 @@ public updateAutoplayButtonState(): void {
 			// Dim and pause icon animation
 			if (this.spinIcon) {
 				this.spinIcon.setAlpha(0.5);
+				this.spinIcon.setTint(0x666666);
 			}
 			if (this.spinIconTween) {
 				this.spinIconTween.pause();
@@ -4873,6 +4957,7 @@ public updateAutoplayButtonState(): void {
 			// Restore icon animation
 			if (this.spinIcon) {
 				this.spinIcon.setAlpha(1);
+				this.spinIcon.clearTint();
 			}
 			if (this.spinIconTween) {
 				this.spinIconTween.resume();
@@ -4899,7 +4984,7 @@ public updateAutoplayButtonState(): void {
 		}
 
 		// Disable if reels are spinning or player can't afford a spin
-		if (gameStateManager.isReelSpinning || !this.canAffordSpin()) {
+		if ((gameStateManager as any).isProcessingSpin || gameStateManager.isReelSpinning || !this.canAffordSpin()) {
 			this.disableSpinButton();
 		} else {
 			this.enableSpinButton();

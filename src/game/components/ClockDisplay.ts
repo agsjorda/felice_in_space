@@ -41,7 +41,7 @@ export class ClockDisplay {
     }
 
     public create(): void {
-        const timeX = this.scene.scale.width * 0.5 + (this.options.offsetX || 0);
+        const timeX = (this.options.offsetX || 0);
         const timeY = (this.options.offsetY || 0);
         const fontSize = this.options.fontSize || 14;
         const fontFamily = this.options.fontFamily || 'Arial';
@@ -63,9 +63,9 @@ export class ClockDisplay {
                 fontSize: `${fontSize}px`,
                 color: textColor,
                 fontStyle: 'normal',
-                align: 'center'
+                align: 'left'
             }
-        ).setOrigin(0.5, 0.5)
+        ).setOrigin(0, 0)
          .setScrollFactor(0)
          .setAlpha(alpha)
          .setDepth(depth)
@@ -93,7 +93,7 @@ export class ClockDisplay {
 
         // Create additional text if provided
         if (this.options.additionalText) {
-            const additionalX = this.scene.scale.width * 0.5 + (this.options.additionalTextOffsetX || 0);
+            const additionalX = this.scene.scale.width - (this.options.additionalTextOffsetX || 0);
             const additionalY = (this.options.offsetY || 0) + (this.options.additionalTextOffsetY || 0);
             const additionalFontSize = this.options.additionalTextFontSize || fontSize;
             const additionalFontFamily = this.options.additionalTextFontFamily || fontFamily;
@@ -109,9 +109,9 @@ export class ClockDisplay {
                     fontSize: `${additionalFontSize}px`,
                     color: additionalColor,
                     fontStyle: 'normal',
-                    align: 'center'
+                    align: 'right'
                 }
-            ).setOrigin(0.5, 0.5)
+            ).setOrigin(1, 0)
              .setScrollFactor(0)
              .setAlpha(alpha)
              .setDepth(depth)

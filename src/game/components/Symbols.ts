@@ -10,6 +10,7 @@ import { TurboConfig } from '../../config/TurboConfig';
 import { SLOT_ROWS, SLOT_COLUMNS, DELAY_BETWEEN_SPINS, MULTIPLIER_SYMBOLS } from '../../config/GameConfig';
 import { SoundEffectType } from '../../managers/AudioManager';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
+import { SpinData } from "../../backend/SpinData";
 
 export class Symbols {
   private static readonly WINLINE_CHECKING_DISABLED: boolean = true;
@@ -52,6 +53,9 @@ export class Symbols {
   
   // Track if multiplier animations are currently in progress
   private multiplierAnimationsInProgress: boolean = false;
+  
+  // Cached total win calculated before freespin dialog is shown
+  private cachedTotalWin: number = 0;
 
  
 
@@ -1531,10 +1535,93 @@ export class Symbols {
   }
 
   /**
+   * Calculate total win from spinData using multiple fallback sources
+   * This method tries to get totalWin directly from spinData, then falls back to
+   * calculating from freespin items, multiplierValue, slot paylines, and tumbles
+   */
+  private calculateTotalWinFromSpinData(): number {
+    console.log(`[Symbols] cachedTotalWin calculateTotalWinFromSpinData:`, this.currentSpinData);
+    let totalWin = 0;
+    try {
+      // First, try to get totalWin directly from spinData
+      if (this.currentSpinData && this.currentSpinData.slot && typeof this.currentSpinData.slot.totalWin === 'number') {
+        totalWin = this.currentSpinData.slot.totalWin;
+        console.log(`[Symbols] cachedTotalWin Using spinData.totalWin for cached total: ${totalWin}`);
+      } else {
+        // Fallback: calculate total win from freespin items, multiplierValue, slot paylines, and tumbles
+        console.log('[Symbols] cachedTotalWin spinData.totalWin not available - calculating from fallback sources');
+        
+        if (this.currentSpinData && this.currentSpinData.slot) {
+          const slot = this.currentSpinData.slot;
+          const freespinData = slot.freespin || slot.freeSpin;
+          
+          // Sum wins from freespin.items
+          if (freespinData && freespinData.items && Array.isArray(freespinData.items)) {
+            const freespinItemsWin = freespinData.items.reduce((sum: number, item: any) => {
+              const perSpinTotal =
+                (typeof item.totalWin === 'number' && item.totalWin > 0)
+                  ? item.totalWin
+                  : (item.subTotalWin || 0);
+              return sum + perSpinTotal;
+            }, 0);
+            totalWin += freespinItemsWin;
+            console.log(`[Symbols] cachedTotalWin Added wins from freespin.items: ${freespinItemsWin}`);
+          }
+          
+          // Add multiplierValue if it exists.
+          // Important: in some payloads `multiplierValue` lives on `freeSpin`, while `items`
+          // may live on `freespin`. So we must check BOTH shapes, not only the chosen `freespinData`.
+          try {
+            const mvRaw =
+              (slot as any)?.freeSpin?.multiplierValue ??
+              (slot as any)?.freespin?.multiplierValue ??
+              (freespinData as any)?.multiplierValue ??
+              0;
+            const multiplierValue = Number(mvRaw) || 0;
+            if (multiplierValue > 0) {
+              totalWin += multiplierValue;
+              console.log(`[Symbols] cachedTotalWin Added freespin/freeSpin.multiplierValue: ${multiplierValue}`);
+            }
+          } catch {}
+          
+          // Sum wins from slot.paylines
+          if (slot.paylines && Array.isArray(slot.paylines) && slot.paylines.length > 0) {
+            const paylinesWin = calculateTotalWinFromPaylines(slot.paylines);
+            totalWin += paylinesWin;
+            console.log(`[Symbols] cachedTotalWin Added wins from slot.paylines: ${paylinesWin}`);
+          }
+          
+          // Sum wins from slot.tumbles
+          if (slot.tumbles && Array.isArray(slot.tumbles) && slot.tumbles.length > 0) {
+            const tumblesWin = slot.tumbles.reduce((sum: number, tumble: any) => {
+              const win = Number(tumble?.win || 0);
+              return sum + (isNaN(win) ? 0 : win);
+            }, 0);
+            totalWin += tumblesWin;
+            console.log(`[Symbols] cachedTotalWin Added wins from slot.tumbles: ${tumblesWin}`);
+          }
+          
+          console.log(`[Symbols] cachedTotalWin Calculated total win from fallback sources: ${totalWin}`);
+        }
+      }
+    } catch (e) {
+      console.warn('[Symbols] cachedTotalWin Failed to calculate total win from spinData', e);
+    }
+    
+    return totalWin;
+  }
+
+  /**
    * Start the scatter animation sequence (called after win dialog closes or immediately if no dialog)
    */
   public startScatterAnimationSequence(mockData: any): void {
     console.log('[Symbols] Starting scatter animation sequence');
+    
+    // Calculate and cache total win before freespin dialog is shown
+    if(this.cachedTotalWin <= 0) {
+      this.cachedTotalWin = this.calculateTotalWinFromSpinData();
+    }
+    console.log(`[Symbols] Cached total win before freespin dialog: ${this.cachedTotalWin}`);
     
     // Keep animations running and symbols visible during scatter; do not stop or hide
     this.hideWinningOverlay();
@@ -2903,61 +2990,17 @@ export class Symbols {
       }
     }
     
-    // Priority 1: Use the authoritative totalWin from the spinData response (freespin.totalWin)
-    // This is the backend's calculated total and should always be used when available
-    let totalWin = 0;
-    try {
-      if (this.currentSpinData && this.currentSpinData.slot) {
-        const freespinData = this.currentSpinData.slot.freespin || this.currentSpinData.slot.freeSpin;
-        if (freespinData && typeof freespinData.totalWin === 'number' && freespinData.totalWin > 0) {
-          totalWin = freespinData.totalWin;
-          console.log(`[Symbols] Using freespin.totalWin from spinData response for congrats: ${totalWin}`);
-        }
-      }
-    } catch (e) {
-      console.warn('[Symbols] Failed to read freespin.totalWin from spinData, trying fallbacks', e);
-    }
+    // Use cached total win that was calculated before freespin dialog was shown
+    let totalWin = this.cachedTotalWin;
+    this.cachedTotalWin = 0;
 
-    // Priority 2: Fallback to BonusHeader cumulative total if spinData totalWin not available
-    if (totalWin === 0) {
-      try {
-        const bonusHeader = (gameScene as any)?.bonusHeader;
-        if (bonusHeader) {
-          // Use the internal cumulative tracker if available; this includes the
-          // scatter trigger win plus all per-spin bonus wins.
-          if (typeof bonusHeader.getCumulativeBonusWin === 'function') {
-            const cumulativeTotal = Number(bonusHeader.getCumulativeBonusWin()) || 0;
-            if (cumulativeTotal > 0) {
-              totalWin = cumulativeTotal;
-              console.log(`[Symbols] Using BonusHeader cumulative bonus total for congrats (fallback): ${totalWin}`);
-            }
-          } else if (typeof bonusHeader.getCurrentWinnings === 'function') {
-            // Backward compatibility: fall back to whatever the bonus header is currently showing
-            const headerTotal = Number(bonusHeader.getCurrentWinnings()) || 0;
-            if (headerTotal > 0) {
-              totalWin = headerTotal;
-              console.log(`[Symbols] Using BonusHeader current winnings for congrats total (legacy fallback): ${totalWin}`);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('[Symbols] Failed to read BonusHeader winnings for congrats, trying final fallback', e);
-      }
-    }
-
-    // Priority 3: Final fallback - calculate total win from freespinItems if neither above worked
-    if (totalWin === 0 && this.currentSpinData && this.currentSpinData.slot) {
-      const freespinData = this.currentSpinData.slot.freespin || this.currentSpinData.slot.freeSpin;
-      if (freespinData && freespinData.items && Array.isArray(freespinData.items)) {
-        totalWin = freespinData.items.reduce((sum: number, item: any) => {
-          const perSpinTotal =
-            (typeof item.totalWin === 'number' && item.totalWin > 0)
-              ? item.totalWin
-              : (item.subTotalWin || 0);
-          return sum + perSpinTotal;
-        }, 0);
-        console.log(`[Symbols] Calculated total win from freespinItems (final fallback, per-spin totalWin/subTotalWin): ${totalWin}`);
-      }
+    if (totalWin > 0) {
+      console.log(`[Symbols] Using cached total win for congrats: ${totalWin}`);
+    } else {
+      // Fallback: if cached value is 0 or not set, recalculate (shouldn't happen normally)
+      console.warn('[Symbols] Cached total win is 0 or not set - recalculating as fallback');
+      totalWin = this.calculateTotalWinFromSpinData();
+      console.log(`[Symbols] Recalculated total win for congrats: ${totalWin}`);
     }
     
     // Derive how many free spins were used for this bonus (total spins played, including retriggers)
@@ -3336,9 +3379,9 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
     if (Array.isArray(tumblesFromSpin) && tumblesFromSpin.length > 0) {
       winsFromSpin = tumblesFromSpin.some((t: any) => {
         const outArr = Array.isArray(t?.symbols?.out) ? t.symbols.out as Array<{ count?: number; win?: number }> : [];
-        const hasOut = outArr.some(o => (Number(o?.count) || 0) > 0);
+        const hasOutWin = outArr.some(o => (Number(o?.win) || 0) > 0);
         const hasWin = Number(t?.win) > 0;
-        return hasOut || hasWin;
+        return hasOutWin || hasWin;
       });
     }
     if (winsFromSpin) {
@@ -3478,15 +3521,40 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
         scatterCount === 4 ? 3 : 0;
       const scatterBaseWin = (isNaN(betAmount) ? 0 : betAmount) * scatterMultiplier;
       
-      // Do not include paylines in total; base scatter only
+      // Base-game display: this flow uses tumbles (cluster) wins + scatter base payout.
+      // Paylines are ignored for this game.
       const totalForHeader = (scatterBaseWin || 0);
+      // Also compute tumble total from SpinData so we can seed the bonus cumulative correctly.
+      // (BonusHeader's TUMBLE_SEQUENCE_DONE only runs once bonus mode is active.)
+      const tumbleWinForSeed = (() => {
+        try {
+          const tumblesArr: any[] = Array.isArray((spinData?.slot as any)?.tumbles) ? (spinData.slot as any).tumbles : [];
+          return tumblesArr.reduce((sum: number, t: any) => {
+            const w = Number(t?.win ?? 0);
+            if (!isNaN(w) && w > 0) return sum + w;
+            const outs = Array.isArray(t?.symbols?.out) ? (t.symbols.out as Array<{ win?: number }>) : [];
+            const outSum = outs.reduce((s, o) => s + (Number(o?.win) || 0), 0);
+            return sum + outSum;
+          }, 0);
+        } catch {
+          return 0;
+        }
+      })();
+      const totalForBonusSeed = tumbleWinForSeed + totalForHeader;
       
       // Update normal header winnings display immediately on scatter trigger
       try {
         const header = (self.scene as any)?.header;
         if (header && typeof header.showWinningsDisplay === 'function' && totalForHeader > 0) {
-          header.showWinningsDisplay(totalForHeader);
-          console.log(`[Symbols] Header winnings updated for scatter: base=$${scatterBaseWin}, total=$${totalForHeader}`);
+          // IMPORTANT: tumbles (cluster wins) are applied before scatter detection in this flow.
+          // At this point, the header may already be showing the tumble total; add scatter base
+          // on top instead of overwriting.
+          const existing = (typeof header.getCurrentWinnings === 'function')
+            ? Number(header.getCurrentWinnings() || 0)
+            : 0;
+          const combined = existing + totalForHeader;
+          header.showWinningsDisplay(combined);
+          console.log(`[Symbols] Header winnings updated for scatter: base=$${scatterBaseWin}, prev=$${existing}, combined=$${combined}`);
         }
       } catch (e) {
         console.warn('[Symbols] Failed to update Header winnings for scatter', e);
@@ -3503,10 +3571,11 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
               console.log(`[Symbols] BonusHeader added scatter retrigger win: $${totalForHeader} (added to cumulative)`);
             }
           } else {
-            // Initial scatter trigger: seed the cumulative total
+            // Initial scatter trigger: seed the cumulative total with the *full base-spin total*
+            // (tumbles + scatter base), so the bonus header total matches the header total.
             if (typeof bonusHeader.seedCumulativeWin === 'function') {
-              bonusHeader.seedCumulativeWin(totalForHeader);
-              console.log(`[Symbols] BonusHeader seeded with total win at scatter: $${totalForHeader} (scatter base only)`);
+              bonusHeader.seedCumulativeWin(totalForBonusSeed);
+              console.log(`[Symbols] BonusHeader seeded with total win at scatter: tumbles=$${tumbleWinForSeed} + scatter=$${totalForHeader} => $${totalForBonusSeed}`);
             }
           }
         }
@@ -4529,33 +4598,65 @@ async function playMultiplierWinThenIdle(self: Symbols, obj: any, base: string):
                             if (typeof value === 'number') weight = getMultiplierNumeric(value);
                           } catch {}
                           // Compute spin total for this spin BEFORE multipliers are applied:
-                          // prefer subTotalWin from the current freespin item, then fall back
-                          // to a manual sum of paylines + tumbles.
+                          // Prefer a true base from raw win components (paylines + tumbles).
+                          // Note: backend freespin items' totalWin commonly already includes multipliers.
                           let spinTotal = 0;
                           try {
                             const spinData: any = (self as any)?.currentSpinData;
-                            const fs = spinData?.slot?.freespin || spinData?.slot?.freeSpin;
-                            if (fs?.items && Array.isArray(fs.items)) {
-                              const currentFreeSpinItem = fs.items.find((item: any) => item.spinsLeft > 0);
-                              if (currentFreeSpinItem && typeof currentFreeSpinItem.subTotalWin === 'number') {
-                                const base = Number(currentFreeSpinItem.subTotalWin);
-                                if (!isNaN(base) && base > 0) {
-                                  spinTotal = base;
-                                }
+
+                            if (spinData?.slot?.paylines && Array.isArray(spinData.slot.paylines)) {
+                              for (const pl of spinData.slot.paylines) {
+                                const w = Number(pl?.win || 0);
+                                if (!isNaN(w)) spinTotal += w;
                               }
                             }
-                            // Fallback: if subTotalWin not available, manually sum paylines + tumbles
-                            if (spinTotal === 0) {
-                              if (spinData?.slot?.paylines && Array.isArray(spinData.slot.paylines)) {
-                                for (const pl of spinData.slot.paylines) {
-                                  const w = Number(pl?.win || 0);
-                                  if (!isNaN(w)) spinTotal += w;
-                                }
+                            if (Array.isArray(spinData?.slot?.tumbles)) {
+                              for (const t of spinData.slot.tumbles) {
+                                const w = Number((t as any)?.win ?? 0);
+                                if (!isNaN(w)) spinTotal += w;
                               }
-                              if (Array.isArray(spinData?.slot?.tumbles)) {
-                                for (const t of spinData.slot.tumbles) {
-                                  const w = Number(t?.win || 0);
-                                  if (!isNaN(w)) spinTotal += w;
+                            }
+
+                            // Fallback: if base can't be derived, attempt to back-calc from item total.
+                            // Compute multiplierSum from current grid so we can divide it out.
+                            if (spinTotal === 0) {
+                              let multiplierSum = 0;
+                              try {
+                                if (self.symbols && self.symbols.length) {
+                                  for (let c = 0; c < self.symbols.length; c++) {
+                                    const col = self.symbols[c] || [];
+                                    for (let r = 0; r < col.length; r++) {
+                                      const o: any = col[r];
+                                      const v = Number(o?.symbolValue);
+                                      if (v >= 10 && v <= 22) {
+                                        multiplierSum += getMultiplierNumeric(v);
+                                      }
+                                    }
+                                  }
+                                }
+                              } catch {}
+
+                              const slotAny: any = spinData?.slot || {};
+                              const fs = slotAny?.freespin || slotAny?.freeSpin;
+                              const items = Array.isArray(fs?.items) ? fs.items : [];
+                              const area = slotAny?.area;
+                              if (items.length > 0 && Array.isArray(area)) {
+                                const areaJson = JSON.stringify(area);
+                                const currentFreeSpinItem = items.find((item: any) =>
+                                  Array.isArray(item?.area) && JSON.stringify(item.area) === areaJson
+                                );
+                                if (currentFreeSpinItem) {
+                                  const raw =
+                                    (currentFreeSpinItem as any).totalWin ??
+                                    (currentFreeSpinItem as any).subTotalWin ??
+                                    0;
+                                  const totalMaybeMultiplied = Number(raw);
+                                  if (!isNaN(totalMaybeMultiplied) && totalMaybeMultiplied > 0) {
+                                    spinTotal =
+                                      multiplierSum > 0
+                                        ? (totalMaybeMultiplied / multiplierSum)
+                                        : totalMaybeMultiplied;
+                                  }
                                 }
                               }
                             }
@@ -4825,28 +4926,46 @@ async function triggerAllMultiplierWinsAfterBonusSpin(self: Symbols): Promise<vo
         let spinTotal = 0;
         try {
           const spinData: any = (self as any)?.currentSpinData;
-          const fs = spinData?.slot?.freespin || spinData?.slot?.freeSpin;
-          if (fs?.items && Array.isArray(fs.items)) {
-            const currentFreeSpinItem = fs.items.find((item: any) => item.spinsLeft > 0);
-            if (currentFreeSpinItem && typeof currentFreeSpinItem.subTotalWin === 'number') {
-              const base = Number(currentFreeSpinItem.subTotalWin);
-              if (!isNaN(base) && base > 0) {
-                spinTotal = base;
-              }
+
+          // Prefer a true base total from raw win components (paylines + tumbles).
+          // Note: backend freespin items' totalWin commonly already includes multipliers.
+          if (spinData?.slot?.paylines && Array.isArray(spinData.slot.paylines)) {
+            for (const pl of spinData.slot.paylines) {
+              const w = Number(pl?.win || 0);
+              if (!isNaN(w)) spinTotal += w;
             }
           }
-          // Fallback: if subTotalWin not available, manually sum paylines + tumbles
-          if (spinTotal === 0) {
-            if (spinData?.slot?.paylines && Array.isArray(spinData.slot.paylines)) {
-              for (const pl of spinData.slot.paylines) {
-                const w = Number(pl?.win || 0);
-                if (!isNaN(w)) spinTotal += w;
-              }
+          if (Array.isArray(spinData?.slot?.tumbles)) {
+            for (const t of spinData.slot.tumbles) {
+              const w = Number((t as any)?.win ?? 0);
+              if (!isNaN(w)) spinTotal += w;
             }
-            if (Array.isArray(spinData?.slot?.tumbles)) {
-              for (const t of spinData.slot.tumbles) {
-                const w = Number(t?.win || 0);
-                if (!isNaN(w)) spinTotal += w;
+          }
+
+          // Fallback: if we cannot derive a base from components, back-calculate from item total.
+          // If multiplierSum is known, assume item total is already multiplied and divide it out.
+          if (spinTotal === 0) {
+            const slotAny: any = spinData?.slot || {};
+            const fs = slotAny?.freespin || slotAny?.freeSpin;
+            const itemsArr = Array.isArray(fs?.items) ? fs.items : [];
+            const area = slotAny?.area;
+            if (itemsArr.length > 0 && Array.isArray(area)) {
+              const areaJson = JSON.stringify(area);
+              const currentFreeSpinItem = itemsArr.find((item: any) =>
+                Array.isArray(item?.area) && JSON.stringify(item.area) === areaJson
+              );
+              if (currentFreeSpinItem) {
+                const raw =
+                  (currentFreeSpinItem as any).totalWin ??
+                  (currentFreeSpinItem as any).subTotalWin ??
+                  0;
+                const totalMaybeMultiplied = Number(raw);
+                if (!isNaN(totalMaybeMultiplied) && totalMaybeMultiplied > 0) {
+                  spinTotal =
+                    multiplierSum > 0
+                      ? (totalMaybeMultiplied / multiplierSum)
+                      : totalMaybeMultiplied;
+                }
               }
             }
           }

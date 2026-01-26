@@ -146,8 +146,12 @@ export class AssetConfig {
 				atlas: atlasPath,
 				json: jsonPath
 			};
+
+			const imageKey = `symbol_${i}`;
+			const imagePath = `assets/symbols/high/symbol${i}.webp`;
+			symbolImages[imageKey] = imagePath;
 			
-			console.log(`[AssetConfig] Symbol ${i}: spine=${atlasPath}`);
+			console.log(`[AssetConfig] Symbol ${i}: spine=${atlasPath}, image=${imagePath}`);
 		}
 		
 		// Load multiplier symbol spines with shared mapping:
@@ -316,51 +320,51 @@ export class AssetConfig {
 				'helpscreen_3': `${prefix}/help_screen/helpscreen_3.webp`,
 
 				// HowToPlay images
-				'howToPlay1': `${prefix}/help_screen/HowToPlay1.png`,
-				'howToPlay1Mobile': `${prefix}/help_screen/HowToPlay1Mobile.png`,
-				'howToPlay2': `${prefix}/help_screen/HowToPlay2.png`,
-				'howToPlay2Mobile': `${prefix}/help_screen/HowToPlay2Mobile.png`,
-				'howToPlay3': `${prefix}/help_screen/HowToPlay3.png`,
-				'howToPlay3Mobile': `${prefix}/help_screen/HowToPlay3Mobile.png`,
-				'howToPlay4': `${prefix}/help_screen/HowToPlay4.png`,
-				'howToPlay4Mobile': `${prefix}/help_screen/HowToPlay4Mobile.png`,
-				'howToPlay5': `${prefix}/help_screen/HowToPlay5.png`,
-				'howToPlay6': `${prefix}/help_screen/HowToPlay6.png`,
-				'howToPlay7': `${prefix}/help_screen/HowToPlay7.png`,
-				'howToPlay8': `${prefix}/help_screen/HowToPlay8.png`,
-				'howToPlay8Mobile': `${prefix}/help_screen/HowToPlay8Mobile.png`,
-				'howToPlay9': `${prefix}/help_screen/HowToPlay9.png`,
-				'howToPlay9Mobile': `${prefix}/help_screen/HowToPlay9Mobile.png`,
-				'howToPlay10': `${prefix}/help_screen/HowToPlay10.png`,
-				'howToPlay10Mobile': `${prefix}/help_screen/HowToPlay10Mobile.png`,
-				// Feature help
-				'BuyFeatHelp': `${prefix}/help_screen/BuyFeatHelp.png`,
-				'BuyFeatMobile': `${prefix}/help_screen/BuyFeatMobile.png`,
-				'DoubleHelp': `${prefix}/help_screen/DoubleHelp.png`,
-				'DoubleHelpMobile': `${prefix}/help_screen/DoubleHelpMobile.png`,
-				// Payline visuals
-				'paylineMobileWin': `${prefix}/help_screen/paylineMobileWin.png`,
-				'paylineMobileNoWin': `${prefix}/help_screen/paylineMobileNoWin.png`,
-				// Scatter / Tumble / Multiplier visuals
-				'scatterGame': `${prefix}/help_screen/scatterGame.png`,
-				'scatterIcon': `${prefix}/help_screen/scatterIcon.png`,
-				'scatterWin': `${prefix}/help_screen/scatterWin.png`,
-				'ScatterLabel': `${prefix}/help_screen/ScatterSymbol.png`,
-				'wheelSpin_helper': `assets/portrait/high/help_screen/wheelSpin_helper.png`,
-				'freeSpin_round': `assets/portrait/high/help_screen/freeSpin_round.png`,
-				'tumbleIcon': `${prefix}/help_screen/tumbleIcon.png`,
-				'tumbleWin': `${prefix}/help_screen/tumbleWin.png`,
-				'multiplierGame': `${prefix}/help_screen/multiplierGame.png`,
-				'multiplierIcon': `${prefix}/help_screen/multiplierIcon.png`,
+				// 'howToPlay1': `${prefix}/help_screen/HowToPlay1.png`,
+				// 'howToPlay1Mobile': `${prefix}/help_screen/HowToPlay1Mobile.png`,
+				// 'howToPlay2': `${prefix}/help_screen/HowToPlay2.png`,
+				// 'howToPlay2Mobile': `${prefix}/help_screen/HowToPlay2Mobile.png`,
+				// 'howToPlay3': `${prefix}/help_screen/HowToPlay3.png`,
+				// 'howToPlay3Mobile': `${prefix}/help_screen/HowToPlay3Mobile.png`,
+				// 'howToPlay4': `${prefix}/help_screen/HowToPlay4.png`,
+				// 'howToPlay4Mobile': `${prefix}/help_screen/HowToPlay4Mobile.png`,
+				// 'howToPlay5': `${prefix}/help_screen/HowToPlay5.png`,
+				// 'howToPlay6': `${prefix}/help_screen/HowToPlay6.png`,
+				// 'howToPlay7': `${prefix}/help_screen/HowToPlay7.png`,
+				// 'howToPlay8': `${prefix}/help_screen/HowToPlay8.png`,
+				// 'howToPlay8Mobile': `${prefix}/help_screen/HowToPlay8Mobile.png`,
+				// 'howToPlay9': `${prefix}/help_screen/HowToPlay9.png`,
+				// 'howToPlay9Mobile': `${prefix}/help_screen/HowToPlay9Mobile.png`,
+				// 'howToPlay10': `${prefix}/help_screen/HowToPlay10.png`,
+				// 'howToPlay10Mobile': `${prefix}/help_screen/HowToPlay10Mobile.png`,
+				// // Feature help
+				// 'BuyFeatHelp': `${prefix}/help_screen/BuyFeatHelp.png`,
+				// 'BuyFeatMobile': `${prefix}/help_screen/BuyFeatMobile.png`,
+				// 'DoubleHelp': `${prefix}/help_screen/DoubleHelp.png`,
+				// 'DoubleHelpMobile': `${prefix}/help_screen/DoubleHelpMobile.png`,
+				// // Payline visuals
+				// 'paylineMobileWin': `${prefix}/help_screen/paylineMobileWin.png`,
+				// 'paylineMobileNoWin': `${prefix}/help_screen/paylineMobileNoWin.png`,
+				// // Scatter / Tumble / Multiplier visuals
+				// 'scatterGame': `${prefix}/help_screen/scatterGame.png`,
+				// 'scatterIcon': `${prefix}/help_screen/scatterIcon.png`,
+				// 'scatterWin': `${prefix}/help_screen/scatterWin.png`,
+				// 'ScatterLabel': `${prefix}/help_screen/ScatterSymbol.png`,
+				// 'wheelSpin_helper': `assets/portrait/high/help_screen/wheelSpin_helper.png`,
+				// 'freeSpin_round': `assets/portrait/high/help_screen/freeSpin_round.png`,
+				// 'tumbleIcon': `${prefix}/help_screen/tumbleIcon.png`,
+				// 'tumbleWin': `${prefix}/help_screen/tumbleWin.png`,
+				// 'multiplierGame': `${prefix}/help_screen/multiplierGame.png`,
+				// 'multiplierIcon': `${prefix}/help_screen/multiplierIcon.png`,
 				// Winlines thumbnails (static, not dependent on screen prefix)
 				// Keys: winlines1 .. winlines20
-				...(() => {
-					const map: { [key: string]: string } = {};
-					for (let i = 1; i <= 20; i++) {
-						map[`winlines${i}`] = `assets/winlines/winline${i}.png`;
-					}
-					return map;
-				})()
+				// ...(() => {
+				// 	const map: { [key: string]: string } = {};
+				// 	for (let i = 1; i <= 20; i++) {
+				// 		map[`winlines${i}`] = `assets/winlines/winline${i}.png`;
+				// 	}
+				// 	return map;
+				// })()
 			}
 		};
 	}

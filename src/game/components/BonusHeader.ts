@@ -818,12 +818,25 @@ export class BonusHeader {
 			// Use subTotalWin from the current freespin item (includes paylines + tumbles)
 			let spinWin = 0;
 			try {
-				const fs = spinData?.slot?.freespin || spinData?.slot?.freeSpin;
-				if (fs?.items && Array.isArray(fs.items)) {
-					const currentFreeSpinItem = fs.items.find((item: any) => item.spinsLeft > 0);
-					if (currentFreeSpinItem && typeof currentFreeSpinItem.subTotalWin === 'number') {
-						spinWin = currentFreeSpinItem.subTotalWin;
-						console.log(`[BonusHeader] WIN_STOP (bonus): using subTotalWin=$${spinWin} from freespin item`);
+				const slotAny: any = spinData?.slot || {};
+				const fs = slotAny?.freespin || slotAny?.freeSpin;
+				const items = Array.isArray(fs?.items) ? fs.items : [];
+				const area = slotAny?.area;
+				if (items.length > 0 && Array.isArray(area)) {
+					const areaJson = JSON.stringify(area);
+					const currentFreeSpinItem = items.find((item: any) =>
+						Array.isArray(item?.area) && JSON.stringify(item.area) === areaJson
+					);
+					if (currentFreeSpinItem) {
+						const raw =
+							(currentFreeSpinItem as any).totalWin ??
+							(currentFreeSpinItem as any).subTotalWin ??
+							0;
+						const v = Number(raw);
+						if (!isNaN(v) && v > 0) {
+							spinWin = v;
+							console.log(`[BonusHeader] WIN_STOP (bonus): using current freespin item total=$${spinWin} (area-matched)`);
+						}
 					}
 				}
 				// Fallback: if subTotalWin not available, manually sum paylines + tumbles

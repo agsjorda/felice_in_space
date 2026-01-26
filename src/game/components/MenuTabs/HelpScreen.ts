@@ -2,7 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 
 type TextStyle = Phaser.Types.GameObjects.Text.TextStyle;
 
-const PAYOUT_RANGES = ['12+', '10', '8'] as const;
+const PAYOUT_RANGES = ['12+', '10 - 11', '8 - 9'] as const;
 
 const SYMBOL_PAYOUTS: Record<number, [number, number, number]> = {
     1: [50.0, 25.0, 10.0],
@@ -105,7 +105,7 @@ export class HelpScreen {
     private readonly payoutInnerPadding: number = 20;
 
     // Scatter section
-    private readonly scatterSymbolKey: string = 'ScatterLabel';
+    private readonly scatterSymbolKey: string = 'symbol_0';
     private readonly scatterHeaderLeftPadding: number = 30;
     private readonly scatterHeaderTopPadding: number = 20;
     private readonly scatterBottomPadding: number = 20;
