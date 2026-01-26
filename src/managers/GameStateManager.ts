@@ -13,6 +13,7 @@ export class GameStateManager {
   private _isBonus: boolean = false;
   private _isReelSpinning: boolean = false;
   private _isNormalSpin: boolean = false;
+  private _isProcessingSpin: boolean = false;
   private _isAutoPlaying: boolean = false;
   private _isTurbo: boolean = false;
   private _isAutoPlaySpinRequested: boolean = false;
@@ -66,6 +67,11 @@ export class GameStateManager {
     gameEventManager.on(GameEventType.WIN_STOP, () => {
       this._isShowingWinlines = false;
     });
+
+    // When reels stop, any in-flight spin processing should be considered complete
+    gameEventManager.on(GameEventType.REELS_STOP, () => {
+      this._isProcessingSpin = false;
+    });
   }
 
   /**
@@ -82,6 +88,7 @@ export class GameStateManager {
   public get isBonus(): boolean { return this._isBonus; }
   public get isReelSpinning(): boolean { return this._isReelSpinning; }
   public get isNormalSpin(): boolean { return this._isNormalSpin; }
+  public get isProcessingSpin(): boolean { return this._isProcessingSpin; }
   public get isAutoPlaying(): boolean { return this._isAutoPlaying; }
   public get isTurbo(): boolean { return this._isTurbo; }
   public get isAutoPlaySpinRequested(): boolean { return this._isAutoPlaySpinRequested; }
@@ -117,6 +124,10 @@ export class GameStateManager {
 
   public set isNormalSpin(value: boolean) {
     this._isNormalSpin = value;
+  }
+
+  public set isProcessingSpin(value: boolean) {
+    this._isProcessingSpin = value;
   }
 
   public set isAutoPlaying(value: boolean) {
@@ -192,6 +203,7 @@ export class GameStateManager {
     this._isBonus = false;
     this._isReelSpinning = false;
     this._isNormalSpin = false;
+    this._isProcessingSpin = false;
     this._isAutoPlaying = false;
     this._isTurbo = false;
     this._isAutoPlaySpinRequested = false;
@@ -211,6 +223,7 @@ export class GameStateManager {
       isBonus: this._isBonus,
       isReelSpinning: this._isReelSpinning,
       isNormalSpin: this._isNormalSpin,
+      isProcessingSpin: this._isProcessingSpin,
       isAutoPlaying: this._isAutoPlaying,
       isTurbo: this._isTurbo,
       isAutoPlaySpinRequested: this._isAutoPlaySpinRequested,

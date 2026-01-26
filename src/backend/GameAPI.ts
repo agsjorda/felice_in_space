@@ -98,7 +98,6 @@ export class GameAPI {
     gameData: GameData;
     exitURL: string = '';
     private currentSpinData: SpinData | null = null;
-    private isFirstSpin: boolean = false; // Flag to track first spin
     private currentFreeSpinIndex: number = 0; // Track current free spin item index
     private initializationData: SlotInitializeData | null = null; // Cached initialization response
     private remainingInitFreeSpins: number = 0; // Free spin rounds from initialization still available

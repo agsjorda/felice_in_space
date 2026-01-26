@@ -1287,6 +1287,10 @@ export class SlotController {
 				this.stopAutoplay();
 				return;
 			}
+			if ((gameStateManager as any).isProcessingSpin) {
+				console.log('[SlotController] Spin blocked - already processing spin');
+				return;
+			}
 			// Click safety guard: block if unaffordable
 			if (!this.canAffordSpin()) {
 				this.updateSpinButtonState();
@@ -1296,6 +1300,8 @@ export class SlotController {
 				console.log('[SlotController] Spin blocked - already spinning');
 				return;
 			}
+			// Mark that we have begun processing a spin on this frame (prevents immediate re-enable)
+			(gameStateManager as any).isProcessingSpin = true;
 			
 			// Disable spin button, bet buttons, feature button and play animations
 			this.disableSpinButton();
@@ -2044,6 +2050,10 @@ export class SlotController {
 				this.stopAutoplay();
 				return;
 			}
+			if ((gameStateManager as any).isProcessingSpin) {
+				console.log('[SlotController] Spin blocked - already processing spin');
+				return;
+			}
 			// Click safety guard: block if unaffordable
 			if (!this.canAffordSpin()) {
 				this.updateSpinButtonState();
@@ -2053,6 +2063,8 @@ export class SlotController {
 				console.log('[SlotController] Spin blocked - already spinning');
 				return;
 			}
+			// Mark that we have begun processing a spin on this frame (prevents immediate re-enable)
+			(gameStateManager as any).isProcessingSpin = true;
 			
 			// Disable spin button, bet buttons, feature button and play animations
 			this.disableSpinButton();
@@ -4073,6 +4085,8 @@ public updateAutoplayButtonState(): void {
 	private async handleSpin(): Promise<void> {
 		if (!this.gameAPI) {
 			console.warn('[SlotController] GameAPI not available, falling back to EventBus');
+			// No backend call is made in this fallback path, consider spin processing done
+			(gameStateManager as any).isProcessingSpin = false;
 			EventBus.emit('spin');
 			return;
 		}
@@ -4085,6 +4099,7 @@ public updateAutoplayButtonState(): void {
 			const totalBetToCharge = gd && gd.isEnhancedBet ? currentBet * 1.25 : currentBet;
 			if (currentBalance < totalBetToCharge) {
 				console.error(`[SlotController] Insufficient balance for spin: $${currentBalance} < $${totalBetToCharge}`);
+				(gameStateManager as any).isProcessingSpin = false;
 				if (this.autoplaySpinsRemaining > 0 || this.gameData?.isAutoPlaying || gameStateManager.isAutoPlaying) {
 					this.stopAutoplay();
 				}
@@ -4260,6 +4275,14 @@ public updateAutoplayButtonState(): void {
 		} catch (error) {
 			console.error('[SlotController] ❌ Spin failed:', error);
 			// Don't emit the spin event if the API call failed
+			(gameStateManager as any).isProcessingSpin = false;
+			try { this.hideSpinner(); } catch {}
+			this.updateSpinButtonState();
+			this.enableAutoplayButton();
+			this.enableTurboButton();
+			this.enableBetButtons();
+			this.enableFeatureButton();
+			this.enableAmplifyButton();
 		}
 	}
 
@@ -4282,6 +4305,9 @@ public updateAutoplayButtonState(): void {
 			},
 			onConfirm: () => {
 				console.log('[SlotController] Buy feature confirmed');
+				// Treat buy-feature confirmation like a spin start: prevent immediate UI re-enable
+				// until REELS_STOP (GameStateManager clears isProcessingSpin on REELS_STOP).
+				(gameStateManager as any).isProcessingSpin = true;
 				// Immediately disable interactions to prevent other actions
 				this.disableSpinButton();
 				this.disableAutoplayButton();
@@ -4302,6 +4328,13 @@ public updateAutoplayButtonState(): void {
 		
 		if (!this.buyFeature || !this.gameAPI) {
 			console.error('[SlotController] Buy feature or GameAPI not available');
+			(gameStateManager as any).isProcessingSpin = false;
+			this.updateSpinButtonState();
+			this.enableAutoplayButton();
+			this.enableFeatureButton();
+			this.enableBetButtons();
+			this.enableAmplifyButton();
+			this.enableBetBackgroundInteraction('buy feature unavailable');
 			return;
 		}
 		
@@ -4320,6 +4353,7 @@ public updateAutoplayButtonState(): void {
 			const currentBalance = this.getBalanceAmount();
 			if (currentBalance < calculatedPrice) {
 			console.error(`[SlotController] Insufficient balance: $${currentBalance.toFixed(2)} < $${calculatedPrice.toFixed(2)}`);
+			(gameStateManager as any).isProcessingSpin = false;
 			// Re-enable controls since purchase cannot proceed
 			this.updateSpinButtonState();
 			this.enableAutoplayButton();
@@ -4410,6 +4444,7 @@ public updateAutoplayButtonState(): void {
 			
 		} catch (error) {
 			console.error('[SlotController] Error processing buy feature purchase:', error);
+			(gameStateManager as any).isProcessingSpin = false;
 			// Re-enable controls on error to avoid locking the UI
 			this.updateSpinButtonState();
 			this.enableAutoplayButton();
@@ -4871,6 +4906,7 @@ public updateAutoplayButtonState(): void {
 			// Dim and pause icon animation
 			if (this.spinIcon) {
 				this.spinIcon.setAlpha(0.5);
+				this.spinIcon.setTint(0x666666);
 			}
 			if (this.spinIconTween) {
 				this.spinIconTween.pause();
@@ -4921,6 +4957,7 @@ public updateAutoplayButtonState(): void {
 			// Restore icon animation
 			if (this.spinIcon) {
 				this.spinIcon.setAlpha(1);
+				this.spinIcon.clearTint();
 			}
 			if (this.spinIconTween) {
 				this.spinIconTween.resume();
@@ -4947,7 +4984,7 @@ public updateAutoplayButtonState(): void {
 		}
 
 		// Disable if reels are spinning or player can't afford a spin
-		if (gameStateManager.isReelSpinning || !this.canAffordSpin()) {
+		if ((gameStateManager as any).isProcessingSpin || gameStateManager.isReelSpinning || !this.canAffordSpin()) {
 			this.disableSpinButton();
 		} else {
 			this.enableSpinButton();
