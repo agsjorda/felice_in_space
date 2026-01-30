@@ -10,6 +10,7 @@ import { GameAPI } from '../../backend/GameAPI';
 import { SpinData, SpinDataUtils } from '../../backend/SpinData';
 import { BuyFeature } from './BuyFeature';
 import { Symbols } from './Symbols';
+import { CurrencyManager } from './CurrencyManager';
 import { SoundEffectType } from '../../managers/AudioManager';
 import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -36,6 +37,59 @@ export class SlotController {
 	private featureButtonHitbox: Phaser.GameObjects.Rectangle | null = null;
 	private primaryControllers: Phaser.GameObjects.Container;
 	private controllerTexts: Phaser.GameObjects.Text[] = [];
+
+	/**
+	 * Layout helper for HUD currency + amount pairs (BALANCE/BET/BUY FEATURE).
+	 * Centers the combined group and supports non-1-character currency (e.g. "USD").
+	 */
+	private layoutCurrencyPair(
+		centerX: number,
+		centerY: number,
+		currencyText: Phaser.GameObjects.Text | null | undefined,
+		amountText: Phaser.GameObjects.Text | null | undefined,
+		isDemo: boolean,
+		spacingPx = 6
+	): void {
+		if (!amountText) return;
+
+		const glyph = CurrencyManager.getCurrencyGlyph();
+		const showCurrency = !isDemo && glyph.length > 0 && !!currencyText;
+
+		if (!currencyText || !showCurrency) {
+			try { currencyText?.setVisible(false); } catch {}
+			amountText.setPosition(centerX, centerY);
+			return;
+		}
+
+		currencyText.setText(glyph);
+		currencyText.setVisible(true);
+
+		const curW = currencyText.width || 0;
+		const amtW = amountText.width || 0;
+		const groupW = curW + spacingPx + amtW;
+		const startX = centerX - groupW * 0.5;
+
+		currencyText.setPosition(startX + curW * 0.5, centerY);
+		amountText.setPosition(startX + curW + spacingPx + amtW * 0.5, centerY);
+	}
+
+	/**
+	 * Re-apply currency glyph + layout after initialization data is fetched later.
+	 */
+	public refreshCurrencySymbols(): void {
+		const scene = this.scene;
+		if (!scene) return;
+
+		const isDemo =
+			this.gameAPI?.getDemoState() ||
+			localStorage.getItem('demo') === 'true' ||
+			sessionStorage.getItem('demo') === 'true';
+
+		const y = scene.scale.height * 0.724 + 8;
+		this.layoutCurrencyPair(scene.scale.width * 0.19, y, this.balanceDollarText, this.balanceAmountText, !!isDemo, 6);
+		this.layoutCurrencyPair(scene.scale.width * 0.81, y, this.betDollarText, this.betAmountText, !!isDemo, 6);
+		this.layoutCurrencyPair(scene.scale.width * 0.5, y, this.featureDollarText, this.featureAmountText, !!isDemo, 6);
+	}
 	private amplifyDescriptionContainer: Phaser.GameObjects.Container;
 	private freeSpinLabel: Phaser.GameObjects.Text;
 	private freeSpinNumber: Phaser.GameObjects.Text;
@@ -1534,7 +1588,6 @@ export class SlotController {
 			this.gameAPI?.getDemoState() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const balanceValueOffset = isDemoBalance ? 0 : 5;
 
 		// Create rounded rectangle background
 		const balanceBg = scene.add.graphics();
@@ -1564,7 +1617,7 @@ export class SlotController {
 
 		// "200,000.00" amount (2nd line, right part)
 		this.balanceAmountText = scene.add.text(
-			balanceX + balanceValueOffset,
+			balanceX,
 			balanceY + 8,
 			'0',
 			{
@@ -1577,20 +1630,18 @@ export class SlotController {
 
 		// "$" symbol (2nd line, left part) - positioned dynamically
 		this.balanceDollarText = scene.add.text(
-			balanceX - (this.balanceAmountText.width / 2) - 3.5,
+			balanceX,
 			balanceY + 8,
-			isDemoBalance ? '' : '$',
+			CurrencyManager.getCurrencyGlyph(),
 			{
 				fontSize: '14px',
 				color: '#ffffff', // White color
 				fontFamily: 'poppins-regular'
 			}
 		).setOrigin(0.5, 0.5).setDepth(9);
-		// In demo mode, keep the number centered and hide the currency glyph
-		if (isDemoBalance) {
-			this.balanceDollarText.setVisible(false);
-		}
 		this.controllerContainer.add(this.balanceDollarText);
+
+		this.layoutCurrencyPair(balanceX, balanceY + 8, this.balanceDollarText, this.balanceAmountText, !!isDemoBalance, 6);
 	}
 
 	private createBetDisplay(scene: Scene, assetScale: number): void {
@@ -1605,7 +1656,7 @@ export class SlotController {
 			this.gameAPI?.getDemoState() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const  betValueOffset = isDemoBet ? 0 : 3;
+		const  betValueOffset = 0;
 
 
 		// Create amplify bet spine animation (behind bet background)
@@ -1691,7 +1742,7 @@ export class SlotController {
 
 		// "0.60" amount (2nd line, right part)
 		this.betAmountText = scene.add.text(
-			betX + betValueOffset,
+			betX,
 			betY + 8,
 			'0.20',
 			{
@@ -1707,19 +1758,18 @@ export class SlotController {
 
 		// "$" symbol (2nd line, left part) - positioned dynamically
 		this.betDollarText = scene.add.text(
-			betX - (this.betAmountText.width / 2) - 3.5,
+			betX,
 			betY + 8,
-			isDemoBet ? '' : '$',
+			CurrencyManager.getCurrencyGlyph(),
 			{
 				fontSize: '14px',
 				color: '#ffffff', // White color
 				fontFamily: 'poppins-regular'
 			}
 		).setOrigin(0.5, 0.5).setDepth(9);
-		if (isDemoBet) {
-			this.betDollarText.setVisible(false);
-		}
 		this.controllerContainer.add(this.betDollarText);
+
+		this.layoutCurrencyPair(betX, betY + 8, this.betDollarText, this.betAmountText, !!isDemoBet, 6);
 
 		// Decrease bet button (left side within container)
 		const decreaseBetButton = scene.add.image(
@@ -1963,7 +2013,7 @@ export class SlotController {
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
 		this.featureAmountText = scene.add.text(
-			featureX + (isDemoFeature ? 0 : 5),
+			featureX,
 			featureY + 8,
 			'0',
 			{
@@ -1976,19 +2026,18 @@ export class SlotController {
 
 		// "$" symbol (2nd line, left part) - positioned dynamically
 		this.featureDollarText = scene.add.text(
-			featureX - (this.featureAmountText.width / 2) - 3,
+			featureX,
 			featureY + 8,
-			isDemoFeature ? '' : '$',
+			CurrencyManager.getCurrencyGlyph(),
 			{
 				fontSize: '14px',
 				color: '#ffffff',
 				fontFamily: 'poppins-regular'
 			}
 		).setOrigin(0.5, 0.5).setDepth(9);
-		if (isDemoFeature) {
-			this.featureDollarText.setVisible(false);
-		}
 		this.controllerContainer.add(this.featureDollarText);
+
+		this.layoutCurrencyPair(featureX, featureY + 8, this.featureDollarText, this.featureAmountText, !!isDemoFeature, 6);
 
 		// Initialize amount from current bet
 		this.updateFeatureAmountFromCurrentBet();
@@ -2246,12 +2295,13 @@ export class SlotController {
 						this.betDollarText.setVisible(false);
 						// Value is already centered in demo mode via initial layout
 					} else {
-						this.betDollarText.setText('$');
+						this.betDollarText.setText(CurrencyManager.getCurrencyGlyph());
 						this.betDollarText.setVisible(true);
 						this.betAmountText.setPosition(betX, betY);
 						this.betDollarText.setPosition(betX - (this.betAmountText.width / 2) - 5, betY);
 					}
 				}
+				try { this.refreshCurrencySymbols(); } catch {}
 			}
 		} finally {
 			this.isInternalBetChange = false;
@@ -2275,12 +2325,13 @@ export class SlotController {
 					this.betDollarText.setVisible(false);
 					// Value is already centered in demo mode via initial layout
 				} else {
-					this.betDollarText.setText('$');
+					this.betDollarText.setText(CurrencyManager.getCurrencyGlyph());
 					this.betDollarText.setVisible(true);
 					this.betAmountText.setPosition(betX, betY);
 					this.betDollarText.setPosition(betX - (this.betAmountText.width / 2) - 5, betY);
 				}
 			}
+			try { this.refreshCurrencySymbols(); } catch {}
 		}
 
 		// Update base bet amount when changed externally (not by amplify bet)
@@ -2346,11 +2397,12 @@ export class SlotController {
 			this.featureDollarText.setVisible(false);
 			// Value is already centered in demo mode via initial layout
 		} else {
-			this.featureDollarText.setText('$');
+			this.featureDollarText.setText(CurrencyManager.getCurrencyGlyph());
 			this.featureDollarText.setVisible(true);
 			this.featureAmountText.setPosition(x, y);
 			this.featureDollarText.setPosition(x - (this.featureAmountText.width / 2) - 3, y);
 		}
+		try { this.refreshCurrencySymbols(); } catch {}
 	}
 
 	getBetAmountText(): string | null {
@@ -2388,12 +2440,13 @@ export class SlotController {
 					this.balanceDollarText.setVisible(false);
 					// Value is already centered in demo mode via initial layout
 				} else {
-					this.balanceDollarText.setText('$');
+					this.balanceDollarText.setText(CurrencyManager.getCurrencyGlyph());
 					this.balanceDollarText.setVisible(true);
 					this.balanceAmountText.setPosition(balanceX, balanceY);
 					this.balanceDollarText.setPosition(balanceX - (this.balanceAmountText.width / 2) - 5, balanceY);
 				}
 			}
+			try { this.refreshCurrencySymbols(); } catch {}
 		}
 
 		// Refresh affordability whenever balance changes
@@ -2445,8 +2498,8 @@ export class SlotController {
 
 	getBalanceAmount(): number {
 		if (this.balanceAmountText) {
-			// Remove the "$" symbol and parse the numeric value
-			const balanceText = this.balanceAmountText.text.replace('$', '').replace(/,/g, '');
+			// Remove any currency prefix and parse the numeric value
+			const balanceText = CurrencyManager.stripCurrencyPrefix(this.balanceAmountText.text).replace(/,/g, '');
 			return parseFloat(balanceText) || 0;
 		}
 		return 0;

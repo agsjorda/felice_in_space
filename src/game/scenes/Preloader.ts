@@ -10,6 +10,7 @@ import { FullScreenManager } from '../../managers/FullScreenManager';
 import { StudioLoadingScreen } from '../components/StudioLoadingScreen';
 import { ClockDisplay } from '../components/ClockDisplay';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
+import { CurrencyManager } from '../components/CurrencyManager';
 
 export class Preloader extends Scene
 {
@@ -427,6 +428,7 @@ export class Preloader extends Scene
             console.log('[Preloader] Calling backend slot initialization...');
             const slotInitData = await this.gameAPI.initializeSlotSession();
             console.log('[Preloader] Slot initialization data:', slotInitData);
+			try { CurrencyManager.initializeFromInitData(slotInitData); } catch {}
 
             console.log('[Preloader] GameAPI and slot session initialized successfully!');
         } catch (error) {

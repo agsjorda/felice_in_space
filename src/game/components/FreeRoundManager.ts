@@ -3,6 +3,7 @@ import { GameAPI, SlotInitializeData } from '../../backend/GameAPI';
 import { gameStateManager } from '../../managers/GameStateManager';
 import { gameEventManager, GameEventType } from '../../event/EventManager';
 import { SlotController } from './SlotController';
+import { CurrencyManager } from './CurrencyManager';
 
 export class FreeRoundManager {
 	private container: Phaser.GameObjects.Container | null = null;
@@ -888,8 +889,7 @@ export class FreeRoundManager {
 					(this.sceneRef as any)?.gameAPI?.getDemoState?.() ||
 					localStorage.getItem('demo') === 'true' ||
 					sessionStorage.getItem('demo') === 'true';
-				const currencySymbol = isDemo ? '' : '$';
-				return `${currencySymbol}${betDisplay}`;
+				return isDemo ? betDisplay : CurrencyManager.formatAmount(Number(betValue || 0), 2);
 			})(),
 			{
 				fontSize: '20px',
@@ -1058,14 +1058,14 @@ export class FreeRoundManager {
 			(this.sceneRef as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const currencySymbol = isDemoCurrency ? '' : '$';
+		const winText = isDemoCurrency ? totalWinDisplay : CurrencyManager.formatAmount(totalWin, 2);
 		const line1Parts = [
 			{
 				text: 'You won ',
 				style: { fontSize: '24px', color: '#ffffff', fontFamily: 'poppins-bold' }
 			},
 			{
-				text: `${currencySymbol}${totalWinDisplay}`,
+				text: winText,
 				style: { fontSize: '32px', color: '#00ff00', fontFamily: 'poppins-bold' }
 			},
 			{
@@ -1078,10 +1078,8 @@ export class FreeRoundManager {
 		const line1TextObjects: Phaser.GameObjects.Text[] = [];
 		for (const part of line1Parts) {
 			const t = scene.add.text(0, 0, part.text, part.style);
-			// Apply green gradient to the winnings value segment
-			if (part.text.startsWith('$')) {
-				this.applyBetValueGradientToText(t);
-			}
+			// Apply green gradient to the winnings value segment (index 1)
+			if (part === line1Parts[1]) this.applyBetValueGradientToText(t);
 			line1Width += t.width;
 			line1TextObjects.push(t);
 		}
@@ -1305,8 +1303,7 @@ export class FreeRoundManager {
 					(this.sceneRef as any)?.gameAPI?.getDemoState?.() ||
 					localStorage.getItem('demo') === 'true' ||
 					sessionStorage.getItem('demo') === 'true';
-				const currencySymbol = isDemo ? '' : '$';
-				return `${currencySymbol}${totalWinDisplay}`;
+				return isDemo ? totalWinDisplay : CurrencyManager.formatAmount(totalWin, 2);
 			})(),
 			{
 				fontSize: '32px',

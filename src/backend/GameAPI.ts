@@ -38,7 +38,7 @@ const getApiBaseUrl = (): string => {
     if (typeof configuredUrl === 'string' && configuredUrl.length > 0) {
         return configuredUrl.replace(/\/$/, "");
     }
-    return 'https://dev-game-launcher.dijoker.com/'; // 192.168.0.17:3000/
+    return 'https://stg-game-launcher.dijoker.com/'; // 192.168.0.17:3000/
 
 };
 
@@ -57,14 +57,16 @@ export interface InitFreeSpinRound {
  */
 export interface SlotInitializeData {
     gameId: string;
+    playerId?: string;
     sessionId: string;
     lang: string;
     currency: string;
+    currencySymbol?: string;
     hasFreeSpinRound: boolean;
     // New backend format: array of free spin round entries.
     // Kept as `any` union-friendly type for backwards compatibility,
     // but we always treat it as InitFreeSpinRound[] in our helper.
-    freeSpinRound: InitFreeSpinRound[] | number;
+    freeSpinRound: InitFreeSpinRound[] | number | Record<string, unknown> | null;
     hasUnresolvedSpin: boolean;
     unresolvedSpinIndex: number;
     // The backend can return arbitrary structure here; keep it flexible
@@ -376,14 +378,16 @@ export class GameAPI {
         if (isDemo) {
             const payload: SlotInitializeData = {
                 gameId: GameAPI.GAME_ID,
+                playerId: '',
                 sessionId: '',
                 lang: 'en',
                 currency: 'USD',
+                currencySymbol: '$',
                 hasFreeSpinRound: false,
-                freeSpinRound: 0,
+                freeSpinRound: {},
                 hasUnresolvedSpin: false,
                 unresolvedSpinIndex: 0,
-                unresolvedSpin: null,
+                unresolvedSpin: {},
             };
             this.initializationData = payload;
             this.remainingInitFreeSpins = 0;

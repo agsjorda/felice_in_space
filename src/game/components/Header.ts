@@ -8,6 +8,7 @@ import { PaylineData } from '../../backend/SpinData';
 import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
 import { SoundEffectType } from '../../managers/AudioManager';
+import { CurrencyManager } from './CurrencyManager';
 
 
 export class Header {
@@ -150,8 +151,10 @@ export class Header {
 			(scene as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const currencySymbolInitial = isDemoInitial ? '' : '$';
-		this.amountText = scene.add.text(x, y + 16, `${currencySymbolInitial}${currencySymbolInitial ? ' ' : ''}0.00`, {
+		const sym = CurrencyManager.getCurrencySymbol();
+		const code = CurrencyManager.getCurrencyCode();
+		const prefix = isDemoInitial ? '' : (sym ? `${sym} ` : (code ? `${code} ` : ''));
+		this.amountText = scene.add.text(x, y + 16, `${prefix}0.00`, {
 			fontSize: '22px',
 			color: '#04fd46',
 			fontFamily: 'Poppins-Bold',
