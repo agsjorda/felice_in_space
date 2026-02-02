@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { NetworkManager } from "../../managers/NetworkManager";
 import { ScreenModeManager } from "../../managers/ScreenModeManager";
 import { ensureSpineFactory } from '../../utils/SpineGuard';
+import { CurrencyManager } from './CurrencyManager';
 
 export interface BetOptionsConfig {
 	position?: { x: number; y: number };
@@ -428,8 +429,7 @@ export class BetOptions {
 		// Bet display
 		// Check if demo mode is active - if so, use blank currency symbol
 		const isDemoInitial = (scene as any).gameAPI?.getDemoState();
-		const currencySymbolInitial = isDemoInitial ? '' : '$';
-		this.betDisplay = scene.add.text(x, y, `${currencySymbolInitial}${this.currentBet.toFixed(2)}`, {
+		this.betDisplay = scene.add.text(x, y, isDemoInitial ? this.currentBet.toFixed(2) : CurrencyManager.formatAmount(this.currentBet, 2), {
 			fontSize: '24px',
 			color: '#ffffff',
 			fontFamily: 'Poppins-Regular'
@@ -528,8 +528,7 @@ export class BetOptions {
 			const multiplier = Number.isFinite(this.betDisplayMultiplier) && this.betDisplayMultiplier > 0 ? this.betDisplayMultiplier : 1;
 			const displayBet = this.currentBet * multiplier;
 			const isDemo = (this.container?.scene as any)?.gameAPI?.getDemoState?.();
-			const currencySymbol = isDemo ? '' : '$';
-			this.betDisplay.setText(`${currencySymbol}${displayBet.toFixed(2)}`);
+			this.betDisplay.setText(isDemo ? displayBet.toFixed(2) : CurrencyManager.formatAmount(displayBet, 2));
 		}
 	}
 

@@ -3,6 +3,7 @@ import { NetworkManager } from "../../managers/NetworkManager";
 import { ScreenModeManager } from "../../managers/ScreenModeManager";
 import { gameStateManager } from "../../managers/GameStateManager";
 import { ensureSpineFactory } from '../../utils/SpineGuard';
+import { CurrencyManager } from './CurrencyManager';
 
 export interface AutoplayOptionsConfig {
 	position?: { x: number; y: number };
@@ -240,8 +241,8 @@ export class AutoplayOptions {
 		// Balance amount - using the current balance from game data
 		// Check if demo mode is active - if so, use blank currency symbol
 		const isDemo = (scene as any).gameAPI?.getDemoState();
-		const currencySymbol = isDemo ? '' : '$';
-		const balanceAmount = scene.add.text(150, 1, `${currencySymbol}${this.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, {
+		const balanceFormatted = this.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+		const balanceAmount = scene.add.text(150, 1, isDemo ? balanceFormatted : `${CurrencyManager.getInlinePrefix()}${balanceFormatted}`, {
 			fontSize: '24px',
 			color: '#00ff00',
 			fontFamily: 'Poppins-Bold'
@@ -365,8 +366,7 @@ export class AutoplayOptions {
 		// Bet display
 		// Check if demo mode is active - if so, use blank currency symbol
 		const isDemoInitial = (scene as any).gameAPI?.getDemoState();
-		const currencySymbolInitial = isDemoInitial ? '' : '$';
-		this.autoplayDisplay = scene.add.text(x, y, `${currencySymbolInitial}${this.currentBet.toFixed(2)}` , {
+		this.autoplayDisplay = scene.add.text(x, y, isDemoInitial ? this.currentBet.toFixed(2) : CurrencyManager.formatAmount(this.currentBet, 2) , {
 			fontSize: '24px',
 			color: '#ffffff',
 			fontFamily: 'Poppins-Bold'
@@ -568,16 +568,15 @@ export class AutoplayOptions {
 			console.log("[AutoplayOptions] Updating autoplay display to: $", displayBet, this.isEnhancedBet ? "(enhanced bet)" : "");
 			// Check if demo mode is active - if so, use blank currency symbol
 			const isDemo = (this.container?.scene as any)?.gameAPI?.getDemoState();
-			const currencySymbol = isDemo ? '' : '$';
-			this.autoplayDisplay.setText(`${currencySymbol}${displayBet.toFixed(2)}`);
+			this.autoplayDisplay.setText(isDemo ? displayBet.toFixed(2) : CurrencyManager.formatAmount(displayBet, 2));
 		}
 	}
 
 	private updateBalanceDisplay(): void {
 		if (this.balanceAmountText) {
 			const isDemo = (this.container?.scene as any)?.gameAPI?.getDemoState?.();
-			const currencySymbol = isDemo ? '' : '$';
-			this.balanceAmountText.setText(`${currencySymbol}${this.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+			const balanceFormatted = this.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+			this.balanceAmountText.setText(isDemo ? balanceFormatted : `${CurrencyManager.getInlinePrefix()}${balanceFormatted}`);
 		}
 	}
 

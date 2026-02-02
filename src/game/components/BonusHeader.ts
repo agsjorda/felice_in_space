@@ -6,6 +6,7 @@ import { gameStateManager } from '../../managers/GameStateManager';
 import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 import { SoundEffectType } from '../../managers/AudioManager';
 import { ensureSpineFactory } from "../../utils/SpineGuard";
+import { CurrencyManager } from './CurrencyManager';
 
 export class BonusHeader {
 	private bonusHeaderContainer: Phaser.GameObjects.Container;
@@ -186,8 +187,10 @@ export class BonusHeader {
 			(scene as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const currencySymbolInitial = isDemoInitial ? '' : '$';
-		this.amountText = scene.add.text(x, y + 16, `${currencySymbolInitial}${currencySymbolInitial ? ' ' : ''}0.00`, {
+		const sym = CurrencyManager.getCurrencySymbol();
+		const code = CurrencyManager.getCurrencyCode();
+		const prefix = isDemoInitial ? '' : (sym ? `${sym} ` : (code ? `${code} ` : ''));
+		this.amountText = scene.add.text(x, y + 16, `${prefix}0.00`, {
 			fontSize: '22px',
 			color: '#04fd46',
 			fontFamily: 'Poppins-Bold',

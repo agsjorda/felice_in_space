@@ -38,6 +38,7 @@ import { Menu } from '../components/Menu';
 import { FullScreenManager } from '../../managers/FullScreenManager';
 import { ScatterAnticipation } from '../components/ScatterAnticipation';
 import { ClockDisplay } from '../components/ClockDisplay';
+import { CurrencyManager } from '../components/CurrencyManager';
 import WinTracker from '../components/WinTracker';
 import { FreeRoundManager } from '../components/FreeRoundManager';
 
@@ -375,6 +376,7 @@ export class Game extends Scene
 		// It will read the backend initialization data and decide whether to show itself.
 		try {
 			const initData = this.gameAPI.getInitializationData();
+			try { CurrencyManager.initializeFromInitData(initData); } catch {}
 			const initFsRemaining = this.gameAPI.getRemainingInitFreeSpins();
 			const initFsBet = this.gameAPI.getInitFreeSpinBet();
 
