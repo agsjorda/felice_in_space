@@ -2831,6 +2831,14 @@ export class SlotController {
 			this.hideAutoplaySpinsRemainingText();
 			console.log('[SlotController] Autoplay spin count hidden');
 
+			// If the current spin/tumble is still resolving, DO NOT re-enable controls yet.
+			// Stopping autoplay should not allow starting a new spin while reels are still spinning / processing.
+			const isSpinStillActive =
+				gameStateManager.isReelSpinning ||
+				gameStateManager.isProcessingSpin ||
+				gameStateManager.isShowingWinlines ||
+				gameStateManager.isShowingWinDialog;
+
 			// If we are in initialization free-round mode, do not re-enable autoplay
 			// or bet controls here; they stay disabled/greyed-out until free rounds
 			// are fully completed.
@@ -2839,6 +2847,17 @@ export class SlotController {
 				// Ensure spin button itself is usable for manual free-round spins.
 				this.updateSpinButtonState();
 				console.log('[SlotController] AUTO_STOP during initialization free-round mode - kept autoplay/bet controls disabled');
+				return;
+			}
+
+			if (isSpinStillActive) {
+				// Keep everything locked until REELS_STOP/WIN_STOP fully complete.
+				this.disableSpinButton();
+				this.disableAutoplayButton();
+				this.disableBetButtons();
+				this.disableFeatureButton();
+				this.disableAmplifyButton();
+				console.log('[SlotController] AUTO_STOP while spin still active - kept controls disabled');
 				return;
 			}
 			
@@ -3230,6 +3249,23 @@ export class SlotController {
 			this.disableSpinButton();
 			this.disableAutoplayButton();
 			this.disableAmplifyButton();
+			return;
+		}
+
+		// If reels/tumbles are still active, stopping autoplay should NOT re-enable Spin/Autoplay.
+		// We also explicitly disable Spin now, since it was kept enabled during autoplay to allow stopping.
+		if (
+			gameStateManager.isReelSpinning ||
+			gameStateManager.isProcessingSpin ||
+			gameStateManager.isShowingWinlines ||
+			gameStateManager.isShowingWinDialog
+		) {
+			this.disableSpinButton();
+			this.disableAutoplayButton();
+			this.disableBetButtons();
+			this.disableFeatureButton();
+			this.disableAmplifyButton();
+			console.log('[SlotController] Autoplay stopped during active spin - controls remain disabled until spin completes');
 			return;
 		}
 		
