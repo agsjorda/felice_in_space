@@ -78,6 +78,22 @@ export interface SlotInitializeResponse {
 }
 
 /**
+ * Request body for the /api/v1/refresh_token endpoint
+ */
+export interface RefreshTokenRequest {
+    refreshToken: string;
+}
+
+/**
+ * Response payload for the /api/v1/refresh_token endpoint.
+ * Backend may return { data: { token: string } } or { token: string }.
+ */
+export interface RefreshTokenResponse {
+    data?: { token?: string };
+    token?: string;
+}
+
+/**
  * History item interface representing a single game history entry
  */
 export interface HistoryItem {
@@ -369,6 +385,96 @@ export class GameAPI {
     }
 
     /**
+     * Initialize refresh token from URL parameters.
+     * This should be called at game startup alongside initializeGame.
+     */
+    public async initializeRefreshToken(): Promise<string> {
+        const isDemo = this.getDemoState();
+        if(isDemo){
+            return '';
+        }
+
+        try {
+            // Check if refresh token is already in the URL parameters
+            const refreshToken = getUrlParameter('refresh_token');
+            
+            console.log('Game refresh token found in URL parameters:', refreshToken);
+            
+            // Store the existing token in localStorage and sessionStorage
+            localStorage.setItem('refresh_token', refreshToken);
+            sessionStorage.setItem('refresh_token', refreshToken);
+            
+            console.log('Game initialized with existing refresh token from URL');
+            
+            return refreshToken;
+            
+        } catch (error) {
+            console.error('Error getting refresh token from URL:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Call the refresh_token API to obtain a new access token using the stored refresh token.
+     * On success, stores the new token in localStorage/sessionStorage and returns it.
+     * @throws Error if no refresh token is available or the API call fails
+     */
+    public async refreshAccessToken(): Promise<string> {
+        const refreshToken =
+            localStorage.getItem('refresh_token') ||
+            sessionStorage.getItem('refresh_token') ||
+            '';
+
+        if (!refreshToken) {
+            throw new Error('No refresh token available.');
+        }
+
+        const apiUrl = `${getApiBaseUrl()}/api/v1/refresh_token`;
+        const requestBody: RefreshTokenRequest = { refreshToken };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Refresh token failed: ${response.status}, ${errorText}`);
+        }
+
+        const data: RefreshTokenResponse = await response.json();
+        const newToken =
+            (data?.data?.token) ??
+            (data?.token) ??
+            '';
+
+        if (!newToken) {
+            throw new Error('Refresh token response did not contain an access token.');
+        }
+
+        localStorage.setItem('token', newToken);
+        sessionStorage.setItem('token', newToken);
+        console.log('[GameAPI] Access token refreshed successfully.');
+        return newToken;
+    }
+
+    /**
+     * Try to refresh the access token using the refresh token.
+     * @returns The new access token, or null if refresh failed or no refresh token is available
+     */
+    private async tryRefreshAndGetNewToken(): Promise<string | null> {
+        try {
+            return await this.refreshAccessToken();
+        } catch (e) {
+            console.warn('[GameAPI] Token refresh failed:', e);
+            return null;
+        }
+    }
+
+    /**
      * Call the backend game initialization endpoint.
      * This should be called once at the very start of the game after the token is available.
      */
@@ -395,13 +501,18 @@ export class GameAPI {
             return payload;
         }
 
-        const token =
+        let token =
             localStorage.getItem('token') ||
             sessionStorage.getItem('token') ||
             '';
 
         if (!token) {
-            throw new Error('No game token available. Please initialize the game first.');
+            const newToken = await this.tryRefreshAndGetNewToken();
+            if (newToken) {
+                token = newToken;
+            } else {
+                throw new Error('No game token available. Please initialize the game first.');
+            }
         }
 
         const apiUrl = `${getApiBaseUrl()}/api/v1/slots/initialize`;
@@ -409,17 +520,38 @@ export class GameAPI {
         try {
             console.log('[GameAPI] Calling slots initialize endpoint...', apiUrl);
 
-            const response = await fetch(apiUrl, {
+            let currentToken = token;
+            let response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${currentToken}`
                 }
             });
 
+            if (!response.ok && (response.status === 400 || response.status === 401)) {
+                const newToken = await this.tryRefreshAndGetNewToken();
+                if (newToken) {
+                    currentToken = newToken;
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${currentToken}`
+                        }
+                    });
+                }
+            }
+
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                const error = new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                // Only show session timeout popup when session is really dead: no refresh token, or refresh/retry failed
+                if (response.status === 400 || response.status === 401) {
+                    this.showTokenExpiredPopup();
+                    localStorage.removeItem('token');
+                }
+                throw error;
             }
 
             const raw = await response.json();
@@ -584,30 +716,45 @@ export class GameAPI {
         }
 
         try {
-            const token = localStorage.getItem('token');
+            let token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+            if (!token) {
+                const newToken = await this.tryRefreshAndGetNewToken();
+                if (newToken) token = newToken;
+            }
             if (!token) {
                 this.showTokenExpiredPopup();
                 throw new Error('No authentication token available');
             }
 
-            const response = await fetch(`${getApiBaseUrl()}/api/v1/slots/balance`, {
-            //const response = await fetch('http://192.168.0.17:3000/api/v1/slots/balance', {
+            let currentToken = token;
+            let response = await fetch(`${getApiBaseUrl()}/api/v1/slots/balance`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${currentToken}`
                 }
             });
 
+            if (!response.ok && (response.status === 400 || response.status === 401)) {
+                const newToken = await this.tryRefreshAndGetNewToken();
+                if (newToken) {
+                    currentToken = newToken;
+                    response = await fetch(`${getApiBaseUrl()}/api/v1/slots/balance`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${currentToken}`
+                        }
+                    });
+                }
+            }
+
             if (!response.ok) {
                 const error = new Error(`HTTP error! status: ${response.status}`);
-                
-                // Show token expired popup for 400 or 401 status
                 if (response.status === 400 || response.status === 401) {
                     this.showTokenExpiredPopup();
                     localStorage.removeItem('token');
                 }
-                
                 throw error;
             }
 
@@ -615,12 +762,9 @@ export class GameAPI {
             return data;
         } catch (error) {
             console.error('Error in getBalance:', error);
-            
-            // Handle network errors or other issues
             if (this.isTokenExpiredError(error)) {
                 this.showTokenExpiredPopup();
             }
-            
             throw error;
         }
     }
@@ -753,10 +897,13 @@ export class GameAPI {
             }
         }
         
-        const token = localStorage.getItem('token');
-        if (!token) {
-            this.showTokenExpiredPopup();
-            throw new Error('No game token available. Please initialize the game first.');
+        // Only require token if not in demo mode; try refresh when token is missing
+        if (!isDemo && !localStorage.getItem('token') && !sessionStorage.getItem('token')) {
+            const newToken = await this.tryRefreshAndGetNewToken();
+            if (!newToken) {
+                this.showTokenExpiredPopup();
+                throw new Error('No game token available. Please initialize the game first.');
+            }
         }
         
         try {
@@ -769,22 +916,44 @@ export class GameAPI {
                 console.log('[GameAPI] Consuming initialization free spin round. Remaining:', this.remainingInitFreeSpins);
             }
 
-            const response = await fetch(`${getApiBaseUrl()}/api/v1/slots/bet`, {
+            // Build headers - include Authorization only if token exists
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+            
+            const token = localStorage.getItem('token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const url = `${getApiBaseUrl()}/api/v1/slots/bet`;
+            const requestBody = {
+                action: 'spin',
+                bet: bet.toString(),
+                line: 1, // Try different line count
+                isBuyFs: isBuyFs, // Use the parameter value
+                isEnhancedBet: isEnhancedBet, // Use the parameter value
+                // Mark whether this spin is using a free spin round granted at initialization
+                isFs: isFs
+            };
+
+            let response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    action: 'spin',
-                    bet: bet.toString(),
-                    line: 1, // Try different line count
-                    isBuyFs: isBuyFs, // Use the parameter value
-                    isEnhancedBet: isEnhancedBet, // Use the parameter value
-                    // Mark whether this spin is using a free spin round granted at initialization
-                    isFs: isFs
-                })
+                headers: headers,
+                body: JSON.stringify(requestBody)
             });
+
+            if (!response.ok && (response.status === 400 || response.status === 401)) {
+                const newToken = await this.tryRefreshAndGetNewToken();
+                if (newToken) {
+                    headers['Authorization'] = `Bearer ${newToken}`;
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(requestBody)
+                    });
+                }
+            }
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -822,7 +991,6 @@ export class GameAPI {
                 
                 const error = new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 
-                // Show token expired popup for 400 or 401 status
                 if (response.status === 400 || response.status === 401) {
                     this.showTokenExpiredPopup();
                     localStorage.removeItem('token');
@@ -887,12 +1055,10 @@ export class GameAPI {
             
         } catch (error) {
             console.error('Error in doSpin:', error);
-            
             // Handle network errors or other issues
             if (this.isTokenExpiredError(error)) {
                 this.showTokenExpiredPopup();
             }
-            
             throw error;
         }
     }
@@ -1079,18 +1245,31 @@ export class GameAPI {
         }
 
         const apiUrl = `${getApiBaseUrl()}/api/v1/games/me/histories`;
-        const token = localStorage.getItem('token')
-            || localStorage.getItem('token')
+        let token = localStorage.getItem('token')
             || sessionStorage.getItem('token')
             || '';
 
-        const response = await fetch(`${apiUrl}?limit=${limit}&page=${page}`,{
+        let response = await fetch(`${apiUrl}?limit=${limit}&page=${page}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             }
         });
+
+        if (!response.ok && (response.status === 400 || response.status === 401)) {
+            const newToken = await this.tryRefreshAndGetNewToken();
+            if (newToken) {
+                token = newToken;
+                response = await fetch(`${apiUrl}?limit=${limit}&page=${page}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+            }
+        }
         
         const data = await response.json();
         return data;

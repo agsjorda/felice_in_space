@@ -3,23 +3,15 @@ import { Scene, GameObjects } from 'phaser';
 export class TokenExpiredPopup extends GameObjects.Container {
     private background: GameObjects.Graphics;
     private messageText: GameObjects.Text;
-    private buttonImage: GameObjects.Image;
-    private buttonText: GameObjects.Text;
     private backgroundColor: number = 0x000000; // Black
     private backgroundAlpha: number = 0.4; // Default opacity (0.6 = 60%)
     private cornerRadius: number = 20; // Default corner radius
-    private buttonOffsetY: number = 130; // Vertical offset from center
-    private buttonScale: number = 0.8; // Scale factor for the button
-    private buttonWidth: number = 364; // Base width of the button
-    private buttonHeight: number = 62; // Base height of the button
     private animationDuration: number = 300; // Animation duration in milliseconds
     private overlay: Phaser.GameObjects.Graphics; // Full-screen overlay
     
     constructor(scene: Scene, x: number = 0, y: number = 0, options: { 
         opacity?: number,
         cornerRadius?: number,
-        buttonOffsetY?: number,
-        buttonScale?: number,
         overlayColor?: number,
         overlayAlpha?: number
     } = {}) {
@@ -48,23 +40,17 @@ export class TokenExpiredPopup extends GameObjects.Container {
         if (options.cornerRadius !== undefined) {
             this.cornerRadius = Math.max(0, options.cornerRadius);
         }
-        if (options.buttonOffsetY !== undefined) {
-            this.buttonOffsetY = options.buttonOffsetY;
-        }
-        if (options.buttonScale !== undefined) {
-            this.buttonScale = Phaser.Math.Clamp(options.buttonScale, 0.1, 2);
-        }
         
         // Create a graphics object for the rounded rectangle background
         this.background = new Phaser.GameObjects.Graphics(scene);
         this.drawBackground();
         
-        // Create message text
+        // Create message text (centered vertically since button was removed)
         this.messageText = new GameObjects.Text(
             scene,
             0,
-            -40,
-            'Your session has expired.\nPlease log in again to keep playing. \n\nIf you were actively playing a game, your progress has been saved, and you can pick up right where you left off after logging back in.',
+            0,
+            'Your play session has expired. Please log in again to keep playing. \n\nIf you were actively playing a game, your progress has been saved, and you can pick up right where you left off after relaunching the game.',
             {
                 fontFamily: 'Poppins-Regular',
                 fontSize: '21px',
@@ -75,59 +61,8 @@ export class TokenExpiredPopup extends GameObjects.Container {
         );
         this.messageText.setOrigin(0.5);
         
-        // Calculate button position and size
-        const buttonX = 0;
-        const buttonY = this.buttonOffsetY;
-        const scaledWidth = this.buttonWidth * this.buttonScale;
-        const scaledHeight = this.buttonHeight * this.buttonScale;
-        
-        // Create button background using the same image as BuyFeature
-        this.buttonImage = new GameObjects.Image(
-            scene,
-            buttonX,
-            buttonY,
-            'long_button'
-        );
-        this.buttonImage.setOrigin(0.5, 0.5);
-        this.buttonImage.setDisplaySize(scaledWidth, scaledHeight);
-        this.buttonImage.setScale(this.buttonScale);
-        
-        // Button text - matching BuyFeature style
-        this.buttonText = new GameObjects.Text(
-            scene,
-            buttonX,
-            buttonY,
-            'REFRESH',
-            {
-                fontFamily: 'Poppins-Bold',
-                fontSize: '24px',
-                color: '#000000',
-                align: 'center'
-            }
-        );
-        this.buttonText.setOrigin(0.5);
-        
-        // Make the button interactive
-        this.buttonImage.setInteractive({ useHandCursor: true });
-        this.buttonImage.on('pointerdown', () => {
-            // Play sound effect if available
-            if ((window as any).audioManager) {
-                (window as any).audioManager.playSoundEffect('button_fx');
-            }
-            window.location.reload();
-        });
-        
-        // Add hover effect
-        this.buttonImage.on('pointerover', () => {
-            this.buttonImage.setTint(0xcccccc); // Slight tint on hover
-        });
-        
-        this.buttonImage.on('pointerout', () => {
-            this.buttonImage.clearTint(); // Clear tint when not hovering
-        });
-        
-        // Add all elements to container
-        this.add([this.background, this.messageText, this.buttonImage, this.buttonText]);
+        // Add all elements to container (button removed but functionality preserved)
+        this.add([this.background, this.messageText]);
         
         // Center the container
         this.setPosition(scene.scale.width / 2, scene.scale.height / 2);
@@ -242,29 +177,14 @@ export class TokenExpiredPopup extends GameObjects.Container {
     }
     
     /**
-     * Set the vertical offset of the button from the center of the popup
-     * @param offsetY - Vertical offset in pixels (positive = down, negative = up)
+     * Refresh functionality (preserved but button removed)
+     * Can be called programmatically if needed
      */
-    public setButtonOffsetY(offsetY: number): void {
-        this.buttonOffsetY = offsetY;
-        this.buttonImage.setY(offsetY);
-        this.buttonText.setY(offsetY);
-    }
-    
-    /**
-     * Set the scale of the button
-     * @param scale - Scale factor (0.1 to 2)
-     */
-    public setButtonScale(scale: number): void {
-        this.buttonScale = Phaser.Math.Clamp(scale, 0.1, 2);
-        const scaledWidth = this.buttonWidth * this.buttonScale;
-        const scaledHeight = this.buttonHeight * this.buttonScale;
-        this.buttonImage.setDisplaySize(scaledWidth, scaledHeight);
-        this.buttonImage.setScale(this.buttonScale);
-        
-        // Adjust font size based on scale
-        const fontSize = Math.max(16, 24 * this.buttonScale);
-        this.buttonText.setFontSize(`${fontSize}px`);
+    public refresh(): void {
+        try {
+            (window as any).audioManager?.playSoundEffect?.('button_fx');
+        } catch {}
+        window.location.reload();
     }
     
     /**
