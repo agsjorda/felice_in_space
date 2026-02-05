@@ -770,6 +770,18 @@ export class GameAPI {
     }
 
     /**
+     * Show session timeout popup and clear token/refresh_token from storage.
+     * Call this when the user has been idle past the configured timeout (e.g. from IdleManager).
+     */
+    public handleSessionTimeout(): void {
+        this.showTokenExpiredPopup();
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refresh_token');
+    }
+
+    /**
      * Show token expired popup to the user
      */
     private showTokenExpiredPopup(): void {
