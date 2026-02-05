@@ -3024,17 +3024,30 @@ export class Symbols {
       console.warn('[Symbols] Failed to derive freespin count for congrats display', e);
     }
 
-    // Show congrats dialog with total win amount and free spin count (if available)
-    if (gameScene.dialogs && typeof gameScene.dialogs.showCongrats === 'function') {
-      const dialogConfig: any = { winAmount: totalWin };
-      if (freeSpinCount > 0) {
-        dialogConfig.freeSpins = freeSpinCount;
+    // Switch bonus header winnings display to "TOTAL WIN" before congrats dialog appears
+    try {
+      const bonusHeader = gameScene.bonusHeader;
+      if (bonusHeader && typeof (bonusHeader as any).showTotalWinBeforeCongrats === 'function' && totalWin > 0) {
+        (bonusHeader as any).showTotalWinBeforeCongrats(totalWin);
       }
-      gameScene.dialogs.showCongrats(this.scene, dialogConfig);
-      console.log(`[Symbols] Congrats dialog shown with total win: ${totalWin}, freeSpins: ${freeSpinCount}`);
-    } else {
-      console.warn('[Symbols] Dialogs component not available for congrats dialog');
+    } catch (e) {
+      console.warn('[Symbols] Failed to show TOTAL WIN in bonus header before congrats', e);
     }
+
+    // Brief delay so "TOTAL WIN" is visible before the congrats overlay appears
+    const totalWinDwellMs = 500;
+    this.scene.time.delayedCall(totalWinDwellMs, () => {
+      if (gameScene.dialogs && typeof gameScene.dialogs.showCongrats === 'function') {
+        const dialogConfig: any = { winAmount: totalWin };
+        if (freeSpinCount > 0) {
+          dialogConfig.freeSpins = freeSpinCount;
+        }
+        gameScene.dialogs.showCongrats(this.scene, dialogConfig);
+        console.log(`[Symbols] Congrats dialog shown with total win: ${totalWin}, freeSpins: ${freeSpinCount}`);
+      } else {
+        console.warn('[Symbols] Dialogs component not available for congrats dialog');
+      }
+    });
   }
 
   /**
@@ -3542,19 +3555,13 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
       })();
       const totalForBonusSeed = tumbleWinForSeed + totalForHeader;
       
-      // Update normal header winnings display immediately on scatter trigger
+      // Update normal header winnings display immediately on scatter trigger.
+      // When a scatter is hit, only the base scatter win is shown for that spin (4→3x bet, 5→5x bet, 6+→100x bet).
       try {
         const header = (self.scene as any)?.header;
         if (header && typeof header.showWinningsDisplay === 'function' && totalForHeader > 0) {
-          // IMPORTANT: tumbles (cluster wins) are applied before scatter detection in this flow.
-          // At this point, the header may already be showing the tumble total; add scatter base
-          // on top instead of overwriting.
-          const existing = (typeof header.getCurrentWinnings === 'function')
-            ? Number(header.getCurrentWinnings() || 0)
-            : 0;
-          const combined = existing + totalForHeader;
-          header.showWinningsDisplay(combined);
-          console.log(`[Symbols] Header winnings updated for scatter: base=$${scatterBaseWin}, prev=$${existing}, combined=$${combined}`);
+          header.showWinningsDisplay(totalForHeader);
+          console.log(`[Symbols] Header winnings updated for scatter: scatter only=$${totalForHeader} (${scatterCount} scatter: ${scatterMultiplier}x bet)`);
         }
       } catch (e) {
         console.warn('[Symbols] Failed to update Header winnings for scatter', e);

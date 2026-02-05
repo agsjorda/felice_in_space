@@ -477,6 +477,47 @@ export class BonusHeader {
 	}
 
 	/**
+	 * Compute the value to show for "TOTAL WIN" consistently: base spin + scatter win + previous
+	 * free spin items totalWin, optionally including the current spin's totalWin.
+	 * Use this whenever the TOTAL WIN display is shown so the amount is consistent at every tumble/start of spin.
+	 */
+	private getTotalWinForDisplay(spinData: any, includeCurrentSpin: boolean): number {
+		const basePlusScatter = Math.max(0, Number(this.scatterBaseWin) || 0);
+		try {
+			const slotAny: any = spinData?.slot || {};
+			const fs = slotAny.freespin || slotAny.freeSpin;
+			const items = Array.isArray(fs?.items) ? fs.items : [];
+			const area = slotAny.area;
+			if (items.length === 0 || !Array.isArray(area)) {
+				return this.cumulativeBonusWin;
+			}
+			const areaJson = JSON.stringify(area);
+			const currentIndex = items.findIndex((item: any) =>
+				Array.isArray(item?.area) && JSON.stringify(item.area) === areaJson
+			);
+			if (currentIndex < 0) {
+				return this.cumulativeBonusWin;
+			}
+			let previousTotalWin = 0;
+			for (let i = 0; i < currentIndex; i++) {
+				const item = items[i];
+				const w = Number((item as any)?.totalWin ?? (item as any)?.subTotalWin ?? 0);
+				if (!isNaN(w) && w > 0) previousTotalWin += w;
+			}
+			let currentSpinWin = 0;
+			if (includeCurrentSpin && currentIndex >= 0 && currentIndex < items.length) {
+				const currentItem = items[currentIndex];
+				const w = Number((currentItem as any)?.totalWin ?? (currentItem as any)?.subTotalWin ?? 0);
+				if (!isNaN(w) && w > 0) currentSpinWin = w;
+			}
+			const total = basePlusScatter + previousTotalWin + currentSpinWin;
+			return total;
+		} catch {
+			return this.cumulativeBonusWin;
+		}
+	}
+
+	/**
 	 * Reset winnings display to zero
 	 */
 	public resetWinnings(): void {
@@ -498,6 +539,23 @@ export class BonusHeader {
 	public hideWinningsForNewSpin(): void {
 		console.log('[BonusHeader] Hiding winnings display for new spin');
 		this.hideWinningsDisplay();
+	}
+
+	/**
+	 * Switch winnings display to "TOTAL WIN" with the given amount. Called from Symbols
+	 * immediately before the congrats dialog is shown so the user sees "TOTAL WIN" first.
+	 * Uses consistent formula: base spin + scatter + previous free spin items totalWin (+ current when end of bonus).
+	 */
+	public showTotalWinBeforeCongrats(totalWin: number): void {
+		const symbolsComponent = (this.bonusHeaderContainer?.scene as any)?.symbols;
+		const spinData = symbolsComponent?.currentSpinData;
+		const displayTotal = spinData
+			? this.getTotalWinForDisplay(spinData, true)
+			: totalWin;
+		if (displayTotal <= 0) return;
+		if (this.youWonText) this.youWonText.setText('TOTAL WIN');
+		this.showWinningsDisplay(displayTotal);
+		console.log(`[BonusHeader] showTotalWinBeforeCongrats: TOTAL WIN $${displayTotal}`);
 	}
 
 	/**
@@ -668,6 +726,35 @@ export class BonusHeader {
 			} catch {}
 		});
 
+		// When multiplier animations complete on the last bonus spin, show "TOTAL WIN" immediately
+		// (before congrats dialog), since WIN_STOP fires after this event.
+		gameEventManager.on(GameEventType.MULTIPLIER_ANIMATIONS_COMPLETE, () => {
+			try {
+				if (!gameStateManager.isBonus) return;
+				const symbolsComponent = (this.bonusHeaderContainer.scene as any).symbols;
+				const spinData = symbolsComponent?.currentSpinData;
+				if (!spinData?.slot) return;
+				const slotAny: any = spinData.slot;
+				const fs = slotAny.freespin || slotAny.freeSpin;
+				const items = Array.isArray(fs?.items) ? fs.items : [];
+				const area = slotAny.area;
+				if (items.length === 0 || !Array.isArray(area)) return;
+				const areaJson = JSON.stringify(area);
+				const currentFreeSpinItem = items.find((item: any) =>
+					Array.isArray(item?.area) && JSON.stringify(item.area) === areaJson
+				);
+				const isLastSpin = currentFreeSpinItem != null && Number((currentFreeSpinItem as any).spinsLeft) === 0;
+				if (isLastSpin) {
+					const totalWin = this.getTotalWinForDisplay(spinData, true);
+					if (totalWin > 0) {
+						if (this.youWonText) this.youWonText.setText('TOTAL WIN');
+						this.showWinningsDisplay(totalWin);
+						console.log(`[BonusHeader] MULTIPLIER_ANIMATIONS_COMPLETE: last spin - showing TOTAL WIN $${totalWin} before congrats`);
+					}
+				}
+			} catch {}
+		});
+
 		// Listen for spin events to hide winnings display at start of manual spin
 		gameEventManager.on(GameEventType.SPIN, () => {
 			console.log('[BonusHeader] Manual spin started - hiding winnings display');
@@ -695,8 +782,13 @@ export class BonusHeader {
 					this.cumulativeBonusWin = this.scatterBaseWin || 0;
 					this.hasStartedBonusTracking = true;
 				}
-				const totalWinSoFar = this.cumulativeBonusWin;
-				console.log(`[BonusHeader] REELS_START (bonus): cumulative bonus win so far = $${totalWinSoFar}`);
+				const symbolsComponent = (this.bonusHeaderContainer.scene as any).symbols;
+				const spinData = symbolsComponent?.currentSpinData;
+				// Use consistent formula: base spin + scatter + previous free spin items totalWin (exclude current spin at start)
+				const totalWinSoFar = spinData
+					? this.getTotalWinForDisplay(spinData, false)
+					: this.cumulativeBonusWin;
+				console.log(`[BonusHeader] REELS_START (bonus): TOTAL WIN so far = $${totalWinSoFar}`);
 
 				// Clear the justSeededWin flag when first spin starts (scatter activation complete)
 				if (this.justSeededWin) {
@@ -873,9 +965,29 @@ export class BonusHeader {
 			}
 
 			console.log(`[BonusHeader] WIN_STOP (bonus): finalized cumulativeBonusWin=$${this.cumulativeBonusWin} (spinWin=$${spinWin})`);
-			// Do not change label or display here; per bonus-mode UX we only show "YOU WON"
-			// per tumble via TUMBLE_WIN_PROGRESS. The cumulative total is tracked internally
-			// for potential end-of-bonus dialogs or other UI, not for the bonus header label.
+
+			// On the very last spin (spinsLeft === 0), switch to "TOTAL WIN" and show cumulative
+			// using consistent formula: base spin + scatter + previous free spin items totalWin + current.
+			const slotAnyLast: any = spinData?.slot || {};
+			const fsLast = slotAnyLast?.freespin || slotAnyLast?.freeSpin;
+			const itemsLast = Array.isArray(fsLast?.items) ? fsLast.items : [];
+			const areaLast = slotAnyLast?.area;
+			let isLastSpin = false;
+			if (itemsLast.length > 0 && Array.isArray(areaLast)) {
+				const areaJson = JSON.stringify(areaLast);
+				const lastSpinItem = itemsLast.find((item: any) =>
+					Array.isArray(item?.area) && JSON.stringify(item.area) === areaJson
+				);
+				isLastSpin = lastSpinItem != null && Number((lastSpinItem as any).spinsLeft) === 0;
+			}
+			if (isLastSpin) {
+				const totalWin = this.getTotalWinForDisplay(spinData, true);
+				if (totalWin > 0) {
+					if (this.youWonText) this.youWonText.setText('TOTAL WIN');
+					this.showWinningsDisplay(totalWin);
+					console.log(`[BonusHeader] WIN_STOP (bonus): last spin - showing TOTAL WIN $${totalWin} before congrats`);
+				}
+			}
 		});
 	}
 
