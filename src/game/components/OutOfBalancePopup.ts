@@ -6,7 +6,7 @@ export class OutOfBalancePopup extends GameObjects.Container {
     private buttonImage: GameObjects.Image;
     private buttonText: GameObjects.Text;
     private backgroundColor: number = 0x000000;
-    private backgroundAlpha: number = 0.4;
+    private backgroundAlpha: number = 0.8;
     private cornerRadius: number = 20;
     private buttonOffsetY: number = 130;
     private buttonScale: number = 0.8;

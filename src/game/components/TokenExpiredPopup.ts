@@ -4,7 +4,7 @@ export class TokenExpiredPopup extends GameObjects.Container {
     private background: GameObjects.Graphics;
     private messageText: GameObjects.Text;
     private backgroundColor: number = 0x000000; // Black
-    private backgroundAlpha: number = 0.4; // Default opacity (0.6 = 60%)
+    private backgroundAlpha: number = 0.8; // Default opacity (0.6 = 60%)
     private cornerRadius: number = 20; // Default corner radius
     private animationDuration: number = 300; // Animation duration in milliseconds
     private overlay: Phaser.GameObjects.Graphics; // Full-screen overlay
