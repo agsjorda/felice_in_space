@@ -216,12 +216,42 @@ export class SlotController {
 	private showOutOfBalancePopup(message?: string): void {
 		const scene = this.scene as Scene | null;
 		if (!scene) return;
+		try {
+			const w: any = window as any;
+			w.__hhPopupState = w.__hhPopupState || {};
+			if (w.__hhPopupState.activeBlockingPopup === 'TOKEN_EXPIRED' || w.__hhPopupState.tokenExpiredShown) {
+				return;
+			}
+			if (w.__hhPopupState.outOfBalanceShown) {
+				return;
+			}
+			w.__hhPopupState.outOfBalanceShown = true;
+			w.__hhPopupState.activeBlockingPopup = 'OUT_OF_BALANCE';
+		} catch {}
 		import('./OutOfBalancePopup').then(module => {
 			const Popup = module.OutOfBalancePopup;
-			const popup = new Popup(scene);
+			const popup = new Popup(scene, 0, 0, {
+				onClose: () => this.updateSpinButtonState()
+			});
+			try {
+				const w: any = window as any;
+				w.__hhPopupState = w.__hhPopupState || {};
+				w.__hhPopupState.outOfBalancePopup = popup;
+			} catch {}
 			if (message) popup.updateMessage(message);
 			popup.show();
-		}).catch(() => {});
+		}).catch(() => {
+			try {
+				const w: any = window as any;
+				if (w && w.__hhPopupState) {
+					if (w.__hhPopupState.activeBlockingPopup === 'OUT_OF_BALANCE') {
+						w.__hhPopupState.activeBlockingPopup = null;
+					}
+					w.__hhPopupState.outOfBalanceShown = false;
+					w.__hhPopupState.outOfBalancePopup = null;
+				}
+			} catch {}
+		});
 	}
 
 	/**
@@ -1345,11 +1375,7 @@ export class SlotController {
 				console.log('[SlotController] Spin blocked - already processing spin');
 				return;
 			}
-			// Click safety guard: block if unaffordable
-			if (!this.canAffordSpin()) {
-				this.updateSpinButtonState();
-				return;
-			}
+
 			if (gameStateManager.isReelSpinning) {
 				console.log('[SlotController] Spin blocked - already spinning');
 				return;
@@ -2103,11 +2129,7 @@ export class SlotController {
 				console.log('[SlotController] Spin blocked - already processing spin');
 				return;
 			}
-			// Click safety guard: block if unaffordable
-			if (!this.canAffordSpin()) {
-				this.updateSpinButtonState();
-				return;
-			}
+
 			if (gameStateManager.isReelSpinning) {
 				console.log('[SlotController] Spin blocked - already spinning');
 				return;
@@ -5073,7 +5095,7 @@ public updateAutoplayButtonState(): void {
 		}
 
 		// Disable if reels are spinning or player can't afford a spin
-		if ((gameStateManager as any).isProcessingSpin || gameStateManager.isReelSpinning || !this.canAffordSpin()) {
+		if ((gameStateManager as any).isProcessingSpin || gameStateManager.isReelSpinning) {
 			this.disableSpinButton();
 		} else {
 			this.enableSpinButton();
