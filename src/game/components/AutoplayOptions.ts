@@ -229,9 +229,11 @@ export class AutoplayOptions {
 		balanceBg.strokeRoundedRect(-balanceWidth/2, -balanceHeight/2, balanceWidth, balanceHeight, 10);
 		balanceContainer.add(balanceBg);
 		
+		const padding = 25;
+		const xPos = balanceWidth / 2 - padding;
 		// "Balance" label
-		const balanceLabel = scene.add.text(-150, 1, 'Balance', {
-			fontSize: '24px',
+		const balanceLabel = scene.add.text(-xPos, 1, 'Balance', {
+			fontSize: '20px',
 			color: '#ffffff',
 			fontFamily: 'Poppins-Regular'
 		});
@@ -242,8 +244,10 @@ export class AutoplayOptions {
 		// Check if demo mode is active - if so, use blank currency symbol
 		const isDemo = (scene as any).gameAPI?.getDemoState();
 		const balanceFormatted = this.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-		const balanceAmount = scene.add.text(150, 1, isDemo ? balanceFormatted : `${CurrencyManager.getInlinePrefix()}${balanceFormatted}`, {
-			fontSize: '24px',
+		const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+		const balanceText = currencyCode ? `${currencyCode}\u00A0${balanceFormatted}` : balanceFormatted;
+		const balanceAmount = scene.add.text(xPos, 1, balanceText, {
+			fontSize: '22px',
 			color: '#00ff00',
 			fontFamily: 'Poppins-Bold'
 		});
@@ -366,10 +370,13 @@ export class AutoplayOptions {
 		// Bet display
 		// Check if demo mode is active - if so, use blank currency symbol
 		const isDemoInitial = (scene as any).gameAPI?.getDemoState();
-		this.autoplayDisplay = scene.add.text(x, y, isDemoInitial ? this.currentBet.toFixed(2) : CurrencyManager.formatAmount(this.currentBet, 2) , {
+		const currencyCodeInitial = isDemoInitial ? '' : CurrencyManager.getCurrencyCode();
+		const betFormatted = this.currentBet.toFixed(2);
+		const betText = currencyCodeInitial ? `${currencyCodeInitial}\u00A0${betFormatted}` : betFormatted;
+		this.autoplayDisplay = scene.add.text(x, y, betText, {
 			fontSize: '24px',
 			color: '#ffffff',
-			fontFamily: 'Poppins-Bold'
+			fontFamily: 'Poppins-Regular'
 		});
 		this.autoplayDisplay.setOrigin(0.5, 0.5);
 		this.container.add(this.autoplayDisplay);
@@ -568,7 +575,10 @@ export class AutoplayOptions {
 			console.log("[AutoplayOptions] Updating autoplay display to: $", displayBet, this.isEnhancedBet ? "(enhanced bet)" : "");
 			// Check if demo mode is active - if so, use blank currency symbol
 			const isDemo = (this.container?.scene as any)?.gameAPI?.getDemoState();
-			this.autoplayDisplay.setText(isDemo ? displayBet.toFixed(2) : CurrencyManager.formatAmount(displayBet, 2));
+			const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+			const betFormatted = displayBet.toFixed(2);
+			const betText = currencyCode ? `${currencyCode}\u00A0${betFormatted}` : betFormatted;
+			this.autoplayDisplay.setText(betText);
 		}
 	}
 
@@ -576,7 +586,9 @@ export class AutoplayOptions {
 		if (this.balanceAmountText) {
 			const isDemo = (this.container?.scene as any)?.gameAPI?.getDemoState?.();
 			const balanceFormatted = this.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-			this.balanceAmountText.setText(isDemo ? balanceFormatted : `${CurrencyManager.getInlinePrefix()}${balanceFormatted}`);
+			const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+			const balanceText = currencyCode ? `${currencyCode}\u00A0${balanceFormatted}` : balanceFormatted;
+			this.balanceAmountText.setText(balanceText);
 		}
 	}
 

@@ -187,10 +187,9 @@ export class BonusHeader {
 			(scene as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const sym = CurrencyManager.getCurrencySymbol();
-		const code = CurrencyManager.getCurrencyCode();
-		const prefix = isDemoInitial ? '' : (sym ? `${sym} ` : (code ? `${code} ` : ''));
-		this.amountText = scene.add.text(x, y + 16, `${prefix}0.00`, {
+		const currencyCode = isDemoInitial ? '' : CurrencyManager.getCurrencyCode();
+		const initialText = currencyCode ? `${currencyCode}\u00A00.00` : '0.00';
+		this.amountText = scene.add.text(x, y + 16, initialText, {
 			fontSize: '22px',
 			color: '#04fd46',
 			fontFamily: 'Poppins-Bold',
@@ -442,24 +441,21 @@ export class BonusHeader {
 			(this.scene as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		if (isDemo) {
-			const formatted = new Intl.NumberFormat('en-US', {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2
-			}).format(amount || 0);
-			return formatted;
-		}
-
-		if (amount === 0) {
-			return '$ 0.00';
-		}
-
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD',
+		
+		// Format with commas for thousands and 2 decimal places
+		const formatted = new Intl.NumberFormat('en-US', {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2
-		}).format(amount);
+		}).format(amount || 0);
+		
+		if (isDemo) {
+			return formatted;
+		}
+		
+		// Get currency code with proper spacing
+		const currencyCode = CurrencyManager.getCurrencyCode();
+		const space = currencyCode ? '\u00A0' : '';
+		return currencyCode ? `${currencyCode}${space}${formatted}` : formatted;
 	}
 
 	/**

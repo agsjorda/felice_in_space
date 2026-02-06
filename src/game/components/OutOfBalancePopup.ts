@@ -15,13 +15,16 @@ export class OutOfBalancePopup extends GameObjects.Container {
     private animationDuration: number = 300;
     private overlay: Phaser.GameObjects.Graphics;
 
+    private onCloseCallback?: () => void;
+
     constructor(scene: Scene, x: number = 0, y: number = 0, options: {
         opacity?: number,
         cornerRadius?: number,
         buttonOffsetY?: number,
         buttonScale?: number,
         overlayColor?: number,
-        overlayAlpha?: number
+        overlayAlpha?: number,
+        onClose?: () => void
     } = {}) {
         super(scene, x, y);
         this.scene = scene;
@@ -49,6 +52,9 @@ export class OutOfBalancePopup extends GameObjects.Container {
         }
         if (options.buttonScale !== undefined) {
             this.buttonScale = Phaser.Math.Clamp(options.buttonScale, 0.1, 2);
+        }
+        if (options.onClose !== undefined) {
+            this.onCloseCallback = options.onClose;
         }
 
         this.background = new Phaser.GameObjects.Graphics(scene);
@@ -103,7 +109,9 @@ export class OutOfBalancePopup extends GameObjects.Container {
             if ((window as any).audioManager) {
                 (window as any).audioManager.playSoundEffect('button_fx');
             }
-            this.hide();
+            this.hide(() => {
+                this.onCloseCallback?.();
+            });
         });
         this.buttonImage.on('pointerover', () => {
             this.buttonImage.setTint(0xcccccc);
@@ -151,6 +159,18 @@ export class OutOfBalancePopup extends GameObjects.Container {
             onComplete: () => {
                 this.setVisible(false);
                 this.overlay.setVisible(false);
+                try {
+                    const w: any = window as any;
+                    if (w && w.__hhPopupState) {
+                        if (w.__hhPopupState.activeBlockingPopup === 'OUT_OF_BALANCE') {
+                            w.__hhPopupState.activeBlockingPopup = null;
+                        }
+                        w.__hhPopupState.outOfBalanceShown = false;
+                        if (w.__hhPopupState.outOfBalancePopup === this) {
+                            w.__hhPopupState.outOfBalancePopup = null;
+                        }
+                    }
+                } catch {}
                 if (callback) callback();
             }
         });
