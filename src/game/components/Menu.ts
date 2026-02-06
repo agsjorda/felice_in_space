@@ -4,6 +4,7 @@ import { GameData } from '../components/GameData';
 import { AudioManager, SoundEffectType } from '../../managers/AudioManager';
 import { GameAPI } from '../../backend/GameAPI';
 import { HelpScreen } from './MenuTabs/HelpScreen';
+import { CurrencyManager } from './CurrencyManager';
 
 interface ButtonBase {
     isButton: boolean;
@@ -1340,7 +1341,10 @@ export class Menu {
             buyFeatContainer.add(buyLabel);
 
             // Static price text $10,000 centered on the button
-            const buyPrice = scene.add.text(btnCenterX, btnCenterY + 14, '$10,000', {
+            const isDemoBuyPrice = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+            const currencyCodeBuy = isDemoBuyPrice ? '' : CurrencyManager.getCurrencyCode();
+            const buyPriceText = currencyCodeBuy ? `${currencyCodeBuy}\u00A010,000` : '10,000';
+            const buyPrice = scene.add.text(btnCenterX, btnCenterY + 14, buyPriceText, {
                 fontSize: '18px',
                 color: '#FFFFFF',
                 fontFamily: 'Poppins-Bold'
@@ -2074,16 +2078,20 @@ export class Menu {
                         const text2 = payoutValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         payoutAdjustments[row] = text2.length;
 
+                        const isDemoPayout = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+                        const currencyCodePayout = isDemoPayout ? '' : CurrencyManager.getCurrencyCode();
+                        const currencyPrefix = currencyCodePayout ? `${currencyCodePayout}\u00A0` : '';
+
                         let text : string;  
                         const repeatTimes = payoutAdjustments[0] - text2.length;
 
                         if(repeatTimes > 0){
                             text = col == 0 ? matchNumRange[row] : 
-                                ' '.repeat(repeatTimes) + '$ ' + text2;
+                                ' '.repeat(repeatTimes) + currencyPrefix + text2;
                         }
                         else{
                             text = col == 0 ? matchNumRange[row] : 
-                                '$ ' + text2;
+                                currencyPrefix + text2;
                         }
 
                         let textElement : GameObjects.Text;
@@ -2114,16 +2122,20 @@ export class Menu {
                     const text2 = (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         payoutAdjustments[row] = text2.length;
 
+                        const isDemoScatter = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+                        const currencyCodeScatter = isDemoScatter ? '' : CurrencyManager.getCurrencyCode();
+                        const currencyPrefixScatter = currencyCodeScatter ? `${currencyCodeScatter}\u00A0` : '';
+
                         let text : string;  
                         const repeatTimes = payoutAdjustments[0] - text2.length;
 
                         if(repeatTimes > 0){
                             text = col == 0 ? scatterNumRange[row] : 
-                                ' '.repeat(repeatTimes) + '$ ' + text2;
+                                ' '.repeat(repeatTimes) + currencyPrefixScatter + text2;
                         }
                         else{
                             text = col == 0 ? scatterNumRange[row] : 
-                                '$ ' + text2;
+                                currencyPrefixScatter + text2;
                         }
 
                     if(col == 0) {

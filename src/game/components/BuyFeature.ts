@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { SlotController } from './SlotController';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
+import { CurrencyManager } from './CurrencyManager';
 
 export interface BuyFeatureConfig {
 	position?: { x: number; y: number };
@@ -473,8 +474,12 @@ export class BuyFeature {
 		
 		// Calculate price as 100 * current base bet
 		const calculatedPrice = this.getCurrentBetValue();
+		const isDemo = (scene as any)?.gameAPI?.getDemoState?.() || localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+		const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+		const formattedPrice = this.formatNumberWithCommas(calculatedPrice);
+		const priceText = currencyCode ? `${currencyCode}\u00A0${formattedPrice}` : formattedPrice;
 		
-		this.priceDisplay = scene.add.text(screenWidth / 2, backgroundTop + 340, `$${this.formatNumberWithCommas(calculatedPrice)}`, {
+		this.priceDisplay = scene.add.text(screenWidth / 2, backgroundTop + 340, priceText, {
 			fontSize: '42px',
 			fontFamily: 'Poppins-Regular',
 			color: '#ffffff',
@@ -549,7 +554,12 @@ export class BuyFeature {
 	private updatePriceDisplay(): void {
 		if (this.priceDisplay) {
 			const calculatedPrice = this.getCurrentBetValue();
-			this.priceDisplay.setText(`$${this.formatNumberWithCommas(calculatedPrice)}`);
+			const scene = this.container?.scene;
+			const isDemo = (scene as any)?.gameAPI?.getDemoState?.() || localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+			const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+			const formattedPrice = this.formatNumberWithCommas(calculatedPrice);
+			const priceText = currencyCode ? `${currencyCode}\u00A0${formattedPrice}` : formattedPrice;
+			this.priceDisplay.setText(priceText);
 		}
 		this.updateBuyButtonState();
 	}
@@ -650,7 +660,11 @@ export class BuyFeature {
 		this.container.add(this.minusButton);
 		
 		// Bet display - show current bet value
-		this.betDisplay = scene.add.text(x, y, `$${this.getCurrentBet().toFixed(2)}`, {
+		const isDemoBet = (scene as any)?.gameAPI?.getDemoState?.() || localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+		const currencyCodeBet = isDemoBet ? '' : CurrencyManager.getCurrencyCode();
+		const betFormatted = this.getCurrentBet().toFixed(2);
+		const betText = currencyCodeBet ? `${currencyCodeBet}\u00A0${betFormatted}` : betFormatted;
+		this.betDisplay = scene.add.text(x, y, betText, {
 			fontSize: '24px',
 			color: '#ffffff',
 			fontFamily: 'Poppins-Regular'
@@ -768,7 +782,12 @@ export class BuyFeature {
 
 	private updateBetDisplay(): void {
 		if (this.betDisplay) {
-			this.betDisplay.setText(`$${this.getCurrentBet().toFixed(2)}`);
+			const scene = this.container?.scene;
+			const isDemo = (scene as any)?.gameAPI?.getDemoState?.() || localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
+			const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+			const betFormatted = this.getCurrentBet().toFixed(2);
+			const betText = currencyCode ? `${currencyCode}\u00A0${betFormatted}` : betFormatted;
+			this.betDisplay.setText(betText);
 		}
 	}
 

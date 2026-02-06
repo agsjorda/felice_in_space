@@ -378,10 +378,9 @@ export class HelpScreen {
             const value = payoutData[row] ?? 0;
             const adjustedValue = this.applyBetToPayout(value);
             const isDemo = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
-            const sym = CurrencyManager.getCurrencySymbol();
-            const code = CurrencyManager.getCurrencyCode();
-            const prefix = isDemo ? '' : (sym ? `${sym} ` : (code ? `${code} ` : ''));
-            const valueText = prefix + this.formatPayout(adjustedValue);
+            const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+            const formattedAmount = this.formatPayout(adjustedValue);
+            const valueText = currencyCode ? `${currencyCode}\u00A0${formattedAmount}` : formattedAmount;
             const payoutText = scene.add.text(0, y, valueText, {
                 fontSize: this.payoutTextFontSize + 'px',
                 color: '#FFFFFF',
@@ -475,10 +474,9 @@ export class HelpScreen {
             const value = SCATTER_PAYOUTS[row] ?? 0;
             const adjustedValue = this.applyBetToPayout(value);
             const isDemo = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
-            const sym = CurrencyManager.getCurrencySymbol();
-            const code = CurrencyManager.getCurrencyCode();
-            const prefix = isDemo ? '' : (sym ? `${sym} ` : (code ? `${code} ` : ''));
-            const valueText = prefix + this.formatPayout(adjustedValue);
+            const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
+            const formattedAmount = this.formatPayout(adjustedValue);
+            const valueText = currencyCode ? `${currencyCode}\u00A0${formattedAmount}` : formattedAmount;
             const payoutTextX = baseTextX + this.scatterPayoutTextColumnSpacing / 2;
             const payoutText = scene.add.text(payoutTextX, adjustedTextY, valueText, {
                 fontSize: this.scatterPayoutTextFontSize + 'px',
@@ -760,8 +758,9 @@ export class HelpScreen {
 
         // Static price text $10,000 centered on the button
         const isDemoBuyPrice = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
-        const buyPrefix = isDemoBuyPrice ? '' : CurrencyManager.getInlinePrefix();
-        const buyPrice = scene.add.text(btnCenterX, btnCenterY + 14, `${buyPrefix}10,000`, {
+        const currencyCode = isDemoBuyPrice ? '' : CurrencyManager.getCurrencyCode();
+        const buyPriceText = currencyCode ? `${currencyCode}\u00A010,000` : '10,000';
+        const buyPrice = scene.add.text(btnCenterX, btnCenterY + 14, buyPriceText, {
             fontSize: '18px',
             color: '#FFFFFF',
             fontFamily: 'Poppins-Bold',
@@ -997,13 +996,12 @@ export class HelpScreen {
 
         // Main value text layer below the title.
         const isDemoBalance = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
-        const symB = CurrencyManager.getCurrencySymbol();
-        const codeB = CurrencyManager.getCurrencyCode();
-        const balancePrefix = isDemoBalance ? '' : (symB ? `${symB} ` : (codeB ? `${codeB} ` : ''));
+        const currencyCodeB = isDemoBalance ? '' : CurrencyManager.getCurrencyCode();
+        const balanceText = currencyCodeB ? `${currencyCodeB}\u00A0200,000.00` : '200,000.00';
         const balanceValue = scene.add.text(
             cardLeft + cardWidth / 2,
             cardHeight / 2 + this.padding * 0.8,
-            `${balancePrefix}200,000.00`,
+            balanceText,
             {
                 ...this.titleStyle,
                 color: '#ffffff',
