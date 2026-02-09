@@ -3534,12 +3534,7 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
         scatterCount === 5 ? 5 :
         scatterCount === 4 ? 3 : 0;
       const scatterBaseWin = (isNaN(betAmount) ? 0 : betAmount) * scatterMultiplier;
-      
-      // Base-game display: this flow uses tumbles (cluster) wins + scatter base payout.
-      // Paylines are ignored for this game.
-      const totalForHeader = (scatterBaseWin || 0);
-      // Also compute tumble total from SpinData so we can seed the bonus cumulative correctly.
-      // (BonusHeader's TUMBLE_SEQUENCE_DONE only runs once bonus mode is active.)
+      // Current spin/tumble win (excluding free spin wins) for total display
       const tumbleWinForSeed = (() => {
         try {
           const tumblesArr: any[] = Array.isArray((spinData?.slot as any)?.tumbles) ? (spinData.slot as any).tumbles : [];
@@ -3554,15 +3549,17 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
           return 0;
         }
       })();
-      const totalForBonusSeed = tumbleWinForSeed + totalForHeader;
+      // Total win for normal header: base bet × scatter multiplier + current spin/tumble win (excluding free spin wins)
+      const totalForHeader = (scatterBaseWin || 0) + tumbleWinForSeed;
+      const totalForBonusSeed = totalForHeader;
       
       // Update normal header winnings display immediately on scatter trigger.
-      // When a scatter is hit, only the base scatter win is shown for that spin (4→3x bet, 5→5x bet, 6+→100x bet).
+      // Show: base bet × multiplier (by scatter count) + current spin/tumble win (excluding free spin wins).
       try {
         const header = (self.scene as any)?.header;
         if (header && typeof header.showWinningsDisplay === 'function' && totalForHeader > 0) {
           header.showWinningsDisplay(totalForHeader);
-          console.log(`[Symbols] Header winnings updated for scatter: scatter only=$${totalForHeader} (${scatterCount} scatter: ${scatterMultiplier}x bet)`);
+          console.log(`[Symbols] Header winnings updated for scatter: total=$${totalForHeader} (scatter ${scatterMultiplier}x bet + tumble $${tumbleWinForSeed})`);
         }
       } catch (e) {
         console.warn('[Symbols] Failed to update Header winnings for scatter', e);
@@ -3583,7 +3580,7 @@ async function processSpinDataSymbols(self: Symbols, symbols: number[][], spinDa
             // (tumbles + scatter base), so the bonus header total matches the header total.
             if (typeof bonusHeader.seedCumulativeWin === 'function') {
               bonusHeader.seedCumulativeWin(totalForBonusSeed);
-              console.log(`[Symbols] BonusHeader seeded with total win at scatter: tumbles=$${tumbleWinForSeed} + scatter=$${totalForHeader} => $${totalForBonusSeed}`);
+              console.log(`[Symbols] BonusHeader seeded with total win at scatter: $${totalForBonusSeed} (scatter + tumble)`);
             }
           }
         }

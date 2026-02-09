@@ -4771,7 +4771,9 @@ public updateAutoplayButtonState(): void {
 			// Update SlotController bet to match the selected Buy Feature bet
 			// This updates both the displayed bet and the internal baseBetAmount
 			this.updateBetAmount(buyFeatureBet);
-			
+			// Re-disable bet +/- buttons; updateBetAmount calls updateBetLimitButtons which re-enables them
+			this.disableBetButtons();
+
 			console.log(`[SlotController] Buy feature bet: $${buyFeatureBet.toFixed(2)}, calculated price: $${calculatedPrice.toFixed(2)}`);
 			
 			// Check if player has enough balance

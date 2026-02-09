@@ -540,14 +540,15 @@ export class BonusHeader {
 	/**
 	 * Switch winnings display to "TOTAL WIN" with the given amount. Called from Symbols
 	 * immediately before the congrats dialog is shown so the user sees "TOTAL WIN" first.
-	 * Uses consistent formula: base spin + scatter + previous free spin items totalWin (+ current when end of bonus).
+	 * Prefer the passed totalWin (same value used for congrats dialog) so the header never
+	 * shows less than the congrats total; fall back to getTotalWinForDisplay only when
+	 * totalWin is 0 so header and congrats stay consistent.
 	 */
 	public showTotalWinBeforeCongrats(totalWin: number): void {
 		const symbolsComponent = (this.bonusHeaderContainer?.scene as any)?.symbols;
 		const spinData = symbolsComponent?.currentSpinData;
-		const displayTotal = spinData
-			? this.getTotalWinForDisplay(spinData, true)
-			: totalWin;
+		const fromFormula = spinData ? this.getTotalWinForDisplay(spinData, true) : 0;
+		const displayTotal = totalWin > 0 ? totalWin : fromFormula;
 		if (displayTotal <= 0) return;
 		if (this.youWonText) this.youWonText.setText('TOTAL WIN');
 		this.showWinningsDisplay(displayTotal);
@@ -741,7 +742,8 @@ export class BonusHeader {
 				);
 				const isLastSpin = currentFreeSpinItem != null && Number((currentFreeSpinItem as any).spinsLeft) === 0;
 				if (isLastSpin) {
-					const totalWin = this.getTotalWinForDisplay(spinData, true);
+					const fromFormula = this.getTotalWinForDisplay(spinData, true);
+					const totalWin = Math.max(fromFormula, this.cumulativeBonusWin);
 					if (totalWin > 0) {
 						if (this.youWonText) this.youWonText.setText('TOTAL WIN');
 						this.showWinningsDisplay(totalWin);
@@ -977,7 +979,8 @@ export class BonusHeader {
 				isLastSpin = lastSpinItem != null && Number((lastSpinItem as any).spinsLeft) === 0;
 			}
 			if (isLastSpin) {
-				const totalWin = this.getTotalWinForDisplay(spinData, true);
+				const fromFormula = this.getTotalWinForDisplay(spinData, true);
+				const totalWin = Math.max(fromFormula, this.cumulativeBonusWin);
 				if (totalWin > 0) {
 					if (this.youWonText) this.youWonText.setText('TOTAL WIN');
 					this.showWinningsDisplay(totalWin);
