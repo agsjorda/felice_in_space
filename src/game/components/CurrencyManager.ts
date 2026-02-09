@@ -87,7 +87,10 @@ export class CurrencyManager {
 
 	public static formatAmount(amount: number, decimals = 2): string {
 		const safe = Number.isFinite(amount) ? amount : 0;
-		return `${CurrencyManager.getInlinePrefix()}${safe.toFixed(decimals)}`;
+		const prefix = CurrencyManager.getCurrencyCode();
+		// Ensure there's always a space between currency and amount
+		const space = prefix && !prefix.endsWith(' ') ? ' ' : '';
+		return `${prefix}${space}${safe.toFixed(decimals)}`;
 	}
 
 	/** Best-effort removal of currency prefix from a display string. */
