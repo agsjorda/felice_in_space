@@ -10,6 +10,8 @@ export interface AutoplayOptionsConfig {
 	scale?: number;
 	onClose?: () => void;
 	onConfirm?: (autoplayCount: number) => void;
+	/** Called immediately when START AUTOPLAY is clicked (before modal close animation). Use to grey out slot controls right away. */
+	onConfirmClicked?: (autoplayCount: number) => void;
 	currentAutoplayCount?: number;
 	/**
 	 * Current base bet (without enhanced multiplier).
@@ -68,6 +70,7 @@ export class AutoplayOptions {
 	private enhanceBetIdleAnimation: any = null; // Enhanced bet spine animation
 	private onCloseCallback?: () => void;
 	private onConfirmCallback?: (autoplayCount: number) => void;
+	private onConfirmClickedCallback?: (autoplayCount: number) => void;
 
 	private getAutoplaySpinCost(): number {
 		const baseBet = this.currentBet || 0;
@@ -516,6 +519,11 @@ export class AutoplayOptions {
 				console.warn('[AutoplayOptions] Failed to set isAutoPlaySpinRequested:', e);
 			}
 
+			// Apply slot controller grey-out/disable immediately so there is no visible delay
+			if (this.onConfirmClickedCallback) {
+				this.onConfirmClickedCallback(this.currentAutoplayCount);
+			}
+
 			if (this.container.scene) {
 				this.container.scene.tweens.add({
 					targets: this.container,
@@ -649,6 +657,7 @@ export class AutoplayOptions {
 			}
 			this.onCloseCallback = config.onClose;
 			this.onConfirmCallback = config.onConfirm;
+			this.onConfirmClickedCallback = config.onConfirmClicked;
 		}
 		
 		// Update the balance display with current balance

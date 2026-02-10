@@ -3456,6 +3456,17 @@ export class SlotController {
 	}
 
 	/**
+	 * Apply grey-out/disabled state to bet and feature buttons immediately.
+	 * Call this as soon as autoplay is confirmed (e.g. from AutoplayOptions onConfirmClicked)
+	 * to avoid a visible delay before startAutoplay runs after the modal close animation.
+	 */
+	public applyAutoplayControlsImmediate(): void {
+		this.disableBetButtons();
+		this.disableFeatureButton();
+		console.log('[SlotController] Applied autoplay controls (bet/feature disabled) immediately');
+	}
+
+	/**
 	 * Start autoplay with specified number of spins
 	 */
 	public startAutoplay(spins: number): void {
@@ -4515,6 +4526,11 @@ public updateAutoplayButtonState(): void {
 			EventBus.emit('spin');
 			return;
 		}
+
+		// Mark spin as in progress immediately (covers autoplay path where spin button handler doesn't run).
+		// Prevents stopAutoplay() from re-enabling buttons when user stops autoplay right after confirm
+		// while the first spin is still starting (handleSpin in flight, reels not yet dropping).
+		(gameStateManager as any).isProcessingSpin = true;
 
 		// Guard: ensure sufficient balance before proceeding
 		try {
