@@ -578,6 +578,9 @@ export class Game extends Scene
 				onClose: () => {
 					console.log('[Game] Autoplay options closed');
 				},
+				onConfirmClicked: () => {
+					this.slotController.applyAutoplayControlsImmediate();
+				},
 				onConfirm: (autoplayCount: number) => {
 					console.log(`[Game] Autoplay confirmed: ${autoplayCount} spins`);
 					// Read the bet selected within the autoplay panel
