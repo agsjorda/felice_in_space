@@ -553,40 +553,45 @@ export class Dialogs {
 			currentDialogType: this.currentDialogType
 		});
 		
-		// Detect free spin autoplay (bonus autoplay) via Symbols component on the scene
+		// Detect free spin autoplay and pending scatter retrigger via Symbols component on the scene
 		let isFreeSpinAutoplay = false;
+		let hasPendingScatterRetrigger = false;
 		try {
 			const gameScene: any = scene as any;
 			const symbolsComponent = gameScene?.symbols;
-			if (symbolsComponent && typeof symbolsComponent.isFreeSpinAutoplayActive === 'function') {
-				isFreeSpinAutoplay = !!symbolsComponent.isFreeSpinAutoplayActive();
+			if (symbolsComponent) {
+				if (typeof symbolsComponent.isFreeSpinAutoplayActive === 'function') {
+					isFreeSpinAutoplay = !!symbolsComponent.isFreeSpinAutoplayActive();
+				}
+				if (typeof symbolsComponent.hasPendingScatterRetrigger === 'function') {
+					hasPendingScatterRetrigger = !!symbolsComponent.hasPendingScatterRetrigger();
+				}
 			}
 		} catch {}
 
 		// If a win dialog appears exactly when bonus spins are exhausted, we still need the
-		// flow to continue reliably to the Congrats dialog. Relying on a manual click here
-		// can deadlock the bonus end (stuck at 0 spins), so we auto-close with a slightly
-		// longer dwell time than normal autoplay.
-		const isEndOfBonusWinDialog = this.isWinDialog() && gameStateManager.isBonusFinished;
-		if (isEndOfBonusWinDialog) {
-			console.log('[Dialogs] End-of-bonus win dialog detected - will auto-close with extended dwell to allow congrats flow');
+		// flow to continue reliably to the Congrats dialog – but only when there is no
+		// pending scatter retrigger (retrigger adds +5 spins and bonus continues).
+		const isEndOfBonusNoRetrigger = this.isWinDialog() && gameStateManager.isBonusFinished && !hasPendingScatterRetrigger;
+		if (isEndOfBonusNoRetrigger) {
+			console.log('[Dialogs] End-of-bonus win dialog detected (no retrigger) - will auto-close with extended dwell to allow congrats flow');
 		}
 
 		// Also auto-close FreeSpinDialog when it's a retrigger during bonus mode
 		const isRetriggerFreeSpinDialog = (this.currentDialogType === 'FreeSpin_Dialog') && this.isRetriggerFreeSpin;
 		const shouldAutoClose = (this.isWinDialog() && (gameStateManager.isAutoPlaying || isFreeSpinAutoplay || gameStateManager.isScatter))
-			|| isEndOfBonusWinDialog
+			|| isEndOfBonusNoRetrigger
 			|| isRetriggerFreeSpinDialog;
 		
 		if (shouldAutoClose) {
 			const reason = isRetriggerFreeSpinDialog
 				? 'retrigger'
-				: (isEndOfBonusWinDialog ? 'end-of-bonus' : (gameStateManager.isAutoPlaying || isFreeSpinAutoplay ? 'autoplay' : 'scatter hit'));
+				: (isEndOfBonusNoRetrigger ? 'end-of-bonus' : (gameStateManager.isAutoPlaying || isFreeSpinAutoplay ? 'autoplay' : 'scatter hit'));
 			// Base auto-close delay (ms). Previously ~2.5s. Extend by +1s when autoplaying (normal or free spin).
 			let baseDelayMs = 2500;
 
-			// End-of-bonus: give the win dialog a little extra dwell, then proceed to Congrats automatically.
-			if (isEndOfBonusWinDialog) {
+			// End-of-bonus (no retrigger): give the win dialog a little extra dwell, then proceed to Congrats automatically.
+			if (isEndOfBonusNoRetrigger) {
 				baseDelayMs = 3500;
 			}
 
@@ -2310,29 +2315,37 @@ export class Dialogs {
 						console.log('[Dialogs] Cleared initial auto-close timer for final staged tier');
 					}
 
-					// Detect free spin autoplay (bonus autoplay) via Symbols component on the scene
+					// Detect free spin autoplay and pending scatter retrigger via Symbols component on the scene
 					let isFreeSpinAutoplay = false;
+					let hasPendingScatterRetrigger = false;
 					try {
 						const gameScene: any = scene as any;
 						const symbolsComponent = gameScene?.symbols;
-						if (symbolsComponent && typeof symbolsComponent.isFreeSpinAutoplayActive === 'function') {
-							isFreeSpinAutoplay = !!symbolsComponent.isFreeSpinAutoplayActive();
+						if (symbolsComponent) {
+							if (typeof symbolsComponent.isFreeSpinAutoplayActive === 'function') {
+								isFreeSpinAutoplay = !!symbolsComponent.isFreeSpinAutoplayActive();
+							}
+							if (typeof symbolsComponent.hasPendingScatterRetrigger === 'function') {
+								hasPendingScatterRetrigger = !!symbolsComponent.hasPendingScatterRetrigger();
+							}
 						}
 					} catch {}
 
 					const isAutoplaying = gameStateManager.isAutoPlaying || isFreeSpinAutoplay;
-					if (isAutoplaying) {
+					// Only treat as last-spin auto-close when bonus is finished and no retrigger (+5 spins) is pending
+					const isLastSpinNeedsAutoClose = gameStateManager.isBonusFinished && !hasPendingScatterRetrigger;
+					if (isAutoplaying || isLastSpinNeedsAutoClose) {
 						const perStageDwellMs = 2950; // Keep in sync with runStagedWinStage
 						const finalStageDwellMs = perStageDwellMs + 3500;
 
-						console.log('[Dialogs] Creating auto-close timer for final staged tier during autoplay', {
+						console.log('[Dialogs] Creating auto-close timer for final staged tier', {
 							delayMs: finalStageDwellMs,
 							currentStageIndex: this.stagedWinCurrentStageIndex,
 							totalStages: this.stagedWinStages.length
 						});
 
 						this.autoCloseTimer = scene.time.delayedCall(finalStageDwellMs, () => {
-							console.log('[Dialogs] Auto-close after final staged tier during autoplay - closing dialog');
+							console.log('[Dialogs] Auto-close after final staged tier - closing dialog');
 							this.handleDialogClick(scene, true);
 						});
 					}

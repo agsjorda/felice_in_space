@@ -16,7 +16,7 @@ export interface VersionDisplayOptions {
  * Version format: v1.x.x.x (e.g. v1.1.0.0)
  */
 export class VersionManager {
-    private static readonly FALLBACK_VERSION = '1.0.0.19';
+    private static readonly FALLBACK_VERSION = '1.0.0.22';
 
     /**
      * Returns the application version in v1.x.x.x format.

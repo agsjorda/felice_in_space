@@ -751,48 +751,58 @@ export class Symbols {
     
     // Listen for win stop to run retrigger scatter sequence (bonus) and/or schedule next free spin
     gameEventManager.on(GameEventType.WIN_STOP, async () => {
-      // If we have a pending retrigger (bonus scatter), run its sequence LAST
+      // If we have a pending retrigger (bonus scatter), run its sequence after the win dialog (if any) closes.
+      // This ensures order: staged win dialog first -> then scatter retrigger animation -> retrigger dialog.
       if (gameStateManager.isBonus && this.pendingScatterRetrigger && Array.isArray(this.pendingScatterRetrigger.scatterGrids)) {
         const retrigger = this.pendingScatterRetrigger;
         this.pendingScatterRetrigger = null;
-        console.log('[Symbols] WIN_STOP: Running delayed scatter retrigger sequence (bonus)');
-        // Set flag to indicate retrigger animation is starting
-        this.scatterRetriggerAnimationInProgress = true;
-        console.log('[Symbols] Set scatterRetriggerAnimationInProgress to true');
-        try {
-          // Re-scan the live grid to ensure we animate the actual current scatters
-          const liveGrids = this.getLiveScatterGrids();
-          await this.playScatterRetriggerSequence(liveGrids);
-        } catch (e) {
-          console.warn('[Symbols] Retrigger scatter sequence failed:', e);
-        }
-        // Show retrigger dialog (+5 spins)
-        try {
-          this.scatterAnimationManager?.showRetriggerFreeSpinsDialog(5);
-        } catch (e) {
-          console.warn('[Symbols] Failed to show retrigger dialog:', e);
-        }
-        // Continue free spin autoplay after dialog finishes
-        this.scene.events.once('dialogAnimationsComplete', () => {
-          // Clear the retrigger animation flag when retrigger dialog closes
-          this.scatterRetriggerAnimationInProgress = false;
-          console.log('[Symbols] Set scatterRetriggerAnimationInProgress to false (retrigger dialog closed)');
-          
-          // Ensure autoplay is marked active
-          try {
-            this.freeSpinAutoplayActive = true;
-            gameStateManager.isAutoPlaying = true;
-            if (this.scene?.gameData) this.scene.gameData.isAutoPlaying = true;
-          } catch {}
 
-          // After retrigger dialog closes, wait for all subsequent dialogs to finish
-          // (e.g., any win dialog(s) that will show) before resuming autoplay.
-          this.waitForAllDialogsToCloseThenResume();
+        const runRetriggerSequenceAndDialog = async () => {
+          console.log('[Symbols] Running scatter retrigger sequence (bonus)');
+          this.scatterRetriggerAnimationInProgress = true;
+          console.log('[Symbols] Set scatterRetriggerAnimationInProgress to true');
+          try {
+            const liveGrids = this.getLiveScatterGrids();
+            await this.playScatterRetriggerSequence(liveGrids);
+          } catch (e) {
+            console.warn('[Symbols] Retrigger scatter sequence failed:', e);
+          }
+          try {
+            this.scatterAnimationManager?.showRetriggerFreeSpinsDialog(5);
+          } catch (e) {
+            console.warn('[Symbols] Failed to show retrigger dialog:', e);
+          }
+          this.scene.events.once('dialogAnimationsComplete', () => {
+            this.scatterRetriggerAnimationInProgress = false;
+            console.log('[Symbols] Set scatterRetriggerAnimationInProgress to false (retrigger dialog closed)');
+            try {
+              this.freeSpinAutoplayActive = true;
+              gameStateManager.isAutoPlaying = true;
+              if (this.scene?.gameData) this.scene.gameData.isAutoPlaying = true;
+            } catch {}
+            this.waitForAllDialogsToCloseThenResume();
+          });
+        };
+
+        // Defer so Game.ts WIN_STOP can run first and show the win dialog if qualifying. Then either
+        // wait for that dialog to close or run retrigger immediately if no win dialog is shown.
+        this.scene.time.delayedCall(150, () => {
+          const gameScene = this.scene as any;
+          const dialogs = gameScene?.dialogs;
+          const anyDialogShowing = !!(dialogs && typeof dialogs.isDialogShowing === 'function' && dialogs.isDialogShowing());
+          if (anyDialogShowing) {
+            console.log('[Symbols] WIN_STOP: Win dialog showing - deferring retrigger until dialogAnimationsComplete');
+            this.scene.events.once('dialogAnimationsComplete', () => {
+              runRetriggerSequenceAndDialog();
+            });
+          } else {
+            console.log('[Symbols] WIN_STOP: No win dialog - running retrigger sequence now');
+            runRetriggerSequenceAndDialog();
+          }
         });
-        // Do not run normal autoplay continuation now; we will continue after dialog
         return;
       }
-      
+
       // No retrigger pending: continue autoplay if active
       if (this.freeSpinAutoplayActive) {
         this.handleFreeSpinAutoplayWinStop();
@@ -2916,12 +2926,12 @@ export class Symbols {
       }
 
       // Robust end-of-bonus detection:
-      // - Prefer the explicit flag when set
+      // - Prefer the explicit flag when set (and no pending retrigger)
       // - Fallback to checking current spin data remaining spins, to avoid rare cases where the
       //   flag isn't set/gets cleared and the game gets stuck at 0 remaining spins.
       let shouldShowCongrats = false;
       try {
-        if (gameStateManager.isBonusFinished) {
+        if (gameStateManager.isBonusFinished && !this.hasPendingScatterRetrigger()) {
           shouldShowCongrats = true;
         } else if (gameStateManager.isBonus && !this.hasPendingScatterRetrigger()) {
           const fsData = this.currentSpinData?.slot?.freespin || this.currentSpinData?.slot?.freeSpin;
@@ -2950,6 +2960,12 @@ export class Symbols {
    */
   private async showCongratsDialogAfterDelay(): Promise<void> {
     console.log('[Symbols] Showing congrats dialog after delay');
+    
+    // If there is a pending scatter retrigger (+5 spins), do not show congrats – bonus will continue
+    if (this.hasPendingScatterRetrigger()) {
+      console.log('[Symbols] Pending scatter retrigger - skipping congrats, bonus will continue');
+      return;
+    }
     
     // Wait for scatter retrigger animation to complete if it's in progress
     if (this.scatterRetriggerAnimationInProgress) {
@@ -2982,8 +2998,46 @@ export class Symbols {
       }
     }
     
-    // Close any open win dialogs first (safety check)
+    // Re-check pending retrigger after async waits (state may have changed)
+    if (this.hasPendingScatterRetrigger()) {
+      console.log('[Symbols] Pending scatter retrigger after waits - skipping congrats, bonus will continue');
+      return;
+    }
+    
+    // Defer so that when MULTIPLIER_ANIMATIONS_COMPLETE fires, processWinQueue has a chance to
+    // show the deferred win dialog first. If a win dialog appears, we skip congrats here and
+    // let WIN_DIALOG_CLOSED show congrats when the user (or auto-close) closes the win dialog.
     const gameScene = this.scene as any;
+    const deferMs = 150;
+    this.scene.time.delayedCall(deferMs, () => {
+      if (this.hasPendingScatterRetrigger()) {
+        console.log('[Symbols] Pending scatter retrigger after defer - skipping congrats, bonus will continue');
+        return;
+      }
+      const dialogs = gameScene.dialogs;
+      const winDialogShowing =
+        dialogs &&
+        typeof dialogs.isDialogShowing === 'function' &&
+        dialogs.isDialogShowing() &&
+        typeof dialogs.isWinDialog === 'function' &&
+        dialogs.isWinDialog();
+      if (winDialogShowing) {
+        console.log('[Symbols] Win dialog is showing after defer - skipping congrats here, WIN_DIALOG_CLOSED will show congrats');
+        return;
+      }
+      this.showCongratsDialogAfterDelayImmediate(gameScene);
+    });
+  }
+
+  /**
+   * Actually show congrats (called after optional defer so deferred win dialog can appear first).
+   */
+  private showCongratsDialogAfterDelayImmediate(gameScene: any): void {
+    if (this.hasPendingScatterRetrigger()) {
+      console.log('[Symbols] Pending scatter retrigger in immediate - skipping congrats, bonus will continue');
+      return;
+    }
+    // Close any open win dialogs first (safety check)
     if (gameScene.dialogs && typeof gameScene.dialogs.hideDialog === 'function') {
       if (gameScene.dialogs.isDialogShowing()) {
         console.log('[Symbols] Closing any remaining win dialogs before showing congrats');
