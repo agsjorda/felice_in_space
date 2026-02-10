@@ -1177,7 +1177,7 @@ export class SlotController {
 	 * Keep this in sync with BetOptions.ts.
 	 */
 	private getBetLevels(): number[] {
-		return [
+		return this.gameData?.betLevels?.length ? this.gameData.betLevels : [
 			0.2, 0.4, 0.6, 0.8, 1,
 			1.2, 1.6, 2, 2.4, 2.8,
 			3.2, 3.6, 4, 5, 6,

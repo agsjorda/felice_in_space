@@ -4,6 +4,16 @@
 export class GameData {
 	static WIN_UP_HEIGHT: number = 50;
 
+	/** Bet ladder; single source of truth for SlotController, BetOptions, AutoplayOptions, BuyFeature. Overwritten from initialization data in Game.create() when available. */
+	public betLevels: number[] = [
+		0.2, 0.4, 0.6, 0.8, 1,
+		1.2, 1.6, 2, 2.4, 2.8,
+		3.2, 3.6, 4, 5, 6,
+		8, 10, 14, 18, 24,
+		32, 40, 60, 80, 100,
+		110, 120, 130, 140, 150
+	];
+
   public isAutoPlaying: boolean = false;
   public isShowingWinlines: boolean = false; // Track if winline animations are playing
 	public isTurbo: boolean = false;
