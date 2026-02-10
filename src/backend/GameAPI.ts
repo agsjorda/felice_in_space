@@ -62,6 +62,8 @@ export interface SlotInitializeData {
     lang: string;
     currency: string;
     currencySymbol?: string;
+    currencyDecimalPlaces?: number;
+    betLevels?: number[];
     hasFreeSpinRound: boolean;
     // New backend format: array of free spin round entries.
     // Kept as `any` union-friendly type for backwards compatibility,
@@ -136,96 +138,32 @@ export class GameAPI {
         new URLSearchParams(window.location.search).get('testMode') === 'true' ||
         localStorage.getItem('testMode') === 'true';
     
-    // Test data to be used when test mode is enabled
+    // Test data to be used when test mode is enabled (lastspin_windialog.json)
     private static readonly TEST_SPIN_DATA: any = {
-        "bet": "1",
+        "playerId": "fixture",
+        "bet": "20",
         "slot": {
-            "area": [
-                [3, 1, 0, 4, 2],
-                [8, 7, 5, 0, 6],
-                [3, 2, 9, 1, 9],
-                [9, 3, 2, 4, 1],
-                [6, 8, 0, 5, 7],
-                [3, 9, 1, 0, 2]
-            ],
-            "totalWin": 44.3,
-            "tumbles": [],
+            "area": [[4,8,8,0,9],[6,1,0,8,8],[0,9,9,6,6],[5,5,8,8,6],[6,0,1,8,8],[6,7,7,3,3]],
+            "totalWin": 38.010000000000005,
+            "tumbles": [{"symbols":{"in":[[9,9],[8,1],[],[9,5],[7,7],[]],"out":[{"symbol":8,"count":8,"win":0.08000000000000002}]},"win":0.08000000000000002}],
             "freeSpin": {
-                "multiplierValue": 3,
+                "multiplierValue": 0.6000000000000001,
                 "items": [
-                    {
-                        "spinsLeft": 10,
-                        "area": [[8,8,9,9,1], [5,5,8,8,10], [5,8,8,7,7], [6,9,9,5,5], [4,8,8,3,3], [5,8,8,9,9]],
-                        "totalWin": 2.3,
-                        "multipliers": [10],
-                        "tumbles": [
-                            {"symbols": {"in": [[9,6], [8,2], [9,9], [], [6,7], [1,8]], "out": [{"symbol": 8, "count": 10, "win": 0.9}]}, "win": 0.9},
-                            {"symbols": {"in": [[7,7,1], [], [4,9], [8,8], [], [7,7]], "out": [{"symbol": 9, "count": 9, "win": 0.25}]}, "win": 0.25}
-                        ]
-                    },
-                    {"spinsLeft": 9, "area": [[8,7,7,4,4], [6,6,7,7,2], [9,6,6,8,8], [8,4,4,0,7], [8,7,7,3,3], [9,5,5,8,8]], "totalWin": 0, "multipliers": [], "tumbles": []},
-                    {
-                        "spinsLeft": 8,
-                        "area": [[8,8,9,9,1], [9,0,3,3,7], [8,8,9,9,11], [2,2,9,9,8], [8,8,9,9,7], [8,5,5,9,9]],
-                        "totalWin": 3.4499999999999997,
-                        "multipliers": [11],
-                        "tumbles": [{"symbols": {"in": [[9,8,8,6], [6], [4,0,9,9], [5,5,8], [8,4,4,6], [6,6,7]], "out": [{"symbol": 8, "count": 8, "win": 0.4}, {"symbol": 9, "count": 11, "win": 0.75}]}, "win": 1.15}]
-                    },
-                    {
-                        "spinsLeft": 7,
-                        "area": [[5,10,3,3,6], [4,4,9,9,6], [5,9,9,4,4], [6,6,9,9,1], [9,9,7,7,5], [6,7,7,3,3]],
-                        "totalWin": 0.5,
-                        "multipliers": [10],
-                        "tumbles": [{"symbols": {"in": [[], [1,1], [8,4], [9,9], [9,9], []], "out": [{"symbol": 9, "count": 8, "win": 0.25}]}, "win": 0.25}]
-                    },
-                    {"spinsLeft": 6, "area": [[1,7,7,4,4], [8,8,15,3,3], [9,9,5,5,8], [4,4,0,7,7], [3,9,9,7,7], [3,8,8,5,5]], "totalWin": 0, "multipliers": [15], "tumbles": []},
-                    {"spinsLeft": 5, "area": [[5,5,11,3,3], [9,9,6,6,1], [9,6,6,8,8], [3,8,8,5,5], [4,4,8,8,3], [7,4,4,9,9]], "totalWin": 0, "multipliers": [11], "tumbles": []},
-                    {"spinsLeft": 4, "area": [[13,3,3,6,6], [8,12,3,3,7], [9,7,7,5,5], [8,8,9,9,4], [9,9,8,8,5], [7,7,5,5,9]], "totalWin": 0, "multipliers": [13,12], "tumbles": []},
-                    {
-                        "spinsLeft": 3,
-                        "area": [[6,8,8,9,9], [5,4,4,6,6], [3,9,9,7,7], [4,4,7,7,8], [9,9,0,8,8], [9,9,5,5,8]],
-                        "totalWin": 7.15,
-                        "multipliers": [11,15],
-                        "tumbles": [
-                            {"symbols": {"in": [[8,8], [], [9,9], [], [6,6], [9,9]], "out": [{"symbol": 9, "count": 8, "win": 0.25}]}, "win": 0.25},
-                            {"symbols": {"in": [[4,8,8,11], [], [], [9], [6,15], [4]], "out": [{"symbol": 8, "count": 8, "win": 0.4}]}, "win": 0.4}
-                        ]
-                    },
-                    {
-                        "spinsLeft": 2,
-                        "area": [[7,6,6,11,8], [6,6,10,9,9], [9,9,5,5,8], [6,9,9,5,5], [8,3,3,9,9], [9,9,7,7,4]],
-                        "totalWin": 5.25,
-                        "multipliers": [11,10,10],
-                        "tumbles": [{"symbols": {"in": [[], [8,9], [8,8], [4,9], [7,10], [5,7]], "out": [{"symbol": 9, "count": 10, "win": 0.75}]}, "win": 0.75}]
-                    },
-                    {
-                        "spinsLeft": 1,
-                        "area": [[8,8,0,9,9], [7,7,5,5,4], [9,9,5,5,8], [8,8,6,6,9], [9,0,8,8,7], [12,8,8,2,2]],
-                        "totalWin": 20.4,
-                        "multipliers": [10,12],
-                        "tumbles": [
-                            {"symbols": {"in": [[9,9], [], [5], [9,9], [9,9], [7,6]], "out": [{"symbol": 8, "count": 9, "win": 0.4}]}, "win": 0.4},
-                            {"symbols": {"in": [[3,10,5,5], [], [4,4], [5,8,8], [8,0,9], []], "out": [{"symbol": 9, "count": 12, "win": 2}]}, "win": 2},
-                            {"symbols": {"in": [[8,6], [2,7], [5,1,1], [8], [], []], "out": [{"symbol": 5, "count": 8, "win": 1}]}, "win": 1}
-                        ]
-                    },
-                    {"spinsLeft": 5, "area": [[7,5,5,11,3], [7,2,2,8,8], [1,1,5,5,9], [3,3,0,11,8], [2,9,9,7,7], [8,8,6,6,7]], "totalWin": 0, "multipliers": [11,11], "tumbles": []},
-                    {"spinsLeft": 4, "area": [[1,1,5,5,8], [4,4,6,6,11], [4,4,7,7,9], [2,2,9,9,8], [7,7,6,6,9], [8,6,6,7,7]], "totalWin": 0, "multipliers": [11], "tumbles": []},
-                    {
-                        "spinsLeft": 3,
-                        "area": [[6,6,8,8,9], [7,2,2,8,8], [9,4,4,2,2], [6,9,9,1,1], [7,7,6,6,9], [9,9,7,7,9]],
-                        "totalWin": 0.25,
-                        "multipliers": [],
-                        "tumbles": [{"symbols": {"in": [[5], [], [2], [2,2], [6], [7,7,9]], "out": [{"symbol": 9, "count": 8, "win": 0.25}]}, "win": 0.25}]
-                    },
-                    {"spinsLeft": 2, "area": [[1,1,7,7,4], [4,4,9,9,6], [8,6,6,3,3], [3,8,8,5,5], [2,9,9,7,7], [5,5,9,9,8]], "totalWin": 0, "multipliers": [], "tumbles": []},
-                    {
-                        "spinsLeft": 1,
-                        "area": [[7,7,4,4,8], [7,9,9,5,5], [0,9,9,6,6], [9,9,6,6,15], [4,8,8,3,3], [8,1,1,9,9]],
-                        "totalWin": 2,
-                        "multipliers": [15],
-                        "tumbles": [{"symbols": {"in": [[], [6,8], [1,0], [9,9], [], [5,5]], "out": [{"symbol": 9, "count": 8, "win": 0.25}]}, "win": 0.25}]
-                    }
+                    {"spinsLeft":10,"area":[[9,9,12,2,2],[8,8,9,9,0],[3,9,9,6,6],[16,7,7,0,9],[8,8,7,7,3],[0,1,1,12,9]],"totalWin":1,"multipliers":[12,10,16,12],"tumbles":[{"symbols":{"in":[[5,5],[10,8],[8,5],[2],[],[5]],"out":[{"symbol":9,"count":8,"win":0.05}]},"win":0.05}]},
+                    {"spinsLeft":14,"area":[[5,8,8,7,7],[9,6,6,1,1],[7,7,9,9,5],[3,12,7,7,0],[8,5,5,9,9],[8,7,7,9,9]],"totalWin":9.860000000000001,"multipliers":[11,12,12,14],"tumbles":[{"symbols":{"in":[[11,9],[],[5,5],[2,5],[],[9,1]],"out":[{"symbol":7,"count":8,"win":0.1}]},"win":0.1},{"symbols":{"in":[[5],[8],[2,4],[],[9,9],[9,9,5]],"out":[{"symbol":9,"count":9,"win":0.05}]},"win":0.05},{"symbols":{"in":[[8,5],[],[9,5,5],[8],[9,9],[9]],"out":[{"symbol":5,"count":9,"win":0.2}]},"win":0.2},{"symbols":{"in":[[],[],[3],[],[7,9,9,8],[14,8,8]],"out":[{"symbol":9,"count":8,"win":0.05}]},"win":0.05},{"symbols":{"in":[[6,7,7],[12],[],[4],[9,5],[9,9,4]],"out":[{"symbol":8,"count":10,"win":0.18000000000000002}]},"win":0.18000000000000002}]},
+                    {"spinsLeft":13,"area":[[4,4,9,9,6],[7,2,2,12,8],[7,5,5,8,8],[8,5,5,9,9],[3,10,8,8,5],[9,9,8,8,0]],"totalWin":5.300000000000001,"multipliers":[12,12,10],"tumbles":[{"symbols":{"in":[[],[9],[9,9],[1],[9,9],[8,7]],"out":[{"symbol":8,"count":8,"win":0.08000000000000002}]},"win":0.08000000000000002},{"symbols":{"in":[[3,3],[7],[1,4],[7,7],[7,7],[7,9]],"out":[{"symbol":9,"count":11,"win":0.15000000000000002}]},"win":0.15000000000000002},{"symbols":{"in":[[],[6,6],[7],[5,9],[5,5],[8,7]],"out":[{"symbol":7,"count":9,"win":0.1}]},"win":0.1},{"symbols":{"in":[[],[],[6,8],[12,3,3],[9,9,4],[]],"out":[{"symbol":5,"count":8,"win":0.2}]},"win":0.2}]},
+                    {"spinsLeft":12,"area":[[0,9,9,3,3],[5,8,8,11,1],[8,8,6,6,3],[9,9,8,8,7],[5,5,8,8,9],[9,7,7,5,5]],"totalWin":0.4000000000000001,"multipliers":[10,11],"tumbles":[{"symbols":{"in":[[],[10,8],[6,6],[1,1],[8,8],[]],"out":[{"symbol":8,"count":8,"win":0.08000000000000002}]},"win":0.08000000000000002}]},
+                    {"spinsLeft":11,"area":[[8,9,9,1,1],[6,1,1,8,8],[9,5,5,8,8],[8,8,7,7,3],[9,7,7,19,4],[4,7,7,8,8]],"totalWin":1.6000000000000003,"multipliers":[19],"tumbles":[{"symbols":{"in":[[9],[4,7],[8,8],[5,9],[],[5,9]],"out":[{"symbol":8,"count":9,"win":0.08000000000000002}]},"win":0.08000000000000002}]},
+                    {"spinsLeft":10,"area":[[3,6,6,8,8],[5,8,8,12,1],[9,9,5,5,8],[5,5,2,2,9],[9,9,7,7,10],[7,9,9,8,8]],"totalWin":0,"multipliers":[12,10],"tumbles":[]},
+                    {"spinsLeft":9,"area":[[9,3,3,7,7],[6,6,1,1,8],[9,5,5,8,8],[15,8,8,5,5],[0,9,9,7,7],[4,7,7,8,8]],"totalWin":0,"multipliers":[15],"tumbles":[]},
+                    {"spinsLeft":8,"area":[[4,6,6,9,9],[9,5,5,7,7],[2,7,7,9,9],[8,8,5,5,2],[7,7,5,5,8],[9,9,7,7,5]],"totalWin":6.3,"multipliers":[18,11],"tumbles":[{"symbols":{"in":[[],[5,5],[7,1],[],[9,0],[1,0]],"out":[{"symbol":7,"count":8,"win":0.1}]},"win":0.1},{"symbols":{"in":[[5,5],[8,8,18,2,2],[4,4],[11,6],[8,8,9],[9,5,5]],"out":[{"symbol":9,"count":8,"win":0.05},{"symbol":5,"count":9,"win":0.2}]},"win":0.25}]},
+                    {"spinsLeft":7,"area":[[6,9,9,13,2],[4,9,9,6,6],[5,8,8,7,7],[9,8,8,7,7],[9,4,4,8,8],[9,9,8,8,10]],"totalWin":0.91,"multipliers":[13,10],"tumbles":[{"symbols":{"in":[[1,1],[4,4],[5,5],[6,9,9],[9,9,5],[9,2,2,8]],"out":[{"symbol":9,"count":8,"win":0.05},{"symbol":8,"count":8,"win":0.08000000000000002}]},"win":0.13}]},
+                    {"spinsLeft":6,"area":[[5,5,8,8,7],[7,7,2,2,12],[3,3,9,9,7],[2,2,9,9,8],[9,8,8,7,7],[2,9,9,7,7]],"totalWin":0.4,"multipliers":[12],"tumbles":[{"symbols":{"in":[[4],[7,3],[4],[],[7,7],[2,2]],"out":[{"symbol":7,"count":8,"win":0.1}]},"win":0.1}]},
+                    {"spinsLeft":5,"area":[[6,10,8,8,4],[3,7,7,5,5],[1,7,7,9,9],[5,5,8,8,6],[5,5,9,9,4],[7,5,5,9,9]],"totalWin":0.5,"multipliers":[10],"tumbles":[{"symbols":{"in":[[],[6,6],[],[9,5],[5,5],[7,9]],"out":[{"symbol":5,"count":8,"win":0.2}]},"win":0.2},{"symbols":{"in":[[],[],[2,2],[8],[0,2],[9,9,4]],"out":[{"symbol":9,"count":8,"win":0.05}]},"win":0.05}]},
+                    {"spinsLeft":4,"area":[[4,4,6,6,9],[8,9,9,0,3],[9,7,7,5,5],[0,9,9,3,3],[9,7,7,5,5],[6,6,9,9,16]],"totalWin":0.5,"multipliers":[16],"tumbles":[{"symbols":{"in":[[5],[9,9],[9],[7,8],[7],[5,7]],"out":[{"symbol":9,"count":9,"win":0.05}]},"win":0.05}]},
+                    {"spinsLeft":3,"area":[[9,1,1,5,5],[6,6,1,1,8],[3,9,9,6,6],[7,7,3,3,13],[4,4,9,9,8],[1,1,9,9,7]],"totalWin":0,"multipliers":[13],"tumbles":[]},
+                    {"spinsLeft":2,"area":[[1,5,5,8,8],[8,9,9,0,3],[7,3,3,9,9],[13,9,9,5,5],[3,3,19,8,8],[5,8,8,7,7]],"totalWin":0,"multipliers":[13,19],"tumbles":[]},
+                    {"spinsLeft":1,"area":[[8,7,7,4,4],[14,8,8,9,9],[7,9,9,5,5],[8,8,5,5,2],[5,8,8,9,9],[8,8,2,2,9]],"totalWin":10.56,"multipliers":[14,19,14],"tumbles":[{"symbols":{"in":[[1],[7,3],[],[2,2],[5,5],[9,14]],"out":[{"symbol":8,"count":9,"win":0.08000000000000002}]},"win":0.08000000000000002},{"symbols":{"in":[[],[0,9],[9,9],[],[0,2],[9,5]],"out":[{"symbol":9,"count":8,"win":0.05}]},"win":0.05},{"symbols":{"in":[[],[],[9,8],[8,9],[1,19,7],[1]],"out":[{"symbol":5,"count":8,"win":0.2}]},"win":0.2}]}
                 ]
             }
         }
@@ -236,7 +174,7 @@ export class GameAPI {
         
         // Log test mode status on initialization
         if (GameAPI.TEST_MODE_ENABLED) {
-            console.log('[GameAPI] 🧪 TEST MODE IS ENABLED - All spins will use test data from lastspin_retrigger.txt');
+            console.log('[GameAPI] 🧪 TEST MODE IS ENABLED - All spins will use test data (lastspin_windialog)');
             console.log('[GameAPI] To disable test mode, remove ?testMode=true from URL or set localStorage.setItem("testMode", "false")');
         }
     }   
