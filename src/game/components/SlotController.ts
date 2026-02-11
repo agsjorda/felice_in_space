@@ -34,7 +34,6 @@ export class SlotController {
 	private balanceLabelContainer: Phaser.GameObjects.Container;
 	private featureAmountText: Phaser.GameObjects.Text;
 	private featureDollarText: Phaser.GameObjects.Text;
-	private featureLabelText: Phaser.GameObjects.Text | null = null;
 	private featureLabelContainer: Phaser.GameObjects.Container;
 	private featureImage: Phaser.GameObjects.Image | null = null;
 	private featureButtonHitbox: Phaser.GameObjects.Rectangle | null = null;
@@ -246,6 +245,8 @@ export class SlotController {
 		if (this.featureLabelContainer) {
 			const featureX = scene.scale.width * 0.5;
 			const featureY = scene.scale.height * 0.724 - 8;
+			// FreeRoundManager uses the center row for its panel during init free rounds.
+			this.featureLabelContainer.setVisible((gameStateManager as any)?.isInFreeSpinRound !== true);
 			
 			// Clear existing text objects
 			this.featureLabelContainer.removeAll(true);
@@ -534,14 +535,14 @@ export class SlotController {
 		if (this.featureButtonHitbox) {
 			this.featureButtonHitbox.setVisible(false);
 		}
+		if (this.featureLabelContainer) {
+			this.featureLabelContainer.setVisible(false);
+		}
 		if (this.featureAmountText) {
 			this.featureAmountText.setVisible(false);
 		}
 		if (this.featureDollarText) {
 			this.featureDollarText.setVisible(false);
-		}
-		if (this.featureLabelText) {
-			this.featureLabelText.setVisible(false);
 		}
 
 		// Autoplay button
@@ -581,14 +582,14 @@ export class SlotController {
 		if (this.featureButtonHitbox) {
 			this.featureButtonHitbox.setVisible(true);
 		}
+		if (this.featureLabelContainer) {
+			this.featureLabelContainer.setVisible(true);
+		}
 		if (this.featureAmountText) {
 			this.featureAmountText.setVisible(true);
 		}
 		if (this.featureDollarText) {
 			this.featureDollarText.setVisible(true);
-		}
-		if (this.featureLabelText) {
-			this.featureLabelText.setVisible(true);
 		}
 
 		const autoplayButton = this.buttons.get('autoplay');
@@ -1254,7 +1255,6 @@ export class SlotController {
 			this.featureLabelContainer.setAlpha(desiredAlpha);
 		}
 
-		this.featureLabelText?.setAlpha(desiredAlpha);
 		this.featureAmountText?.setAlpha(desiredAlpha);
 		this.featureDollarText?.setAlpha(desiredAlpha);
 	}
@@ -1289,7 +1289,6 @@ export class SlotController {
 			this.featureLabelContainer.setAlpha(desiredAlpha);
 		}
 
-		this.featureLabelText?.setAlpha(desiredAlpha);
 		this.featureAmountText?.setAlpha(desiredAlpha);
 		this.featureDollarText?.setAlpha(desiredAlpha);
 	}
@@ -2366,6 +2365,9 @@ export class SlotController {
 		// Create container for feature label parts
 		this.featureLabelContainer = scene.add.container(featureX, featureY - 8);
 		this.featureLabelContainer.setDepth(9);
+		// If the game boots directly into initialization free rounds, the FreeRoundManager
+		// panel occupies the center row and this label must stay hidden.
+		this.featureLabelContainer.setVisible((gameStateManager as any)?.isInFreeSpinRound !== true);
 		
 		const buyText = 'BUY';
 		const currencyCode = isDemoFeature ? '' : CurrencyManager.getCurrencyCode();
@@ -2426,8 +2428,6 @@ export class SlotController {
 		const totalWidth = currentX;
 		this.featureLabelContainer.setX(featureX - totalWidth / 2);
 		this.controllerContainer.add(this.featureLabelContainer);
-		// Keep reference for compatibility
-		this.featureLabelText = null;
 
 		this.featureAmountText = scene.add.text(
 			featureX,

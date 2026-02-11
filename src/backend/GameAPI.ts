@@ -917,14 +917,17 @@ export class GameAPI {
                     this.remainingInitFreeSpins = 0;
                     console.log('[GameAPI] Reset remainingInitFreeSpins to 0');
                     
+                    // Do NOT clear isInFreeSpinRound here. FreeRoundManager clears it when the
+                    // user dismisses the completion panel (OK click). Keeping it true until then
+                    // prevents SlotController from showing the Buy Feature label over the panel.
                     // Clear the isInFreeSpinRound flag
-                    import('../managers/GameStateManager').then(module => {
-                        const { gameStateManager } = module;
-                        (gameStateManager as any).isInFreeSpinRound = false;
-                        console.log('[GameAPI] Cleared isInFreeSpinRound flag');
-                    }).catch(err => {
-                        console.warn('[GameAPI] Failed to clear isInFreeSpinRound flag:', err);
-                    });
+                    // import('../managers/GameStateManager').then(module => {
+                    //     const { gameStateManager } = module;
+                    //     (gameStateManager as any).isInFreeSpinRound = false;
+                    //     console.log('[GameAPI] Cleared isInFreeSpinRound flag');
+                    // }).catch(err => {
+                    //     console.warn('[GameAPI] Failed to clear isInFreeSpinRound flag:', err);
+                    // });
                     
                     // Emit event to update the FreeRoundManager with count 0 to trigger completion
                     import('../event/EventManager').then(module => {
@@ -964,6 +967,11 @@ export class GameAPI {
                 }).catch(err => {
                     console.warn('[GameAPI] Failed to emit FREEROUND_COUNT_UPDATE event:', err);
                 });
+            }
+
+            // Ensure bet is included in the response data (server might not return it)
+            if (!responseData.bet) {
+                responseData.bet = bet.toString();
             }
             
             // 3. Store the spin data to SpinData.ts

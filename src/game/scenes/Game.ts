@@ -626,6 +626,8 @@ export class Game extends Scene
 				const hasCluster = tumbleResult.hasCluster;
 				const betAmount = parseFloat(spinData.bet);
 
+				console.log('[Game] BET CHECK: ', betAmount);
+
 				// During free spins, prefer the totalWin coming from the matching freespin item
 				// so win dialogs reflect the backend's per-spin total directly.
 				if (gameStateManager.isBonus) {
