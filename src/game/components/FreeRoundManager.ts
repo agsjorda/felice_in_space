@@ -1100,6 +1100,7 @@ export class FreeRoundManager {
 					? (this.slotControllerRef as any).getBaseBetAmount()
 					: 0;
 		const betDisplay = betValue.toFixed(2);
+		const betDisplayFormatted = isDemoCurrency ? betDisplay : CurrencyManager.formatAmount(betValue, 2);
 
 		const line2Y = 0;
 		const spinsCountText = scene.add.text(
@@ -1139,7 +1140,7 @@ export class FreeRoundManager {
 		const betValueText = scene.add.text(
 			0,
 			0,
-			`${currencySymbol}${betDisplay}`,
+			betDisplayFormatted,
 			{
 				fontSize: '22px',
 				color: '#379557',
