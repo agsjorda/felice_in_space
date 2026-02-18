@@ -314,57 +314,34 @@ export class AssetConfig {
 		const prefix = this.getAssetPrefix();
 		return {
 			images: {
-				'helpscreen_0': `${prefix}/help_screen/helpscreen_0.webp`,
-				'helpscreen_1': `${prefix}/help_screen/helpscreen_1.webp`,
-				'helpscreen_2': `${prefix}/help_screen/helpscreen_2.webp`,
-				'helpscreen_3': `${prefix}/help_screen/helpscreen_3.webp`,
+				// Payline visuals
+				'paylineMobileWin': `${prefix}/help_screen/game_settings_content/paylineMobileWin.webp`,
+				'paylineMobileNoWin': `${prefix}/help_screen/game_settings_content/paylineMobileNoWin.webp`,
 
-				// HowToPlay images
-				// 'howToPlay1': `${prefix}/help_screen/HowToPlay1.png`,
-				// 'howToPlay1Mobile': `${prefix}/help_screen/HowToPlay1Mobile.png`,
-				// 'howToPlay2': `${prefix}/help_screen/HowToPlay2.png`,
-				// 'howToPlay2Mobile': `${prefix}/help_screen/HowToPlay2Mobile.png`,
-				// 'howToPlay3': `${prefix}/help_screen/HowToPlay3.png`,
-				// 'howToPlay3Mobile': `${prefix}/help_screen/HowToPlay3Mobile.png`,
-				// 'howToPlay4': `${prefix}/help_screen/HowToPlay4.png`,
-				// 'howToPlay4Mobile': `${prefix}/help_screen/HowToPlay4Mobile.png`,
-				// 'howToPlay5': `${prefix}/help_screen/HowToPlay5.png`,
-				// 'howToPlay6': `${prefix}/help_screen/HowToPlay6.png`,
-				// 'howToPlay7': `${prefix}/help_screen/HowToPlay7.png`,
-				// 'howToPlay8': `${prefix}/help_screen/HowToPlay8.png`,
-				// 'howToPlay8Mobile': `${prefix}/help_screen/HowToPlay8Mobile.png`,
-				// 'howToPlay9': `${prefix}/help_screen/HowToPlay9.png`,
-				// 'howToPlay9Mobile': `${prefix}/help_screen/HowToPlay9Mobile.png`,
-				// 'howToPlay10': `${prefix}/help_screen/HowToPlay10.png`,
-				// 'howToPlay10Mobile': `${prefix}/help_screen/HowToPlay10Mobile.png`,
-				// // Feature help
-				// 'BuyFeatHelp': `${prefix}/help_screen/BuyFeatHelp.png`,
-				// 'BuyFeatMobile': `${prefix}/help_screen/BuyFeatMobile.png`,
-				// 'DoubleHelp': `${prefix}/help_screen/DoubleHelp.png`,
-				// 'DoubleHelpMobile': `${prefix}/help_screen/DoubleHelpMobile.png`,
-				// // Payline visuals
-				// 'paylineMobileWin': `${prefix}/help_screen/paylineMobileWin.png`,
-				// 'paylineMobileNoWin': `${prefix}/help_screen/paylineMobileNoWin.png`,
-				// // Scatter / Tumble / Multiplier visuals
-				// 'scatterGame': `${prefix}/help_screen/scatterGame.png`,
-				// 'scatterIcon': `${prefix}/help_screen/scatterIcon.png`,
-				// 'scatterWin': `${prefix}/help_screen/scatterWin.png`,
-				// 'ScatterLabel': `${prefix}/help_screen/ScatterSymbol.png`,
-				// 'wheelSpin_helper': `assets/portrait/high/help_screen/wheelSpin_helper.png`,
-				// 'freeSpin_round': `assets/portrait/high/help_screen/freeSpin_round.png`,
-				// 'tumbleIcon': `${prefix}/help_screen/tumbleIcon.png`,
-				// 'tumbleWin': `${prefix}/help_screen/tumbleWin.png`,
-				// 'multiplierGame': `${prefix}/help_screen/multiplierGame.png`,
-				// 'multiplierIcon': `${prefix}/help_screen/multiplierIcon.png`,
-				// Winlines thumbnails (static, not dependent on screen prefix)
-				// Keys: winlines1 .. winlines20
-				// ...(() => {
-				// 	const map: { [key: string]: string } = {};
-				// 	for (let i = 1; i <= 20; i++) {
-				// 		map[`winlines${i}`] = `assets/winlines/winline${i}.png`;
-				// 	}
-				// 	return map;
-				// })()
+				// Scatter / Tumble / Multiplier visuals
+				'scatterGame': `${prefix}/help_screen/bonus_game_content/scatter_game.webp`,
+				'tumbleWin': `${prefix}/help_screen/bonus_game_content/tumble_win.webp`,
+				'multiplierGame': `${prefix}/help_screen/bonus_game_content/multiplier_game.webp`,
+
+				// How To Play || Bet controls
+				'betControlsMinus': `${prefix}/help_screen/how_to_play_content/betControls_minus.png`,
+				'betControlsPlus': `${prefix}/help_screen/how_to_play_content/betControls_plus.png`,
+
+				// How To Play || Game actions
+				'spin_button': `${prefix}/help_screen/how_to_play_content/spin_button.png`,
+				'enhanced_bet_button': `${prefix}/help_screen/how_to_play_content/enhanced_bet.png`,
+				'amplify_bet_button': `${prefix}/help_screen/how_to_play_content/enhanced_bet.png`,
+				'autoplay_button': `${prefix}/help_screen/how_to_play_content/autoplay.png`,
+				'turbo_button': `${prefix}/help_screen/how_to_play_content/turbo.png`,
+
+				// How To Play || General controls
+				'sound_icon_on': `${prefix}/help_screen/how_to_play_content/sound_icon_on.png`,
+				'sound_icon_off': `${prefix}/help_screen/how_to_play_content/sound_icon_off.png`,
+				'settings_icon': `${prefix}/help_screen/how_to_play_content/settings.png`,
+				'info_icon': `${prefix}/help_screen/how_to_play_content/info.png`,
+
+				// Package 1 specific assets
+				'help_multiplier_symbol': `${prefix}/help_screen/bonus_game_content/help_multiplier_symbol.webp`,
 			}
 		};
 	}
