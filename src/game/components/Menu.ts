@@ -828,12 +828,8 @@ export class Menu {
         contentArea.add(musicToggleCircle);
         musicToggleBg.setDepth(10);
         musicToggleCircle.setDepth(11);
+        // Reflect current volume; do not overwrite user's choice when opening menu
         let musicOn = scene.audioManager.getVolume() > 0;
-        if (!musicOn) {
-            // Default should be ON
-            musicOn = true;
-            scene.audioManager.setVolume(1);
-        }
         drawToggle(musicToggleBg, musicToggleCircle, toggleX, startY + 70, musicOn);
         const musicToggleArea = scene.add.zone(toggleX, startY + 70 - toggleHeight / 2, toggleWidth, toggleHeight).setOrigin(0, 0);
         musicToggleArea.setInteractive();
@@ -853,12 +849,8 @@ export class Menu {
         contentArea.add(sfxToggleCircle);
         sfxToggleBg.setDepth(10);
         sfxToggleCircle.setDepth(11);
+        // Reflect current SFX volume; do not overwrite user's choice when opening menu
         let sfxOn = scene.audioManager.getSfxVolume() > 0;
-        if (!sfxOn) {
-            // Default should be ON
-            sfxOn = true;
-            scene.audioManager.setSfxVolume(1);
-        }
         drawToggle(sfxToggleBg, sfxToggleCircle, toggleX, startY + 170, sfxOn);
         const sfxToggleArea = scene.add.zone(toggleX, startY + 170 - toggleHeight / 2, toggleWidth, toggleHeight).setOrigin(0, 0);
         sfxToggleArea.setInteractive();

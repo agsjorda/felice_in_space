@@ -1551,12 +1551,13 @@ export class Symbols {
    * calculating from freespin items, multiplierValue, slot paylines, and tumbles
    */
   private calculateTotalWinFromSpinData(): number {
-    console.log(`[Symbols] cachedTotalWin calculateTotalWinFromSpinData:`, this.currentSpinData);
+    console.log('[Symbols] cachedTotalWin calculating total win from spinData', this.currentSpinData);
     let totalWin = 0;
     try {
       // First, try to get totalWin directly from spinData
-      if (this.currentSpinData && this.currentSpinData.slot && typeof this.currentSpinData.slot.totalWin === 'number') {
-        totalWin = this.currentSpinData.slot.totalWin;
+      if (this.currentSpinData && this.currentSpinData.slot) {
+        const slotTotalWin = this.currentSpinData.slot.totalWin;
+        totalWin = typeof slotTotalWin === 'number' ? slotTotalWin : Number(slotTotalWin);
         console.log(`[Symbols] cachedTotalWin Using spinData.totalWin for cached total: ${totalWin}`);
       } else {
         // Fallback: calculate total win from freespin items, multiplierValue, slot paylines, and tumbles
@@ -1569,10 +1570,8 @@ export class Symbols {
           // Sum wins from freespin.items
           if (freespinData && freespinData.items && Array.isArray(freespinData.items)) {
             const freespinItemsWin = freespinData.items.reduce((sum: number, item: any) => {
-              const perSpinTotal =
-                (typeof item.totalWin === 'number' && item.totalWin > 0)
-                  ? item.totalWin
-                  : (item.subTotalWin || 0);
+              const winValue = typeof item.totalWin === 'number' ? item.totalWin : Number(item.totalWin);
+              const perSpinTotal = (winValue > 0) ? winValue : (item.subTotalWin || 0);
               return sum + perSpinTotal;
             }, 0);
             totalWin += freespinItemsWin;
