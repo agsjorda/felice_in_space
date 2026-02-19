@@ -1622,6 +1622,8 @@ export class SlotController {
 			this.disableSpinButton();
 			this.disableBetButtons();
 			this.disableFeatureButton();
+			// Disable amplify bet immediately so player cannot toggle it after spin has started
+			this.disableAmplifyButton();
 			// Disable and grey out autoplay and turbo buttons while symbols are dropping
 			this.disableAutoplayButton();
 			this.disableTurboButton();
@@ -2532,6 +2534,8 @@ export class SlotController {
 			this.disableSpinButton();
 			this.disableBetButtons();
 			this.disableFeatureButton();
+			// Disable amplify bet immediately so player cannot toggle it after spin has started
+			this.disableAmplifyButton();
 			// Disable and grey out autoplay and turbo buttons while symbols are dropping
 			this.disableAutoplayButton();
 			this.disableTurboButton();
