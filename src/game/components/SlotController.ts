@@ -3058,11 +3058,11 @@ export class SlotController {
 
 			// If we are in initialization free-round mode, keep autoplay/bet controls
 			// disabled/greyed-out for the duration of the free rounds. Only the spin
-			// button should be re-enabled between spins.
+			// button is re-enabled between spins (turbo stays toggle-able and is never disabled).
 			const gsmAny: any = gameStateManager as any;
 			if (gsmAny.isInFreeSpinRound === true) {
 				this.updateSpinButtonState();
-				console.log('[SlotController] Initialization free-round mode active - re-enabled spin only on REELS_STOP');
+				console.log('[SlotController] Initialization free-round mode active - re-enabled spin on REELS_STOP');
 				return;
 			}
 			
@@ -3134,6 +3134,8 @@ export class SlotController {
 			}
 			
 			this.setAutoplayButtonState(true);
+			// Disable amplify bet so players cannot toggle it during autoplay
+			this.disableAmplifyButton();
 			// Keep spin button enabled during autoplay (allow stopping autoplay)
 			// Hide and pause spin icon completely during autoplay, show stop icon
 			if (this.spinIcon) {
@@ -3395,6 +3397,10 @@ export class SlotController {
 	 * Handle amplify button click - toggle between on and off states
 	 */
 	private handleAmplifyButtonClick(): void {
+		// Ignore clicks during autoplay - button should be disabled, this is a safety guard
+		if (gameStateManager.isAutoPlaying) {
+			return;
+		}
 		// Check GameData state to determine current amplify bet status
 		const gameData = this.getGameData();
 		if (!gameData) {
@@ -3638,6 +3644,43 @@ export class SlotController {
 	}
 
 	/**
+	 * Resume normal autoplay after bonus mode ends (scatter had been triggered during autoplay).
+	 * Restores saved remaining spins and continues the autoplay session.
+	 */
+	private resumeAutoplayAfterBonus(): void {
+		const count = this.savedAutoplaySpinsRemaining;
+		this.savedAutoplaySpinsRemaining = 0;
+		if (count <= 0) return;
+		console.log(`[SlotController] Resuming autoplay after bonus with ${count} spins remaining`);
+		this.autoplaySpinsRemaining = count;
+		if (this.gameData) {
+			this.gameData.isAutoPlaying = true;
+		}
+		gameStateManager.isAutoPlaying = true;
+		this.setAutoplayButtonState(true);
+		this.showAutoplaySpinsRemainingText();
+		this.updateAutoplaySpinsRemainingText(count);
+		if (this.spinIcon) this.spinIcon.setVisible(false);
+		if (this.spinIconTween) this.spinIconTween.pause();
+		if (this.autoplayStopIcon) {
+			this.autoplayStopIcon.setVisible(true);
+			if (this.primaryControllers) this.primaryControllers.bringToTop(this.autoplayStopIcon);
+		}
+		if (this.autoplaySpinsRemainingText && this.primaryControllers) {
+			this.primaryControllers.bringToTop(this.autoplaySpinsRemainingText);
+		}
+		this.disableBetButtons();
+		this.disableFeatureButton();
+		this.disableAmplifyButton();
+		const spinButton = this.buttons.get('spin');
+		if (spinButton) {
+			spinButton.disableInteractive();
+			this.shouldReenableSpinButtonAfterFirstAutoplay = true;
+		}
+		this.performAutoplaySpin();
+	}
+
+	/**
 	 * Perform a single autoplay spin
 	 */
 	private async performAutoplaySpin(): Promise<void> {
@@ -3721,9 +3764,13 @@ export class SlotController {
 	}
 
 	/**
-	 * Disable the turbo button (grey out and disable interaction)
+	 * Disable the turbo button (grey out and disable interaction).
+	 * During free round spins the turbo button stays toggle-able and is not disabled.
 	 */
 	public disableTurboButton(): void {
+		if ((gameStateManager as any).isInFreeSpinRound === true) {
+			return; // Keep turbo always toggle-able during free rounds
+		}
 		const turboButton = this.buttons.get('turbo');
 		if (turboButton) {
 			turboButton.setTint(0x666666); // Grey out the button
@@ -3767,7 +3814,8 @@ export class SlotController {
 	}
 
 	/**
-	 * Update turbo button state based on game conditions
+	 * Update turbo button state based on game conditions.
+	 * During free round spins the turbo button stays enabled (always toggle-able).
 	 */
 	public updateTurboButtonState(): void {
 		const gameData = this.getGameData();
@@ -3777,6 +3825,12 @@ export class SlotController {
 
 		const turboButton = this.buttons.get('turbo');
 		if (!turboButton) return;
+
+		// During free rounds keep turbo always toggle-able
+		if ((gameStateManager as any).isInFreeSpinRound === true) {
+			this.enableTurboButton();
+			return;
+		}
 
 		// Disable turbo button if spinning, enable otherwise
 		if (gameStateManager.isReelSpinning) {
@@ -4234,17 +4288,26 @@ export class SlotController {
 			console.log('[SlotController] Showing amplify description');
 		}
 		
-		// Restore the feature button
+		// Restore the feature button only if amplify/enhance bet is OFF (keep disabled when ON)
+		const gameData = this.getGameData();
+		const shouldEnableFeature = !gameData || !gameData.isEnhancedBet;
 		if (this.featureButtonHitbox) {
-			this.featureButtonHitbox.setInteractive(); // Re-enable clicking
-			console.log('[SlotController] Feature button restored and enabled');
+			if (shouldEnableFeature) {
+				this.featureButtonHitbox.setInteractive(); // Re-enable clicking
+				console.log('[SlotController] Feature button restored and enabled');
+			} else {
+				this.featureButtonHitbox.disableInteractive();
+				console.log('[SlotController] Feature button kept disabled (amplify bet is ON)');
+			}
 		}
 		if (this.featureImage) {
-			this.featureImage.setAlpha(1.0); // Restore full opacity
+			this.featureImage.setAlpha(shouldEnableFeature ? 1.0 : 0.3);
 		}
 		if (this.featureLabelContainer) {
-			this.featureLabelContainer.setAlpha(1.0);
+			this.featureLabelContainer.setAlpha(shouldEnableFeature ? 1.0 : 0.3);
 		}
+		this.featureAmountText?.setAlpha(shouldEnableFeature ? 1.0 : 0.3);
+		this.featureDollarText?.setAlpha(shouldEnableFeature ? 1.0 : 0.3);
 		
 		// Restore the bet buttons
 		const decreaseBetButton = this.buttons.get('decrease_bet');
@@ -4985,6 +5048,10 @@ public updateAutoplayButtonState(): void {
 				this.canEnableFeatureButton = true;
 				// Re-enable buy feature only after bonus is fully deactivated
 				this.enableFeatureButton();
+				// Resume normal autoplay if it was paused by scatter (defer so Game's setBonusMode listener runs first and we restore state after)
+				if (this.savedAutoplaySpinsRemaining > 0) {
+					this.scene?.time.delayedCall(0, () => this.resumeAutoplayAfterBonus());
+				}
 			}
 		});
 
@@ -5007,9 +5074,10 @@ public updateAutoplayButtonState(): void {
 			console.log(`[SlotController] scatterBonusActivated event received with data:`, data);
 			console.log(`[SlotController] Data validation: scatterIndex=${data.scatterIndex}, actualFreeSpins=${data.actualFreeSpins}`);
 			
-			// Stop normal autoplay when scatter is hit
+			// Save remaining autoplay spins when scatter is hit so we can resume after bonus ends
 			if (this.autoplaySpinsRemaining > 0) {
-				console.log(`[SlotController] Scatter hit during autoplay - stopping normal autoplay (${this.autoplaySpinsRemaining} spins remaining)`);
+				this.savedAutoplaySpinsRemaining = this.autoplaySpinsRemaining;
+				console.log(`[SlotController] Scatter hit during autoplay - saving ${this.savedAutoplaySpinsRemaining} remaining spins to resume after bonus`);
 				this.stopAutoplay();
 			}
 			
