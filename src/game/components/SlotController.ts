@@ -592,10 +592,13 @@ export class SlotController {
 			this.featureDollarText.setVisible(true);
 		}
 
+		// Use enableAutoplayButton() so tint is cleared (it may have been greyed during free spins)
+		// and setAlpha(1) in case it was dimmed for free rounds.
 		const autoplayButton = this.buttons.get('autoplay');
 		if (autoplayButton) {
 			autoplayButton.setAlpha(1.0);
-			autoplayButton.setInteractive();
+			this.enableAutoplayButton();
+			this.updateAutoplayButtonState();
 			console.log('[SlotController] Autoplay button re-enabled after free rounds');
 		}
 
@@ -3644,43 +3647,6 @@ export class SlotController {
 	}
 
 	/**
-	 * Resume normal autoplay after bonus mode ends (scatter had been triggered during autoplay).
-	 * Restores saved remaining spins and continues the autoplay session.
-	 */
-	private resumeAutoplayAfterBonus(): void {
-		const count = this.savedAutoplaySpinsRemaining;
-		this.savedAutoplaySpinsRemaining = 0;
-		if (count <= 0) return;
-		console.log(`[SlotController] Resuming autoplay after bonus with ${count} spins remaining`);
-		this.autoplaySpinsRemaining = count;
-		if (this.gameData) {
-			this.gameData.isAutoPlaying = true;
-		}
-		gameStateManager.isAutoPlaying = true;
-		this.setAutoplayButtonState(true);
-		this.showAutoplaySpinsRemainingText();
-		this.updateAutoplaySpinsRemainingText(count);
-		if (this.spinIcon) this.spinIcon.setVisible(false);
-		if (this.spinIconTween) this.spinIconTween.pause();
-		if (this.autoplayStopIcon) {
-			this.autoplayStopIcon.setVisible(true);
-			if (this.primaryControllers) this.primaryControllers.bringToTop(this.autoplayStopIcon);
-		}
-		if (this.autoplaySpinsRemainingText && this.primaryControllers) {
-			this.primaryControllers.bringToTop(this.autoplaySpinsRemainingText);
-		}
-		this.disableBetButtons();
-		this.disableFeatureButton();
-		this.disableAmplifyButton();
-		const spinButton = this.buttons.get('spin');
-		if (spinButton) {
-			spinButton.disableInteractive();
-			this.shouldReenableSpinButtonAfterFirstAutoplay = true;
-		}
-		this.performAutoplaySpin();
-	}
-
-	/**
 	 * Perform a single autoplay spin
 	 */
 	private async performAutoplaySpin(): Promise<void> {
@@ -5048,10 +5014,6 @@ public updateAutoplayButtonState(): void {
 				this.canEnableFeatureButton = true;
 				// Re-enable buy feature only after bonus is fully deactivated
 				this.enableFeatureButton();
-				// Resume normal autoplay if it was paused by scatter (defer so Game's setBonusMode listener runs first and we restore state after)
-				if (this.savedAutoplaySpinsRemaining > 0) {
-					this.scene?.time.delayedCall(0, () => this.resumeAutoplayAfterBonus());
-				}
 			}
 		});
 
@@ -5074,10 +5036,8 @@ public updateAutoplayButtonState(): void {
 			console.log(`[SlotController] scatterBonusActivated event received with data:`, data);
 			console.log(`[SlotController] Data validation: scatterIndex=${data.scatterIndex}, actualFreeSpins=${data.actualFreeSpins}`);
 			
-			// Save remaining autoplay spins when scatter is hit so we can resume after bonus ends
+			// Stop normal autoplay when scatter is hit (no resume after bonus)
 			if (this.autoplaySpinsRemaining > 0) {
-				this.savedAutoplaySpinsRemaining = this.autoplaySpinsRemaining;
-				console.log(`[SlotController] Scatter hit during autoplay - saving ${this.savedAutoplaySpinsRemaining} remaining spins to resume after bonus`);
 				this.stopAutoplay();
 			}
 			
