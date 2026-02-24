@@ -5,6 +5,7 @@ import { AudioManager, SoundEffectType } from '../../managers/AudioManager';
 import { GameAPI } from '../../backend/GameAPI';
 import { HelpScreen } from './MenuTabs/HelpScreen';
 import { CurrencyManager } from './CurrencyManager';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 
 interface ButtonBase {
     isButton: boolean;
@@ -593,7 +594,7 @@ export class Menu {
 
             contentY += 30;
             // Create row centered per column
-            this.createHistoryEntry(contentY, scene, rowsContainer, spinDate, currency, bet, win.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), columnCenters);
+            this.createHistoryEntry(contentY, scene, rowsContainer, spinDate, currency, bet, formatCurrencyNumber(Number(win)), columnCenters);
             this.addDividerHistory(scene, rowsContainer, contentY);
             contentY += 20;
         });
@@ -2067,7 +2068,7 @@ export class Menu {
                             11: [1.25, 0.25, 0.10]
                         };
                         const payoutValue = (payoutMap[symbolIndex] && payoutMap[symbolIndex][row] !== undefined) ? payoutMap[symbolIndex][row] : 0;
-                        const text2 = payoutValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const text2 = formatCurrencyNumber(payoutValue);
                         payoutAdjustments[row] = text2.length;
 
                         const isDemoPayout = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
@@ -2111,7 +2112,7 @@ export class Menu {
                     }
                 } else {
                     // For scatter symbol
-                    const text2 = (0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const text2 = formatCurrencyNumber(0);
                         payoutAdjustments[row] = text2.length;
 
                         const isDemoScatter = localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';

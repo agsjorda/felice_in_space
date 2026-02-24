@@ -4,6 +4,7 @@ import { gameStateManager } from '../../managers/GameStateManager';
 import { gameEventManager, GameEventType } from '../../event/EventManager';
 import { SlotController } from './SlotController';
 import { CurrencyManager } from './CurrencyManager';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 
 export class FreeRoundManager {
 	private container: Phaser.GameObjects.Container | null = null;
@@ -867,7 +868,7 @@ export class FreeRoundManager {
 					? (this.slotControllerRef as any).getBaseBetAmount()
 					: 0;
 
-		const betDisplay = betValue.toFixed(2);
+		const betDisplay = formatCurrencyNumber(betValue);
 
 		// "With" (white) and bet value (green) as separate texts so styles can differ
 		const withText = scene.add.text(
@@ -889,7 +890,7 @@ export class FreeRoundManager {
 					(this.sceneRef as any)?.gameAPI?.getDemoState?.() ||
 					localStorage.getItem('demo') === 'true' ||
 					sessionStorage.getItem('demo') === 'true';
-				return isDemo ? betDisplay : CurrencyManager.formatAmount(Number(betValue || 0), 2);
+				return isDemo ? betDisplay : CurrencyManager.formatAmount(Number(betValue || 0));
 			})(),
 			{
 				fontSize: '20px',
@@ -1051,14 +1052,14 @@ export class FreeRoundManager {
 		this.panelContainer.add(titleText);
 
 		// Line 1: "You won $XX.XX with"
-		const totalWinDisplay = totalWin.toFixed(2);
+		const totalWinDisplay = formatCurrencyNumber(totalWin);
 
 		const line1Y = -40;
 		const isDemoCurrency =
 			(this.sceneRef as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		const winText = isDemoCurrency ? totalWinDisplay : CurrencyManager.formatAmount(totalWin, 2);
+		const winText = isDemoCurrency ? totalWinDisplay : CurrencyManager.formatAmount(totalWin);
 		const line1Parts = [
 			{
 				text: 'You won ',
@@ -1099,8 +1100,8 @@ export class FreeRoundManager {
 				: (this.slotControllerRef && (this.slotControllerRef as any).getBaseBetAmount)
 					? (this.slotControllerRef as any).getBaseBetAmount()
 					: 0;
-		const betDisplay = betValue.toFixed(2);
-		const betDisplayFormatted = isDemoCurrency ? betDisplay : CurrencyManager.formatAmount(betValue, 2);
+		const betDisplay = formatCurrencyNumber(betValue);
+		const betDisplayFormatted = isDemoCurrency ? betDisplay : CurrencyManager.formatAmount(betValue);
 
 		const line2Y = 0;
 		const spinsCountText = scene.add.text(
@@ -1293,7 +1294,7 @@ export class FreeRoundManager {
 		this.panelContainer.add(titleText);
 
 		// Line 1: "$XX.XX" (winnings only, on its own line)
-		const totalWinDisplay = totalWin.toFixed(2);
+		const totalWinDisplay = formatCurrencyNumber(totalWin);
 		const winningsY = -50;
 
 		const winningsText = scene.add.text(
@@ -1304,7 +1305,7 @@ export class FreeRoundManager {
 					(this.sceneRef as any)?.gameAPI?.getDemoState?.() ||
 					localStorage.getItem('demo') === 'true' ||
 					sessionStorage.getItem('demo') === 'true';
-				return isDemo ? totalWinDisplay : CurrencyManager.formatAmount(totalWin, 2);
+				return isDemo ? totalWinDisplay : CurrencyManager.formatAmount(totalWin);
 			})(),
 			{
 				fontSize: '32px',

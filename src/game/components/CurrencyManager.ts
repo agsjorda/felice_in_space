@@ -1,5 +1,6 @@
 import type { SlotInitializeData } from "../../backend/GameAPI";
 import { Scene, GameObjects } from "phaser";
+import { formatCurrencyNumber } from "../../utils/NumberPrecisionFormatter";
 
 type CurrencyInit = Pick<SlotInitializeData, "currency" | "currencySymbol">;
 
@@ -85,12 +86,12 @@ export class CurrencyManager {
 		return "";
 	}
 
-	public static formatAmount(amount: number, decimals = 2): string {
+	public static formatAmount(amount: number): string {
 		const safe = Number.isFinite(amount) ? amount : 0;
+		const formatted = formatCurrencyNumber(safe);
 		const prefix = CurrencyManager.getCurrencyCode();
-		// Ensure there's always a space between currency and amount
 		const space = prefix && !prefix.endsWith(' ') ? ' ' : '';
-		return `${prefix}${space}${safe.toFixed(decimals)}`;
+		return `${prefix}${space}${formatted}`;
 	}
 
 	/** Best-effort removal of currency prefix from a display string. */

@@ -7,6 +7,7 @@ import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 import { SoundEffectType } from '../../managers/AudioManager';
 import { ensureSpineFactory } from "../../utils/SpineGuard";
 import { CurrencyManager } from './CurrencyManager';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 
 export class BonusHeader {
 	private bonusHeaderContainer: Phaser.GameObjects.Container;
@@ -441,18 +442,10 @@ export class BonusHeader {
 			(this.scene as any)?.gameAPI?.getDemoState?.() ||
 			localStorage.getItem('demo') === 'true' ||
 			sessionStorage.getItem('demo') === 'true';
-		
-		// Format with commas for thousands and 2 decimal places
-		const formatted = new Intl.NumberFormat('en-US', {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		}).format(amount || 0);
-		
+		const formatted = formatCurrencyNumber(amount || 0);
 		if (isDemo) {
 			return formatted;
 		}
-		
-		// Get currency code with proper spacing
 		const currencyCode = CurrencyManager.getCurrencyCode();
 		const space = currencyCode ? '\u00A0' : '';
 		return currencyCode ? `${currencyCode}${space}${formatted}` : formatted;

@@ -39,6 +39,7 @@ import { FullScreenManager } from '../../managers/FullScreenManager';
 import { ScatterAnticipation } from '../components/ScatterAnticipation';
 import { ClockDisplay } from '../components/ClockDisplay';
 import { CurrencyManager } from '../components/CurrencyManager';
+import { setDecimalPlaces } from '../../utils/NumberPrecisionFormatter';
 import WinTracker from '../components/WinTracker';
 import { FreeRoundManager } from '../components/FreeRoundManager';
 import { IdleManager } from '../components/IdleManager';
@@ -383,7 +384,10 @@ export class Game extends Scene
 		let appliedInitializationFreeSpinBet = false;
 		try {
 			const initData = this.gameAPI.getInitializationData();
-			try { CurrencyManager.initializeFromInitData(initData); } catch {}
+			try {
+				CurrencyManager.initializeFromInitData(initData);
+				setDecimalPlaces(initData?.currencyDecimalPlaces ?? 2);
+			} catch {}
 			const initFsRemaining = this.gameAPI.getRemainingInitFreeSpins();
 			const initFsBet = this.gameAPI.getInitFreeSpinBet();
 

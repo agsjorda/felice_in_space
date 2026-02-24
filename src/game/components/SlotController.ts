@@ -11,6 +11,7 @@ import { SpinData, SpinDataUtils } from '../../backend/SpinData';
 import { BuyFeature } from './BuyFeature';
 import { Symbols } from './Symbols';
 import { CurrencyManager } from './CurrencyManager';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 import { SoundEffectType } from '../../managers/AudioManager';
 import { SpineGameObject } from '@esotericsoftware/spine-phaser-v3';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -2700,7 +2701,7 @@ export class SlotController {
 			const gameData = this.getGameData();
 			if (gameData && gameData.isEnhancedBet && this.betAmountText) {
 				const increasedBet = betAmount * 1.25;
-				this.betAmountText.setText(increasedBet.toFixed(2));
+				this.betAmountText.setText(formatCurrencyNumber(increasedBet));
 
 				// Amount text is already centered (no currency to layout)
 				try { this.refreshCurrencySymbols(); } catch {}
@@ -2712,7 +2713,7 @@ export class SlotController {
 
 	updateBetAmount(betAmount: number): void {
 		if (this.betAmountText) {
-			this.betAmountText.setText(betAmount.toFixed(2));
+			this.betAmountText.setText(formatCurrencyNumber(betAmount));
 			// Amount text is already centered (no currency to layout)
 			try { this.refreshCurrencySymbols(); } catch {}
 		}
@@ -2730,7 +2731,7 @@ export class SlotController {
 				// Update displayed bet amount to show new bet with 25% increase
 				if (this.betAmountText) {
 					const increasedBet = betAmount * 1.25;
-					this.betAmountText.setText(increasedBet.toFixed(2));
+					this.betAmountText.setText(formatCurrencyNumber(increasedBet));
 					// Amount text is already centered (no currency to layout)
 				}
 				console.log(`[SlotController] Bet amount changed to $${betAmount} - preserving enhanced bet state (displayed: $${(betAmount * 1.25).toFixed(2)})`);
@@ -2760,8 +2761,7 @@ export class SlotController {
 		// Always use base bet for Buy Feature price; enhanced bet's +25% is display-only
 		const baseBet = this.getBaseBetAmount() || 0;
 		const price = baseBet * 100;
-		// Format with thousands separators and 2 decimals
-		this.featureAmountText.setText(price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+		this.featureAmountText.setText(formatCurrencyNumber(price));
 		// Amount text is already centered (no currency to layout)
 		try { this.refreshCurrencySymbols(); } catch {}
 	}
@@ -2787,7 +2787,7 @@ export class SlotController {
 
 	updateBalanceAmount(balanceAmount: number): void {
 		if (this.balanceAmountText) {
-			this.balanceAmountText.setText(balanceAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+			this.balanceAmountText.setText(formatCurrencyNumber(balanceAmount));
 			// Amount text is already centered (no currency to layout)
 			try { this.refreshCurrencySymbols(); } catch {}
 		}
@@ -4073,7 +4073,7 @@ export class SlotController {
 		
 		// Only update the display, keep baseBetAmount unchanged for API calls
 		if (this.betAmountText) {
-			this.betAmountText.setText(increasedBet.toFixed(2));
+			this.betAmountText.setText(formatCurrencyNumber(increasedBet));
 			
 			// Update dollar sign position based on new bet amount width
 			if (this.betDollarText) {
@@ -4098,7 +4098,7 @@ export class SlotController {
 	private restoreOriginalBetAmount(): void {
 		// Restore display to base bet amount
 		if (this.betAmountText) {
-			this.betAmountText.setText(this.baseBetAmount.toFixed(2));
+			this.betAmountText.setText(formatCurrencyNumber(this.baseBetAmount));
 			// Amount text is already centered (no currency to layout)
 		}
 		

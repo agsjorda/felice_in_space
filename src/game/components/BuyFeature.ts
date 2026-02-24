@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { SlotController } from './SlotController';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
 import { CurrencyManager } from './CurrencyManager';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 
 export interface BuyFeatureConfig {
 	position?: { x: number; y: number };
@@ -586,7 +587,7 @@ export class BuyFeature {
 	}
 
 	private formatNumberWithCommas(num: number): string {
-		return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		return formatCurrencyNumber(num);
 	}
 
 	private animateIn(): void {
@@ -683,7 +684,7 @@ export class BuyFeature {
 		// Bet display - show current bet value
 		const isDemoBet = (scene as any)?.gameAPI?.getDemoState?.() || localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
 		const currencyCodeBet = isDemoBet ? '' : CurrencyManager.getCurrencyCode();
-		const betFormatted = this.getCurrentBet().toFixed(2);
+		const betFormatted = formatCurrencyNumber(this.getCurrentBet());
 		const betText = currencyCodeBet ? `${currencyCodeBet}\u00A0${betFormatted}` : betFormatted;
 		this.betDisplay = scene.add.text(x, y, betText, {
 			fontSize: '24px',
@@ -806,7 +807,7 @@ export class BuyFeature {
 			const scene = this.container?.scene;
 			const isDemo = (scene as any)?.gameAPI?.getDemoState?.() || localStorage.getItem('demo') === 'true' || sessionStorage.getItem('demo') === 'true';
 			const currencyCode = isDemo ? '' : CurrencyManager.getCurrencyCode();
-			const betFormatted = this.getCurrentBet().toFixed(2);
+			const betFormatted = formatCurrencyNumber(this.getCurrentBet());
 			const betText = currencyCode ? `${currencyCode}\u00A0${betFormatted}` : betFormatted;
 			this.betDisplay.setText(betText);
 		}

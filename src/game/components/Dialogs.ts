@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { NetworkManager } from '../../managers/NetworkManager';
 import { ScreenModeManager } from '../../managers/ScreenModeManager';
 import { NumberDisplay, NumberDisplayConfig } from './NumberDisplay';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 import { IrisTransition } from './IrisTransition';
 import { SymbolExplosionTransition } from './SymbolExplosionTransition';
 import { gameStateManager } from '../../managers/GameStateManager';
@@ -700,7 +701,7 @@ export class Dialogs {
 		// Determine if this is the Congrats dialog showing a total win amount
 		const isCongratsTotalWin = this.currentDialogType === 'Congrats_Dialog' && freeSpins === undefined;
 
-		// Create number display configuration
+		// Create number display configuration (win amount uses precision formatter)
 		const numberConfig: NumberDisplayConfig = {
 			x: scene.scale.width / 2,
 			y: this.getNumberDisplayY(scene, this.currentDialogType) - 18,
@@ -714,7 +715,8 @@ export class Dialogs {
 			prefix: isCongratsTotalWin ? '$ ' : '',
 			suffix: '', // No suffix - only display numbers
 			commaYOffset: 12,
-			dotYOffset: 10
+			dotYOffset: 10,
+			...(freeSpins === undefined && { formatValue: (n) => formatCurrencyNumber(n) })
 		};
 
 		// Create the number display (primary win amount / free spins, depending on dialog)

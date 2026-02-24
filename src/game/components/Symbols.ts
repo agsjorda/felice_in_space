@@ -12,6 +12,7 @@ import { SoundEffectType } from '../../managers/AudioManager';
 import { ensureSpineFactory } from '../../utils/SpineGuard';
 import { SpinData } from "../../backend/SpinData";
 import { CurrencyManager } from './CurrencyManager';
+import { formatCurrencyNumber } from '../../utils/NumberPrecisionFormatter';
 
 export class Symbols {
   private static readonly WINLINE_CHECKING_DISABLED: boolean = true;
@@ -4086,15 +4087,10 @@ function createWinText(self: Symbols, amount: number, x: number, y: number): Pha
       sessionStorage.getItem('demo') === 'true';
     
     if (isDemo) {
-      // Demo mode: show amount without currency prefix
       if (Number.isInteger(amount)) textValue = `${amount}`;
-      else textValue = Number(amount).toFixed(2);
+      else textValue = formatCurrencyNumber(amount);
     } else {
-      // Use currency code (prefer code over symbol, matching WinTracker pattern)
-      const formattedAmount = amount.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      const formattedAmount = formatCurrencyNumber(amount);
       const currencyCode = CurrencyManager.getCurrencyCode();
       textValue = currencyCode ? `${currencyCode}\u00A0${formattedAmount}` : formattedAmount;
     }
