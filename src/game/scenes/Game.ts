@@ -386,7 +386,7 @@ export class Game extends Scene
 			const initData = this.gameAPI.getInitializationData();
 			try {
 				CurrencyManager.initializeFromInitData(initData);
-				setDecimalPlaces(initData?.currencyDecimalPlaces ?? 2);
+				this.initializeNumberPrecisionFromGameData();
 			} catch {}
 			const initFsRemaining = this.gameAPI.getRemainingInitFreeSpins();
 			const initFsBet = this.gameAPI.getInitFreeSpinBet();
@@ -859,6 +859,18 @@ export class Game extends Scene
 			}
 		} catch (e) {
 			console.warn('[Game] Failed to set gameData.betLevels from initialization data:', e);
+		}
+	}
+
+	private initializeNumberPrecisionFromGameData() {
+		try {
+			const initData = this.gameAPI?.getInitializationData?.();
+			const currencyDecimalPlaces = (initData as any)?.currencyDecimalPlaces;
+			if (currencyDecimalPlaces != null && Number.isFinite(currencyDecimalPlaces)) {
+				setDecimalPlaces(currencyDecimalPlaces);
+			}
+		} catch (e) {
+			console.warn('[Game] Failed to set number precision from initialization data:', e);
 		}
 	}
 

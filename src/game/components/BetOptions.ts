@@ -73,10 +73,8 @@ export class BetOptions {
 	}
 
 	private formatBetOptionLabel(value: number): string {
-		// Keep the label compact like the original `value.toString()` (no trailing zeros),
-		// but stable for fractional enhanced values.
-		const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
-		return Number.isFinite(rounded) ? rounded.toString() : value.toString();
+		// Compact display for bet option buttons (trimZeroValueDecimals), respects global precision.
+		return formatCurrencyNumber(value, true);
 	}
 
 	private getDisplayBetFromHud(): number | undefined {
