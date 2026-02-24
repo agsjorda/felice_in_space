@@ -20,6 +20,8 @@ interface GameScene extends Scene {
     audioManager: AudioManager;
     gameAPI: GameAPI;
     getCurrentBetAmount?: () => number;
+    /** Base bet only (no amplify). Use for HelpScreen payouts. */
+    getBaseBetAmount?: () => number;
 }
 
 export class Menu {
@@ -349,8 +351,8 @@ export class Menu {
         this.contentArea.add(this.settingsContent);
         
         // Initialize content for each tab
-        // Help / Rules content is delegated to HelpScreen
-        const resolveBetAmount = scene.getCurrentBetAmount?.bind(scene) ?? (() => 1);
+        // Help / Rules content is delegated to HelpScreen (use base bet so payouts do not change when amplify is enabled)
+        const resolveBetAmount = scene.getBaseBetAmount?.bind(scene) ?? scene.getCurrentBetAmount?.bind(scene) ?? (() => 1);
         this.helpScreen = new HelpScreen(
             scene,
             this.contentArea,

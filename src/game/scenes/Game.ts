@@ -136,6 +136,11 @@ export class Game extends Scene
 		return 1;
 	}
 
+	/** Base bet only (no amplify). Use for HelpScreen payouts so they do not change when amplify is enabled. */
+	public getBaseBetAmount(): number {
+		return this.slotController?.getBaseBetAmount?.() ?? 1;
+	}
+
 	preload () 
 	{
 		// Assets are now loaded in Preloader scene
